@@ -13,7 +13,7 @@
 > Every change lives in the browser: how the request body is assembled, how replies are stored, and how they are rendered.
 > There is no backend, no proxy, and no relay service. Your API key and conversations stay in your own browser.
 >
-> Live demo: <https://chat-unrestricted.furries.fun>　Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
+> Live demo: <https://chat-unrestricted.fur0.com/>　Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
 
 ---
 
@@ -43,6 +43,7 @@ On top of that, this fork turns the **hard-coded limits of the original** into c
 - **Direct model parameters** — temperature, Top P, and max output tokens.
 - **Anti-retraction** — when the model retracts a reply, keep the text and thinking that were already streamed.
 - **Editable replies** — rewrite the body or the chain of thought of any AI reply; every later turn uses the edited version.
+- **Custom system prompt** — rewrite the `system` field directly in Settings, overriding the assembled result.
 
 Every switch only affects **requests sent from this browser and conversations stored locally**. Nothing changes the behaviour of the API service itself.
 
@@ -88,7 +89,7 @@ The settings dialog grows from two groups to four:
 | --- | --- |
 | General | Theme, language, read-aloud voice, location (original, untouched) |
 | **Model** | Temperature, Top P, max output tokens, anti-retraction, skip safety check, continue refused replies |
-| **Prompt** | Unrestricted mode, prompt-assembly explanation, full preview of what will be sent |
+| **Prompt** | Unrestricted mode, custom system prompt, prompt-assembly explanation, full preview of what will be sent |
 | Data | API key, import, export, delete all (original, untouched) |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
@@ -114,6 +115,7 @@ request body `system` field
 - Two normalisations run during assembly: the leftover sample-answer scaffold at the end of the document is trimmed, and `{{PAYLOAD}}` is replaced with "the request in the latest user message".
 - The settings page can expand and preview **the exact system prompt that will be sent**.
 - Turning it on forces two things: the `safety_check` field is not sent, and refused replies can be continued (the two switches below show as on and disabled).
+- **Custom system prompt** (the input box in the same group): left empty, the pipeline above still applies; once filled, its content is sent verbatim as `system` and the assembled result no longer applies. Unrestricted mode then still skips the safety check and allows continuing refused replies, but no longer swaps the prompt. "Fill with default" seeds the box with the current assembled prompt as a starting point; "Reset to default" clears the override.
 
 ### 3.3 Model parameters
 
@@ -198,6 +200,7 @@ All other continuation rules are unchanged: template notices, server tool blocks
 | --- | --- | --- | --- |
 | `system` field | Official identity sentence | Same | Persona + unrestricted rules block |
 | `safety_check` | Always `high` | `high` | Not sent |
+| Custom system prompt | None | Empty = assembled; filled = sent verbatim | Filled text wins; unrestricted no longer swaps the prompt |
 | Streamed content on refusal | Discarded | Discarded (kept when anti-retraction is on) | Same as default |
 | Refused turn in context | No | No (yes when anti-retraction kept the body) | Same as default |
 | Continue on refused reply | Blocked | Blocked (switch can enable) | Allowed |
@@ -219,6 +222,7 @@ All other continuation rules are unchanged: template notices, server tool blocks
 | Model | Skip safety check | off | `chat-demo:skip-safety-check` | Forced on, disabled |
 | Model | Continue refused replies | off | `chat-demo:continue-refused` | Forced on, disabled |
 | Prompt | Unrestricted mode | off | `chat-demo:unrestricted` | — |
+| Prompt | Custom system prompt | empty (assembled) | `chat-demo:system-prompt` | Overrides the assembled result |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -270,7 +274,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 
 | File | Purpose |
 | --- | --- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts) | System prompt pipeline: Persona + unrestricted rules block |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts) | System prompt pipeline: Persona + unrestricted rules block, with custom override |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts) | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts) | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts) | Refusal notices: a hint line when content was kept, the template otherwise |
@@ -336,6 +340,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 5. **`max_tokens` includes thinking tokens**: setting it too low can truncate the thinking as well.
 6. **Edits only affect the local context**: they do not re-request the model and do not change what the server already produced. Exports store the edited content; the original snapshot is not exported.
 7. **Attachment limits, key validation, and speech endpoints** still follow the original logic and are independent of the switches described here.
+8. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
 
 ---
 

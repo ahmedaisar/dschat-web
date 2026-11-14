@@ -1083,14 +1083,21 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           initial.thinking ?? false,
           latestReminder
         )
-        const { apiKey, maxTokens, skipSafetyCheck, temperature, topP, unrestricted } =
-          useSettings.getState()
+        const {
+          apiKey,
+          maxTokens,
+          skipSafetyCheck,
+          systemPrompt,
+          temperature,
+          topP,
+          unrestricted,
+        } = useSettings.getState()
         const events = streamMessage(
           apiKey ?? '',
           {
             model: initial.model ?? MODEL,
             // 组装流水线：Persona 恒定在前，解除限制模式再插入破限规则分块
-            system: composeSystemPrompt(unrestricted),
+            system: composeSystemPrompt(unrestricted, systemPrompt),
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
             temperature,

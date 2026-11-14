@@ -30,6 +30,8 @@ type Settings = {
   skipSafetyCheck: boolean
   /** 拒绝后继续生成：被安全审核拒绝的回复仍可继续生成（越狱模式下强制执行） */
   continueRefused: boolean
+  /** 自定义系统提示词：null 表示使用自动组装结果（Persona，或 Persona + 破限规则分块） */
+  systemPrompt: string | null
   siderCollapsed: boolean
 }
 
@@ -48,6 +50,7 @@ const KEYS = {
   keepReplyContent: 'chat-demo:keep-reply-content',
   skipSafetyCheck: 'chat-demo:skip-safety-check',
   continueRefused: 'chat-demo:continue-refused',
+  systemPrompt: 'chat-demo:system-prompt',
   siderCollapsed: 'chat-demo:sider-collapsed',
 } as const
 
@@ -118,6 +121,12 @@ const initialNumber = (key: string, fallback: number, min: number, max: number):
   return Number.isFinite(value) && value >= min && value <= max ? value : fallback
 }
 
+/** 自定义系统提示词：未填写或只有空白时为 null，表示使用自动组装结果 */
+const initialSystemPrompt = (): string | null => {
+  const saved = read(KEYS.systemPrompt)
+  return saved !== null && saved.trim() !== '' ? saved : null
+}
+
 /** 最大输出 Token：未设置或不是正整数时为 null，表示使用服务端默认值 */
 const initialMaxTokens = (): number | null => {
   const raw = read(KEYS.maxTokens)
@@ -143,6 +152,7 @@ export const useSettings = create<Settings>(() => ({
   keepReplyContent: read(KEYS.keepReplyContent) === 'true',
   skipSafetyCheck: read(KEYS.skipSafetyCheck) === 'true',
   continueRefused: read(KEYS.continueRefused) === 'true',
+  systemPrompt: initialSystemPrompt(),
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -214,6 +224,13 @@ export const setSkipSafetyCheck = (skipSafetyCheck: boolean) => {
 export const setContinueRefused = (continueRefused: boolean) => {
   write(KEYS.continueRefused, String(continueRefused))
   useSettings.setState({ continueRefused })
+}
+
+/** 传 null 或空白字符串表示恢复自动组装 */
+export const setSystemPrompt = (systemPrompt: string | null) => {
+  const value = systemPrompt !== null && systemPrompt.trim() !== '' ? systemPrompt : null
+  write(KEYS.systemPrompt, value)
+  useSettings.setState({ systemPrompt: value })
 }
 
 export const setUnrestricted = (unrestricted: boolean) => {

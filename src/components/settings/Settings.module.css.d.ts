@@ -37,6 +37,13 @@ declare const styles: {
   readonly "promptPreview": string;
   readonly "promptPreviewSummary": string;
   readonly "promptPreviewBody": string;
+  readonly "systemPrompt": string;
+  readonly "systemPromptHead": string;
+  readonly "systemPromptLabel": string;
+  readonly "systemPromptDescription": string;
+  readonly "systemPromptTextarea": string;
+  readonly "systemPromptActions": string;
+  readonly "systemPromptHint": string;
 };
 export = styles;
 

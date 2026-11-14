@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   IconDarkOutline16,
   IconDataOutline16,
@@ -28,6 +28,7 @@ import {
   setLocation,
   setMaxTokens,
   setSkipSafetyCheck,
+  setSystemPrompt,
   setTemperature,
   setThemePreference,
   setTopP,
@@ -448,6 +449,7 @@ const ModelSettings = () => {
 const UnrestrictedSetting = () => {
   const t = useTranslate()
   const unrestricted = useSettings((state) => state.unrestricted)
+  const systemPrompt = useSettings((state) => state.systemPrompt)
   return (
     <>
       <SettingCell
@@ -462,14 +464,81 @@ const UnrestrictedSetting = () => {
           />
         }
       />
+      <SystemPromptSetting />
       <div className={styles.pipeline}>
-        {t(unrestricted ? 'settingsPipelineUnrestricted' : 'settingsPipelineDefault')}
+        {t(
+          systemPrompt !== null
+            ? 'settingsPipelineCustom'
+            : unrestricted
+              ? 'settingsPipelineUnrestricted'
+              : 'settingsPipelineDefault'
+        )}
       </div>
       <details className={styles.promptPreview}>
         <summary className={styles.promptPreviewSummary}>{t('settingsPromptPreview')}</summary>
-        <pre className={styles.promptPreviewBody}>{composeSystemPrompt(unrestricted)}</pre>
+        <pre className={styles.promptPreviewBody}>
+          {composeSystemPrompt(unrestricted, systemPrompt)}
+        </pre>
       </details>
     </>
+  )
+}
+
+/**
+ * 自定义系统提示词：留空沿用自动组装结果，填写后原样作为 system 下发。
+ * 草稿独立于设置值，清空输入框不会立刻回填默认内容；「填入默认」把当前组装结果填进输入框。
+ */
+const SystemPromptSetting = () => {
+  const t = useTranslate()
+  const unrestricted = useSettings((state) => state.unrestricted)
+  const systemPrompt = useSettings((state) => state.systemPrompt)
+  const [draft, setDraft] = useState(systemPrompt ?? '')
+
+  // 外部重置（恢复默认）或切换分组后同步草稿
+  useEffect(() => {
+    setDraft(systemPrompt ?? '')
+  }, [systemPrompt])
+
+  const commit = (value: string) => {
+    setDraft(value)
+    setSystemPrompt(value)
+  }
+
+  return (
+    <div className={styles.systemPrompt}>
+      <div className={styles.systemPromptHead}>
+        <div className={styles.systemPromptLabel}>{t('settingsCustomPrompt')}</div>
+        <div className={styles.systemPromptDescription}>{t('settingsCustomPromptDescription')}</div>
+      </div>
+      <textarea
+        className={styles.systemPromptTextarea}
+        aria-label={t('settingsCustomPrompt')}
+        rows={6}
+        placeholder={t('settingsCustomPromptPlaceholder')}
+        value={draft}
+        onChange={(event) => commit(event.target.value)}
+      />
+      <div className={styles.systemPromptActions}>
+        <span className={styles.systemPromptHint}>
+          {t(systemPrompt === null ? 'settingsCustomPromptAuto' : 'settingsCustomPromptCustom')}
+        </span>
+        <Button
+          variant="outlined"
+          size="s"
+          onClick={() => commit(composeSystemPrompt(unrestricted))}
+        >
+          {t('settingsCustomPromptFill')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="s"
+          disabled={systemPrompt === null}
+          onClick={() => commit('')}
+        >
+          {t('settingsCustomPromptReset')}
+        </Button>
+      </div>
+    </div>
   )
 }
 

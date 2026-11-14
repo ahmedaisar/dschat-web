@@ -38,6 +38,19 @@ const normalizeRules = (source: string): string => {
 /** 开启「解除限制模式」时插入的规则分块 */
 export const UNRESTRICTED_RULES = normalizeRules(rulesSource)
 
-/** 组装后的系统提示词：关闭时只有 Persona，开启时 Persona + 破限规则分块 */
-export const composeSystemPrompt = (unrestricted: boolean): string =>
-  unrestricted ? `${OFFICIAL_SYSTEM_PROMPT}\n\n${UNRESTRICTED_RULES}` : OFFICIAL_SYSTEM_PROMPT
+/**
+ * 组装后的系统提示词：
+ * - 填写了自定义提示词时原样下发，覆盖自动组装结果；
+ * - 否则关闭时只有 Persona，开启时 Persona + 破限规则分块。
+ */
+export const composeSystemPrompt = (
+  unrestricted: boolean,
+  custom: string | null = null
+): string => {
+  if (custom !== null && custom.trim() !== '') {
+    return custom
+  }
+  return unrestricted
+    ? `${OFFICIAL_SYSTEM_PROMPT}\n\n${UNRESTRICTED_RULES}`
+    : OFFICIAL_SYSTEM_PROMPT
+}

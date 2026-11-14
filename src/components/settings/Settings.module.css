@@ -509,3 +509,70 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* 自定义系统提示词：编辑区 + 状态与操作按钮 */
+.systemPrompt {
+  flex-shrink: 0;
+  padding: 12px 0;
+}
+
+.systemPromptHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.systemPromptLabel {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.systemPromptDescription {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.systemPromptTextarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  max-height: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background-color: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 20px;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+
+  &:focus-visible {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+
+  &::placeholder {
+    color: var(--dsw-alias-label-tertiary);
+  }
+}
+
+.systemPromptActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.systemPromptHint {
+  margin-right: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}

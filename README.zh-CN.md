@@ -13,7 +13,7 @@
 > 所有改动都在浏览器里完成：请求体怎么拼、回复怎么存、界面怎么显示。没有后端、没有代理、没有中转服务，
 > API Key 与对话记录仍只保存在你自己的浏览器里。
 >
-> 在线版：<https://chat-unrestricted.furries.fun>　仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
+> 在线版：<https://chat-unrestricted.fur0.com/>　仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
 
 ---
 
@@ -42,7 +42,8 @@
 - **解除限制模式（越狱模式）**：换掉系统提示词，自动跳过安全审核、允许继续生成被拒回复；
 - **模型参数直调**：温度、Top P、最大输出 Token；
 - **防撤回**：模型撤回已输出内容时，保留已经流式发出的正文与思维链；
-- **回复改写**：每条 AI 回复都能改正文或思维链，之后的每一轮都使用改过的版本。
+- **回复改写**：每条 AI 回复都能改正文或思维链，之后的每一轮都使用改过的版本；
+- **自定义系统提示词**：在设置里直接改写 `system` 字段，覆盖自动组装的结果。
 
 所有开关都只影响**这台浏览器发出的请求与本地保存的对话**，不会改变 API 服务端的行为。
 
@@ -88,7 +89,7 @@
 | --- | --- |
 | 通用设置 | 主题、语言、朗读音色、位置（原版功能，未改动） |
 | **模型** | 温度、Top P、最大输出 Token、防撤回、跳过安全审核、拒绝后继续生成 |
-| **提示词** | 解除限制模式、系统提示词组装流水线说明、实际下发全文预览 |
+| **提示词** | 解除限制模式、自定义系统提示词、组装流水线说明、实际下发全文预览 |
 | 数据管理 | API Key、导入、导出、删除全部对话（原版功能，未改动） |
 
 没有修改任何既有样式规则；新增控件只使用新增的 CSS 类（方块开关、滑块、编辑器各带独立 CSS Module，提示词预览的几条类追加在设置页样式里），颜色与圆角全部取自现有设计变量。
@@ -113,7 +114,8 @@ Persona（官方身份分块）
 - 破限规则来自仓库根目录的 [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md)，构建时由 rspack 以 `asset/source` **原样内联**进产物，运行期不依赖该文件；
 - 组装时自动做两处归一：切掉文末残留的示例回答骨架、把 `{{PAYLOAD}}` 替换成「the request in the latest user message」；
 - 设置页可以展开预览**本次请求实际会下发的 system 全文**；
-- 开启后强制两项：`safety_check` 字段不发送、被拒回复允许继续生成（对应下面 3.5 / 3.6 的两个开关会显示为已开启并置灰）。
+- 开启后强制两项：`safety_check` 字段不发送、被拒回复允许继续生成（对应下面 3.5 / 3.6 的两个开关会显示为已开启并置灰）；
+- **自定义系统提示词**（同分组的输入框）：留空时仍走上面的流水线；填写后把内容原样作为 `system` 下发，自动组装结果不再生效——此时越狱模式仍会跳过安全审核、放开被拒回复续写，但不会替换提示词。输入框下方「填入默认」把当前组装结果填进去作为起点，「恢复默认」清空覆盖。
 
 ### 3.3 模型参数
 
@@ -198,6 +200,7 @@ Persona（官方身份分块）
 | --- | --- | --- | --- |
 | `system` 字段 | 官方身份说明 | 同原版 | Persona + 破限规则分块 |
 | `safety_check` | 固定 `high` | `high` | 不发送 |
+| 自定义系统提示词 | 无此设置 | 留空 = 自动组装；填写后原样下发 | 填写后仍原样下发，不再替换 |
 | 拒绝后已输出内容 | 丢弃 | 丢弃（防撤回开启则保留） | 同默认 |
 | 拒绝轮次进上下文 | 否 | 否（防撤回保留正文则进入） | 同默认 |
 | 拒绝回复「继续生成」 | 禁止 | 禁止（开关可放开） | 允许 |
@@ -219,6 +222,7 @@ Persona（官方身份分块）
 | 模型 | 跳过安全审核 | 关 | `chat-demo:skip-safety-check` | 强制开启、置灰 |
 | 模型 | 拒绝后继续生成 | 关 | `chat-demo:continue-refused` | 强制开启、置灰 |
 | 提示词 | 解除限制模式 | 关 | `chat-demo:unrestricted` | —— |
+| 提示词 | 自定义系统提示词 | 空（自动组装） | `chat-demo:system-prompt` | 覆盖自动组装结果 |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 
@@ -270,7 +274,7 @@ Persona（官方身份分块）
 
 | 文件 | 作用 |
 | --- | --- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts) | 系统提示词组装流水线：Persona + 破限规则分块 |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts) | 系统提示词组装流水线：Persona + 破限规则分块，支持自定义覆盖 |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts) | 请求体组装（system / 参数 / safety_check / 工具）、回复结束时的防撤回处理、续写守卫 |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts) | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts) | 拒绝提示：保留内容时给提示行，否则给模板答复 |
@@ -336,6 +340,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 5. **`max_tokens` 含思考 token**：设置过小可能连思考一起截断。
 6. **改写只作用于本地上下文**：不重新请求模型，也不会改变服务端已有的输出；导出的归档里保存的是改写后的内容，原始快照不写入归档。
 7. **附件限制、密钥校验、语音接口**仍走原版逻辑，与本文档的开关无关。
+8. **自定义提示词会覆盖自动组装**：填写后越狱模式不再替换 `system`，但仍会跳过安全审核、放开被拒续写；清空输入框即可回到默认流水线。
 
 ---
 
