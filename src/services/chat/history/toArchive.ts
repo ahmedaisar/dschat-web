@@ -1,6 +1,7 @@
 import type { ServerToolUseBlock } from '../../api/types.js'
 import { getVisibleMessages, normalizeSession } from '../branches.js'
 import { describeReply } from '../describe.js'
+import { hasReplyContent } from '../reply.js'
 import type { AssistantMessage, Message, ReplyBlock, Session, UserMessage } from '../types.js'
 import { fail } from './errors.js'
 import type {
@@ -171,7 +172,8 @@ const assistantFragments = (message: AssistantMessage): Fragment[] => {
   const hasTemplate = blocks.some((block) => block.type === 'text' && block.isTemplate)
   if (
     (message.status === 'error' && message.error) ||
-    (!hasTemplate && message.stopReason === 'refusal')
+    // 防撤回保留了正文时不写拒绝模板，否则导入后会被当成拒绝回复再次清空。
+    (!hasTemplate && message.stopReason === 'refusal' && !hasReplyContent(message))
   ) {
     const notice = describeReply(message)
     if (notice) {
@@ -181,9 +183,11 @@ const assistantFragments = (message: AssistantMessage): Fragment[] => {
   return fragments
 }
 
-const replyStatus = ({ status, stopReason }: AssistantMessage): ChatMessageStatus => {
+const replyStatus = (message: AssistantMessage): ChatMessageStatus => {
+  const { status, stopReason } = message
   if (stopReason === 'refusal') {
-    return 'CONTENT_FILTER'
+    // 防撤回保留了正文时按正常结束导出，导入后内容仍然可见、仍可进入上下文。
+    return hasReplyContent(message) ? 'FINISHED' : 'CONTENT_FILTER'
   }
   switch (status) {
     case 'done':

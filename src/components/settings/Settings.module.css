@@ -440,3 +440,72 @@
     max-width: 100%;
   }
 }
+
+/* 提示词分组：流水线说明 + 可展开的实际下发全文 */
+.pipeline {
+  flex-shrink: 0;
+  padding: 8px 0 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.promptPreview {
+  flex-shrink: 0;
+  padding-bottom: 16px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.promptPreviewSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--dsw-alias-label-tertiary);
+  list-style: none;
+
+  &::after {
+    content: '▸';
+    transition: transform var(--ds-transition-duration) var(--ds-ease-in-out);
+  }
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  .promptPreview[open] &::after {
+    transform: rotate(90deg);
+  }
+
+  &:hover {
+    color: var(--dsw-alias-label-primary);
+  }
+
+  &:focus-visible {
+    border-radius: 4px;
+    outline: 2px solid var(--dsw-alias-button-primary-fill);
+    outline-offset: 2px;
+  }
+}
+
+.promptPreviewBody {
+  box-sizing: border-box;
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background-color: var(--dsw-alias-markdown-code-block);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 20px;
+  scrollbar-width: thin;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

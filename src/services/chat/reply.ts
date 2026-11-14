@@ -138,19 +138,25 @@ export const applyEvent = (
 
 /**
  * 回复结束：未结束的思考块以当前时间收尾。
- * 安全拒绝（stop_reason: refusal）时已下发的思考与正文不能撤回，按协议要求由客户端丢弃，只保留工具块。
+ * 安全拒绝（stop_reason: refusal）时已下发的思考与正文按协议要求由客户端丢弃，只保留工具块；
+ * 开启防撤回（keepRefused）时反而保留这些内容，供界面展示并继续进入上下文。
  */
 export const settleReply = (
   reply: AssistantMessage,
   status: Extract<ReplyStatus, 'done' | 'stopped' | 'error'>,
   now: number,
-  error?: AssistantMessage['error']
+  error?: AssistantMessage['error'],
+  keepRefused = false
 ): AssistantMessage => ({
   ...reply,
   status,
   error,
   blocks: reply.blocks.flatMap((block): ReplyBlock[] => {
-    if (reply.stopReason === 'refusal' && (block.type === 'thinking' || block.type === 'text')) {
+    if (
+      reply.stopReason === 'refusal' &&
+      !keepRefused &&
+      (block.type === 'thinking' || block.type === 'text')
+    ) {
       return []
     }
     return block.type === 'thinking' && block.startedAt !== undefined && block.endedAt === undefined
@@ -159,20 +165,117 @@ export const settleReply = (
   }),
 })
 
+/**
+ * 回复是否保留了服务端已下发的正文或思维链。
+ * 拒绝回复默认被清空，只有开启防撤回时才有内容，界面据此决定是否按正常回复展示。
+ */
+export const hasReplyContent = (reply: Pick<AssistantMessage, 'blocks'>): boolean =>
+  reply.blocks.some(
+    (block) =>
+      (block.type === 'text' && !block.isTemplate && block.text.trim() !== '') ||
+      (block.type === 'thinking' && block.thinking.trim() !== '')
+  )
+
 /** 回复里所有文本块拼起来，用于复制与判断是否有回答 */
 export const getReplyText = (reply: AssistantMessage) =>
   reply.blocks.map((block) => (block.type === 'text' ? block.text : '')).join('')
 
 /**
+ * 末尾连续的正文块：界面上展示为「回答」的文本段。
+ * 模板提示不是模型正文，出现在末尾时终止这一段。
+ */
+const getAnswerIndexes = (blocks: ReplyBlock[]): number[] => {
+  const indexes: number[] = []
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const block = blocks[index]
+    if (block.type !== 'text' || block.isTemplate) {
+      break
+    }
+    indexes.unshift(index)
+  }
+  return indexes
+}
+
+/** 思维链：所有思考块的文本，按块顺序用空行连接 */
+const joinThinking = (blocks: ReplyBlock[]): string =>
+  blocks.flatMap((block) => (block.type === 'thinking' ? [block.thinking] : [])).join('\n\n')
+
+/** 正文：末尾正文段的拼接结果，与界面上展示的回答一致 */
+const joinAnswer = (blocks: ReplyBlock[]): string =>
+  getAnswerIndexes(blocks)
+    .map((index) => (blocks[index] as Extract<ReplyBlock, { type: 'text' }>).text)
+    .join('')
+
+export const getReplyThinking = (reply: AssistantMessage): string => joinThinking(reply.blocks)
+
+export const getReplyAnswerText = (reply: AssistantMessage): string => joinAnswer(reply.blocks)
+
+/**
+ * 把用户改写的思维链与正文写回内容块，之后每一轮请求都从这里取内容：
+ * - 思维链写入第一个思考块，其余思考块清空；原本没有思考块且有内容时在最前面新建一个；
+ * - 正文写入末尾正文段的第一个文本块，其余文本块清空；原本没有正文段且有内容时追加一个文本块；
+ * - 正文改动会丢弃引用标记（位置已失效），模板提示、工具块与思考签名保持原样；
+ * - 只有内容确实变化的字段才会重写，避免只改思维链时误清引用。
+ */
+export const rewriteReplyBlocks = (
+  blocks: ReplyBlock[],
+  next: { thinking: string; text: string }
+): ReplyBlock[] => {
+  let result = blocks
+  if (next.thinking !== joinThinking(blocks)) {
+    const indexes = result.flatMap((block, index) => (block.type === 'thinking' ? [index] : []))
+    if (indexes.length === 0) {
+      if (next.thinking.trim()) {
+        result = [{ type: 'thinking', thinking: next.thinking }, ...result]
+      }
+    } else {
+      result = [...result]
+      const [first, ...rest] = indexes
+      const head = result[first]
+      if (head.type === 'thinking') {
+        result[first] = { ...head, thinking: next.thinking }
+      }
+      for (const index of rest) {
+        const block = result[index]
+        if (block.type === 'thinking') {
+          result[index] = { ...block, thinking: '', signature: undefined }
+        }
+      }
+    }
+  }
+  if (next.text !== joinAnswer(blocks)) {
+    const indexes = getAnswerIndexes(result)
+    if (indexes.length > 0) {
+      result = [...result]
+      const [first, ...rest] = indexes
+      const head = result[first]
+      if (head.type === 'text') {
+        result[first] = { ...head, text: next.text, citations: [] }
+      }
+      for (const index of rest) {
+        const block = result[index]
+        if (block.type === 'text') {
+          result[index] = { ...block, text: '', citations: [] }
+        }
+      }
+    } else if (next.text !== '') {
+      result = [...result, { type: 'text', text: next.text }]
+    }
+  }
+  return result
+}
+
+/**
  * 只有正常达到输出上限或被停止的回复可续写，报错回复不能续写。
- * 末条限制由调用方判断，拒绝和客户端工具调用不能续写。
+ * 末条限制由调用方判断，客户端工具调用不能续写。
+ * 被安全审核拒绝的回复默认不能续写；allowRefused 为 true（设置开关或越狱模式）时放开。
  * 本轮含服务端工具调用或结果（含 READ_LINK 和孤立结果块）的回复不能续写。
  * 服务端模板提示不能作为续写前缀。
  */
-export const canContinueReply = (reply: AssistantMessage): boolean => {
+export const canContinueReply = (reply: AssistantMessage, allowRefused = false): boolean => {
   if (
     !reply.prefix ||
-    reply.stopReason === 'refusal' ||
+    (reply.stopReason === 'refusal' && !allowRefused) ||
     reply.stopReason === 'tool_use' ||
     reply.blocks.some(
       (block) =>
@@ -184,20 +287,21 @@ export const canContinueReply = (reply: AssistantMessage): boolean => {
   ) {
     return false
   }
-  return (
-    reply.status === 'stopped' ||
-    (reply.status === 'done' && reply.stopReason === 'max_tokens')
-  )
+  // 被拒绝的回复按「正常结束」参与续写判断，其余维持原有规则。
+  const done =
+    reply.status === 'done' &&
+    (reply.stopReason === 'max_tokens' || (allowRefused && reply.stopReason === 'refusal'))
+  return reply.status === 'stopped' || done
 }
 
 /**
- * 已结束或停止且有回答文本的回复才放进上下文；被安全拒绝的轮次不回传。
+ * 已结束或停止且有回答文本的回复才放进上下文。
+ * 被安全拒绝的轮次默认没有正文，自然不进上下文；开启防撤回保留了正文时按正常轮次回传。
  * 服务端模板提示不进入上下文。
  */
 const isUsableReply = (message: Message): message is AssistantMessage =>
   message.role === 'assistant' &&
   (message.status === 'done' || message.status === 'stopped') &&
-  message.stopReason !== 'refusal' &&
   !message.blocks.some((block) => block.type === 'text' && block.isTemplate) &&
   getReplyText(message) !== ''
 

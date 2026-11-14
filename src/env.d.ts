@@ -5,6 +5,12 @@ declare module '*.module.css' {
 
 declare module '*.css' {}
 
+/** Markdown 文档按原文内联为字符串，见 rspack.config.ts 的 asset/source 规则 */
+declare module '*.md' {
+  const source: string
+  export default source
+}
+
 /** 公开 API 的地址，见 rspack.config.ts 的 createConfig */
 declare const __API_ORIGIN__: string
 

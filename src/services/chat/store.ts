@@ -5,6 +5,7 @@ import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
+import { composeSystemPrompt } from './systemPrompt.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -19,6 +20,9 @@ import {
   applyEvent,
   canContinueReply,
   getContextRounds,
+  getReplyAnswerText,
+  getReplyThinking,
+  rewriteReplyBlocks,
   settleReply,
   toRequestMessages,
 } from './reply.js'
@@ -34,12 +38,17 @@ import {
 
 /** deepseek-flash 同时支持深度思考与图片输入 */
 const MODEL: ChatModel = 'deepseek-flash'
-/** 所有生成请求统一携带的助手身份说明 */
-const SYSTEM_PROMPT = '该助手为DeepSeek，由深度求索公司创造。'
 /** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
 const SESSION_CACHE_LIMIT = 5
-/** 安全审核固定开启，所有请求都走扩展模式 */
-const SAFETY_CHECK = { level: 'high' } as const
+/**
+ * 安全审核字段：默认开启基础风控；勾选「跳过安全审核」或进入越狱模式时不携带该字段，
+ * 与传 low 等价，不再额外审核模型输入与输出。
+ */
+const safetyCheck = (
+  unrestricted: boolean,
+  skipSafetyCheck: boolean
+): CreateMessageRequest['safety_check'] =>
+  unrestricted || skipSafetyCheck ? undefined : { level: 'high' }
 /** 服务端判定 file_id 失效后，重新补传并重发的最多次数（不含首次请求） */
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
@@ -55,6 +64,17 @@ const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
   }
   return tools
 }
+
+/**
+ * 回复结束：防撤回开启时保留服务端已下发的内容，
+ * 关闭时按协议丢弃拒绝回复的正文与思考，只保留工具块。
+ */
+const settle = (
+  reply: AssistantMessage,
+  status: 'done' | 'stopped' | 'error',
+  now: number,
+  error?: AssistantMessage['error']
+) => settleReply(reply, status, now, error, useSettings.getState().keepReplyContent)
 
 /** 允许自动补标题的请求；手动重命名后取消本轮标题写入，包含主动清空标题的情况。 */
 const titleRequests = new Set<AbortController>()
@@ -282,7 +302,7 @@ const settleInterrupted = (session: Session): Session => {
     ...session,
     messages: session.messages.map((m) =>
       m.role === 'assistant' && (m.status === 'pending' || m.status === 'streaming')
-        ? settleReply(m, 'stopped', session.updatedAt)
+        ? settle(m, 'stopped', session.updatedAt)
         : m
     ),
   }
@@ -674,6 +694,69 @@ export const editMessage = (sessionId: string, messageId: string, content: strin
   return true
 }
 
+/**
+ * 改写一条已结束回复的正文或思维链：直接写回内容块，不新建分支，
+ * 之后每一轮请求都从这里取内容；首次改写时保存原始块快照，供「还原原文」使用。
+ */
+export const editReplyContent = (
+  sessionId: string,
+  messageId: string,
+  next: { thinking: string; text: string }
+): boolean => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return false
+  }
+  const session = getSession(sessionId)
+  const message = session?.messages.find((item) => item.id === messageId)
+  if (!session || !message || message.role !== 'assistant') {
+    return false
+  }
+  // 内容没有变化就当作保存成功，不写入快照，避免凭空产生「已编辑」状态。
+  if (next.thinking === getReplyThinking(message) && next.text === getReplyAnswerText(message)) {
+    return true
+  }
+  const at = Date.now()
+  const blocks = rewriteReplyBlocks(message.blocks, next)
+  updateSession(sessionId, (state) => ({
+    ...state,
+    updatedAt: at,
+    messages: state.messages.map((item) =>
+      item.id === messageId && item.role === 'assistant'
+        ? { ...item, blocks, edited: item.edited ?? { at, blocks: item.blocks } }
+        : item
+    ),
+  }))
+  persist(sessionId)
+  return true
+}
+
+/** 还原为模型原始回复：恢复到首次改写前保存的块快照 */
+export const revertReplyContent = (sessionId: string, messageId: string): boolean => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return false
+  }
+  const session = getSession(sessionId)
+  const message = session?.messages.find((item) => item.id === messageId)
+  if (!session || !message || message.role !== 'assistant') {
+    return false
+  }
+  const original = message.edited
+  if (!original) {
+    return false
+  }
+  updateSession(sessionId, (state) => ({
+    ...state,
+    updatedAt: Date.now(),
+    messages: state.messages.map((item) =>
+      item.id === messageId && item.role === 'assistant'
+        ? { ...item, blocks: original.blocks, edited: undefined }
+        : item
+    ),
+  }))
+  persist(sessionId)
+  return true
+}
+
 export const selectMessageVersion = (sessionId: string, messageId: string) => {
   if (get().importingHistory || deletingSessions.has(sessionId)) {
     return
@@ -697,11 +780,13 @@ export const continueReply = (sessionId: string, messageId: string) => {
   const path = getVisibleMessages(session)
   const question = path.at(-2)
   const previous = path.at(-1)
+  const { continueRefused, unrestricted } = useSettings.getState()
   if (
     question?.role !== 'user' ||
     previous?.role !== 'assistant' ||
     previous.id !== messageId ||
-    !canContinueReply(previous)
+    // 拒绝后继续生成：设置开关或越狱模式下允许续写被拒绝的回复。
+    !canContinueReply(previous, continueRefused || unrestricted)
   ) {
     return
   }
@@ -716,6 +801,8 @@ export const continueReply = (sessionId: string, messageId: string) => {
     stopReason: undefined,
     stopDetails: undefined,
     error: undefined,
+    // 续写会改变块结构，原始快照不再对得上，「还原原文」入口随之失效。
+    edited: undefined,
   }
   updateReply(sessionId, reply)
   updateSession(sessionId, (s) => ({ ...s, updatedAt: Date.now() }))
@@ -996,14 +1083,20 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           initial.thinking ?? false,
           latestReminder
         )
+        const { apiKey, maxTokens, skipSafetyCheck, temperature, topP, unrestricted } =
+          useSettings.getState()
         const events = streamMessage(
-          useSettings.getState().apiKey ?? '',
+          apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            system: SYSTEM_PROMPT,
+            // 组装流水线：Persona 恒定在前，解除限制模式再插入破限规则分块
+            system: composeSystemPrompt(unrestricted),
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            safety_check: SAFETY_CHECK,
+            temperature,
+            top_p: topP,
+            ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
+            safety_check: safetyCheck(unrestricted, skipSafetyCheck),
             tools: serverTools(initial.search ?? false),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },
@@ -1031,15 +1124,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             frame ||= requestAnimationFrame(flush)
           }
         }
-        reply = settleReply(reply, 'done', Date.now())
+        reply = settle(reply, 'done', Date.now())
         break
       } catch (error) {
         if (controller.signal.aborted) {
-          reply = settleReply(reply, 'stopped', Date.now())
+          reply = settle(reply, 'stopped', Date.now())
           break
         }
         if (preparing) {
-          reply = settleReply(reply, 'error', Date.now(), {
+          reply = settle(reply, 'error', Date.now(), {
             kind: 'upload',
             message: '',
             localMessage: describeUploadError(error),
@@ -1055,23 +1148,23 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         ) {
           await waitForRetry(attempt, controller.signal)
           if (controller.signal.aborted) {
-            reply = settleReply(reply, 'stopped', Date.now())
+            reply = settle(reply, 'stopped', Date.now())
             break
           }
           continue
         }
         if (error instanceof ApiError && error.kind === 'interrupted' && reply.stopReason) {
           // 已收到 message_delta 的结束原因，只是缺了结尾的 message_stop
-          reply = settleReply(reply, 'done', Date.now())
+          reply = settle(reply, 'done', Date.now())
         } else if (error instanceof ApiError) {
-          reply = settleReply(reply, 'error', Date.now(), {
+          reply = settle(reply, 'error', Date.now(), {
             kind: error.kind,
             message: error.message,
             status: error.status,
             localMessage: error.localMessage,
           })
         } else {
-          reply = settleReply(reply, 'error', Date.now(), {
+          reply = settle(reply, 'error', Date.now(), {
             kind: 'protocol',
             message: error instanceof Error ? error.message : String(error),
           })

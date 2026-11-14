@@ -4,9 +4,11 @@ import {
   IconDarkOutline16,
   IconDataOutline16,
   IconDownloadOutline16,
+  IconEditOutline16,
   IconFollowsystemOutline16,
   IconLightOutline16,
   IconSettingsOutline16,
+  IconThinkOutline16,
   IconUploadOutline14,
 } from '../base/icons.js'
 import {
@@ -20,18 +22,29 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  setContinueRefused,
+  setKeepReplyContent,
   setLocale,
   setLocation,
+  setMaxTokens,
+  setSkipSafetyCheck,
+  setTemperature,
   setThemePreference,
+  setTopP,
   setTtsVoice,
+  setUnrestricted,
   useSettings,
   type ThemePreference,
 } from '../../services/settings.js'
+import { composeSystemPrompt } from '../../services/chat/systemPrompt.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { Select } from '../base/Select.js'
+import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
+import { ParamControl } from './ParamControls.js'
+import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
 import styles from './Settings.module.css'
@@ -51,6 +64,8 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     label: 'settingDialogAsideGeneralOptionLabel',
     icon: <IconSettingsOutline16 />,
   },
+  { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
+  { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
 ]
 
@@ -101,6 +116,10 @@ const SettingsContent = () => {
               <TtsVoiceSetting />
               <LocationSetting />
             </>
+          ) : section === 'model' ? (
+            <ModelSettings />
+          ) : section === 'prompt' ? (
+            <UnrestrictedSetting />
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
@@ -311,6 +330,146 @@ const TtsVoiceSetting = () => {
         />
       }
     />
+  )
+}
+
+/**
+ * 模型参数与回复开关：采样温度、Top P、每次回复的输出上限，
+ * 以及防撤回、跳过安全审核、拒绝后继续生成。越狱模式下后两个强制执行。
+ */
+const ModelSettings = () => {
+  const t = useTranslate()
+  const temperature = useSettings((state) => state.temperature)
+  const topP = useSettings((state) => state.topP)
+  const maxTokens = useSettings((state) => state.maxTokens)
+  const keepReplyContent = useSettings((state) => state.keepReplyContent)
+  const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
+  const continueRefused = useSettings((state) => state.continueRefused)
+  // 越狱模式下两项限制强制执行，开关显示为已开启且不可单独关闭。
+  const unrestricted = useSettings((state) => state.unrestricted)
+  return (
+    <>
+      <SettingCell
+        label={t('settingsTemperature')}
+        description={t('settingsTemperatureDescription')}
+        status={null}
+        className={paramStyles.cell}
+        action={
+          <ParamControl
+            label={t('settingsTemperature')}
+            value={temperature}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={(value) => setTemperature(value ?? 1)}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsTopP')}
+        description={t('settingsTopPDescription')}
+        status={null}
+        className={paramStyles.cell}
+        action={
+          <ParamControl
+            label={t('settingsTopP')}
+            value={topP}
+            min={0.01}
+            max={1}
+            step={0.01}
+            onChange={(value) => setTopP(value ?? 1)}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsMaxTokens')}
+        description={t('settingsMaxTokensDescription')}
+        status={null}
+        className={paramStyles.cell}
+        action={
+          <ParamControl
+            label={t('settingsMaxTokens')}
+            value={maxTokens}
+            min={1}
+            max={65536}
+            step={1}
+            optional
+            onChange={setMaxTokens}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsKeepReply')}
+        description={t('settingsKeepReplyDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={keepReplyContent}
+            onChange={setKeepReplyContent}
+            label={t('settingsKeepReply')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsSkipSafetyCheck')}
+        description={t('settingsSkipSafetyCheckDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={skipSafetyCheck || unrestricted}
+            disabled={unrestricted}
+            onChange={setSkipSafetyCheck}
+            label={t('settingsSkipSafetyCheck')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsContinueRefused')}
+        description={t('settingsContinueRefusedDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={continueRefused || unrestricted}
+            disabled={unrestricted}
+            onChange={setContinueRefused}
+            label={t('settingsContinueRefused')}
+          />
+        }
+      />
+    </>
+  )
+}
+
+/**
+ * 系统提示词组装流水线：打开「解除限制模式」后，请求发出前把 Persona 与破限规则分块拼在一起，
+ * 同时跳过安全审核、允许继续生成被拒绝的回复；关闭时原样放行官方默认提示词。
+ * 下方可预览实际下发的全文。
+ */
+const UnrestrictedSetting = () => {
+  const t = useTranslate()
+  const unrestricted = useSettings((state) => state.unrestricted)
+  return (
+    <>
+      <SettingCell
+        label={t('settingsUnrestricted')}
+        description={t('settingsUnrestrictedDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={unrestricted}
+            onChange={setUnrestricted}
+            label={t('settingsUnrestricted')}
+          />
+        }
+      />
+      <div className={styles.pipeline}>
+        {t(unrestricted ? 'settingsPipelineUnrestricted' : 'settingsPipelineDefault')}
+      </div>
+      <details className={styles.promptPreview}>
+        <summary className={styles.promptPreviewSummary}>{t('settingsPromptPreview')}</summary>
+        <pre className={styles.promptPreviewBody}>{composeSystemPrompt(unrestricted)}</pre>
+      </details>
+    </>
   )
 }
 

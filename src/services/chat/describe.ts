@@ -1,5 +1,6 @@
 import { isTranslationKey, translate } from '../../i18n/index.js'
 import { classifyStatus } from '../api/errors.js'
+import { hasReplyContent } from './reply.js'
 import type { AssistantMessage } from './types.js'
 
 export type Notice = {
@@ -50,6 +51,10 @@ export const describeReply = (reply: AssistantMessage): Notice | null => {
     return { text: template }
   }
   if (reply.stopReason === 'refusal') {
+    // 防撤回保留了已下发内容时不再用模板替换正文，只提示本轮被撤回。
+    if (hasReplyContent(reply)) {
+      return { text: translate('replyRefusalKept') }
+    }
     // 导入的拒绝回复优先展示归档中的模板，普通正文仍不可展示。
     return { text: template || translate('replyRefused'), presentation: 'response' }
   }

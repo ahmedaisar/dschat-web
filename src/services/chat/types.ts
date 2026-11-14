@@ -92,6 +92,14 @@ export type AssistantMessage = MessageBranch & {
   stopDetails?: StopDetails
   /** 最近一次请求的用量，续写后更新 */
   usage?: MessageUsage
+  /**
+   * 本地改写记录：改后的正文与思维链直接写回 blocks，这里只保存首次改写前的原始块快照，
+   * 用于「还原原文」。续写会让快照与当前块对不上，因此续写时丢弃该记录。
+   */
+  edited?: {
+    at: number
+    blocks: ReplyBlock[]
+  }
   error?: {
     /** upload：发送前补传附件失败，请求没有发出 */
     kind: ApiErrorKind | 'upload'

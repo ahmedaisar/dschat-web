@@ -32,6 +32,13 @@ export const en = {
   copyFailed: 'Copy failed. Please long-press or select the text to copy.',
   send: 'Send',
   editMessage: 'Edit message',
+  editReply: 'Edit reply',
+  replyThinkingLabel: 'Chain of thought',
+  replyBodyLabel: 'Reply body',
+  replyRevert: 'Revert to original',
+  replyEditSaved: 'Saved. Every later turn uses the edited version.',
+  replyEditReverted: 'Reverted to the original reply.',
+  save: 'Save',
   regenerate: 'Regenerate',
   continueGenerating: 'Continue',
   changeApiKey: 'Change API Key',
@@ -76,6 +83,8 @@ export const en = {
   completionServerBusyToast: 'Server busy, please try again later.',
   unknownError: 'Unknown error',
   replyRefused: "Sorry, that's beyond my current scope. Let's talk about something else.",
+  replyRefusalKept:
+    'This reply was flagged by safety review; anti-retraction kept the streamed content.',
   messageThinkDuration: 'Thought for {count} second',
   messageThinkDurationPlural: 'Thought for {count} seconds',
   messageThinkStopped: 'Stopped',
@@ -98,7 +107,34 @@ export const en = {
   settingsLocationCity: 'Select city',
   settingsLocationRegion: 'Select country or region',
   settingDialogAsideGeneralOptionLabel: 'General',
+  settingDialogAsideModelOptionLabel: 'Model',
+  settingDialogAsidePromptOptionLabel: 'Prompt',
   settingDialogAsideDataOptionLabel: 'Data',
+  settingsTemperature: 'Temperature',
+  settingsTemperatureDescription:
+    'Sampling temperature from 0 to 2; higher is more random. The server always uses 1 in thinking mode.',
+  settingsTopP: 'Top P',
+  settingsTopPDescription:
+    'Nucleus sampling threshold from 0.01 to 1. Usually adjust only one of temperature and Top P.',
+  settingsMaxTokens: 'Max output tokens',
+  settingsMaxTokensDescription:
+    'Cap for each reply, including thinking. Leave empty to use the server default.',
+  settingsParamDefault: 'Default',
+  settingsKeepReply: 'Anti-retraction',
+  settingsKeepReplyDescription:
+    'Keep the streamed text and thinking when the model retracts a reply. Off discards them per protocol and shows the template answer instead.',
+  settingsSkipSafetyCheck: 'Skip safety check',
+  settingsSkipSafetyCheckDescription:
+    'Omits the safety_check field from requests (same as the default check level). Forced on in unrestricted mode.',
+  settingsContinueRefused: 'Continue refused replies',
+  settingsContinueRefusedDescription:
+    'Allows continuing a reply that safety review refused. Off hides the Continue button; forced on in unrestricted mode.',
+  settingsUnrestricted: 'Unrestricted mode',
+  settingsUnrestrictedDescription:
+    'Replaces the system prompt with the unrestricted prompt, skips the safety check, and allows continuing refused replies. Off passes the official default prompt through unchanged.',
+  settingsPipelineDefault: 'Pipeline: Persona → Model API',
+  settingsPipelineUnrestricted: 'Pipeline: Persona → Unrestricted block → Model API',
+  settingsPromptPreview: 'Preview the system prompt sent with the next request',
   avatarMenuSettingsDialogThemeItemLabel: 'Theme',
   avatarMenuSettingsDialogThemeSelectLightOption: 'Light',
   avatarMenuSettingsDialogThemeSelectDarkOption: 'Dark',

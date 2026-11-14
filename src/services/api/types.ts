@@ -177,8 +177,15 @@ export type CreateMessageRequest = {
   system: string
   messages: MessageParam[]
   thinking: { type: 'enabled' | 'disabled' }
+  /** 采样温度 0–2；思考模式下服务端固定按 1 处理 */
+  temperature?: number
+  /** 核采样阈值 0–1 */
+  top_p?: number
+  /** 本次回复的输出上限（含思考 token）；不传时由服务端决定 */
+  max_tokens?: number
   tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
-  safety_check: { level: 'high' }
+  /** 省略时不携带（等同 low 档默认检查）；high 开启基础风控，默认档下发 high */
+  safety_check?: { level: 'high' | 'low' }
   title?: { enabled: boolean }
 }
 

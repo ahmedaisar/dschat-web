@@ -1,21 +1,29 @@
 import { useTranslate } from '../../i18n/index.js'
+import { useSettings } from '../../services/settings.js'
 import clsx from 'clsx'
-import { memo } from 'react'
-import { IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
+import { memo, useState } from 'react'
+import { IconEditOutline16, IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
-import { canContinueReply } from '../../services/chat/reply.js'
-import { continueReply, regenerateReply } from '../../services/chat/store.js'
+import { canContinueReply, getReplyThinking, hasReplyContent } from '../../services/chat/reply.js'
+import {
+  continueReply,
+  editReplyContent,
+  regenerateReply,
+  revertReplyContent,
+} from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
+import { showToast } from '../base/toastState.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
 import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
+import { ReplyEditor } from './ReplyEditor.js'
 import { useReplyView } from './useReplyView.js'
 import {
   BranchSwitcher,
@@ -44,11 +52,14 @@ export const AssistantMessage = memo(function AssistantMessage({
   onSelectVersion: SelectMessageVersion
 }) {
   const t = useTranslate()
+  const [editing, setEditing] = useState(false)
+  // 拒绝后继续生成：设置开关或越狱模式下允许续写被拒绝的回复。
+  const allowRefused = useSettings((state) => state.continueRefused || state.unrestricted)
   const view = useReplyView(message, streaming)
   const panelEntry = useSearchPanel((state) => state.entry)
   const notice = streaming ? null : describeReply(message)
-  // 安全拒绝：已下发的思考与正文按协议丢弃，只显示模板答复。
-  const refused = message.stopReason === 'refusal'
+  // 安全拒绝：默认已下发内容按协议丢弃，只显示模板答复；防撤回保留了内容时按正常回复展示。
+  const refused = message.stopReason === 'refusal' && !hasReplyContent(message)
   const answer = refused ? null : view.answer
   const responseText = [answer?.text, notice?.presentation === 'response' ? notice.text : null]
     .filter(Boolean)
@@ -56,6 +67,37 @@ export const AssistantMessage = memo(function AssistantMessage({
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
+  // 失败、拒绝与模板提示没有可改写的模型正文；生成中不允许改写。
+  const editable =
+    !streaming && !refused && message.status !== 'error' && notice?.presentation !== 'response'
+  if (editing) {
+    return (
+      <div className={styles.message}>
+        <ReplyEditor
+          hasThinking={message.blocks.some(
+            (block) => block.type === 'thinking' && block.thinking.trim() !== ''
+          )}
+          canRevert={Boolean(message.edited)}
+          busy={busy}
+          initialThinking={getReplyThinking(message)}
+          initialText={view.answer?.text ?? ''}
+          onCancel={() => setEditing(false)}
+          onSave={(draft) => {
+            if (editReplyContent(sessionId, message.id, draft)) {
+              setEditing(false)
+              showToast({ key: 'replyEditSaved' })
+            }
+          }}
+          onRevert={() => {
+            if (revertReplyContent(sessionId, message.id)) {
+              setEditing(false)
+              showToast({ key: 'replyEditReverted' })
+            }
+          }}
+        />
+      </div>
+    )
+  }
   return (
     <div className={styles.message}>
       {refused ? null : (
@@ -146,6 +188,15 @@ export const AssistantMessage = memo(function AssistantMessage({
             {responseText && !refused ? (
               <ReadAloudButton messageId={message.id} text={responseText} />
             ) : null}
+            {editable ? (
+              <IconButton
+                icon={<IconEditOutline16 />}
+                tooltip={t('editReply')}
+                tooltipPlacement="bottom"
+                disabled={busy}
+                onClick={() => setEditing(true)}
+              />
+            ) : null}
             <IconButton
               icon={<IconRefreshOutline16 />}
               tooltip={t('regenerate')}
@@ -157,7 +208,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               }}
             />
           </div>
-          {isLast && canContinueReply(message) ? (
+          {isLast && canContinueReply(message, allowRefused) ? (
             <Button
               variant="outlined"
               size="s"

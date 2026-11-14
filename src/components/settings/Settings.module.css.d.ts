@@ -33,6 +33,10 @@ declare const styles: {
   readonly "importConfirmText": string;
   readonly "deleteConfirm": string;
   readonly "deleteActions": string;
+  readonly "pipeline": string;
+  readonly "promptPreview": string;
+  readonly "promptPreviewSummary": string;
+  readonly "promptPreviewBody": string;
 };
 export = styles;
 
