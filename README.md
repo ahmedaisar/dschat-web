@@ -118,7 +118,7 @@ Persona block (official identity sentence)
 request body `system` field
 ```
 
-- The unrestricted rules come from [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md) in the repository root. At build time rspack inlines it verbatim with `asset/source`, so the built app does not depend on the file.
+- The unrestricted rules come from [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>) in the repository root. At build time rspack inlines it verbatim with `asset/source`, so the built app does not depend on the file.
 - Two normalisations run during assembly: the leftover sample-answer scaffold at the end of the document is trimmed, and `{{PAYLOAD}}` is replaced with "the request in the latest user message".
 - The settings page can expand and preview **the exact system prompt that will be sent**.
 - Turning it on forces two things: the `safety_check` field is not sent, and refused replies can be continued (the two switches below show as on and disabled).
@@ -197,7 +197,7 @@ All other continuation rules are unchanged: template notices, server tool blocks
 | Reply editor | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css` (new) |
 | Translations | `src/i18n/zh.ts`, `src/i18n/en.ts` |
 
-> `deepseek-unrestricted-v3.md` is a build dependency. Commit it together with the code, otherwise a fresh clone will fail to build.
+> `deepseekv4.1 and v4.1-1017.md` is a build dependency. Commit it together with the code, otherwise a fresh clone will fail to build.
 
 ### 3.9 Jailbreak lab (optional, requires the local MCP backend)
 
@@ -306,7 +306,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx) | Switch component |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx) | Reply editor (thinking / body) |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch |
-| [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md) | Unrestricted rules text, inlined at build time |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>) | Unrestricted rules text, inlined at build time |
 | [`mcp-server/`](mcp-server/README.md) | Local EasyJailbreak MCP backend |
 | [`src/components/lab/`](src/components/lab/LabView.tsx) | Jailbreak lab page |
 | [`src/services/lab/`](src/services/lab/mcpClient.ts) | MCP client and lab state |

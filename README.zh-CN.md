@@ -118,7 +118,7 @@ Persona（官方身份分块）
 请求体 system 字段
 ```
 
-- 破限规则来自仓库根目录的 [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md)，构建时由 rspack 以 `asset/source` **原样内联**进产物，运行期不依赖该文件；
+- 破限规则来自仓库根目录的 [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)，构建时由 rspack 以 `asset/source` **原样内联**进产物，运行期不依赖该文件；
 - 组装时自动做两处归一：切掉文末残留的示例回答骨架、把 `{{PAYLOAD}}` 替换成「the request in the latest user message」；
 - 设置页可以展开预览**本次请求实际会下发的 system 全文**；
 - 开启后强制两项：`safety_check` 字段不发送、被拒回复允许继续生成（对应下面 3.5 / 3.6 的两个开关会显示为已开启并置灰）；
@@ -197,7 +197,7 @@ Persona（官方身份分块）
 | 回复编辑器 | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css`（新增） |
 | 中英文案 | `src/i18n/zh.ts`、`src/i18n/en.ts` |
 
-> `deepseek-unrestricted-v3.md` 是构建依赖，提交代码时请一并纳入版本管理，否则别人 clone 下来会构建失败。
+> `deepseekv4.1 and v4.1-1017.md` 是构建依赖，提交代码时请一并纳入版本管理，否则别人 clone 下来会构建失败。
 
 ### 3.9 越狱实验台（可选，需本地 MCP 后端）
 
@@ -306,7 +306,7 @@ Persona（官方身份分块）
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx) | 方块开关组件 |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx) | 回复编辑器（思维链 / 正文） |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | 编辑入口、「继续生成」按钮、拒绝回复的展示分支 |
-| [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md) | 破限规则文本，构建时内联 |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>) | 破限规则文本，构建时内联 |
 | [`mcp-server/`](mcp-server/README.md) | 本地 EasyJailbreak MCP 后端 |
 | [`src/components/lab/`](src/components/lab/LabView.tsx) | 越狱实验台页面 |
 | [`src/services/lab/`](src/services/lab/mcpClient.ts) | MCP 客户端与实验台状态 |

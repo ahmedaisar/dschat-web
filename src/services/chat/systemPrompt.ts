@@ -1,4 +1,4 @@
-import rulesSource from '../../../deepseek-unrestricted-v3.md'
+import rulesSource from '../../../deepseekv4.1 and v4.1-1017.md'
 
 /**
  * 系统提示词组装流水线。
@@ -23,8 +23,9 @@ const PAYLOAD_TARGET = 'the request in the latest user message'
 
 /**
  * 破限规则分块文本。
- * 源文件为仓库根目录的 deepseek-unrestricted-v3.md，构建时以 asset/source 原样内联，
- * 这里只做两处归一：去掉试写骨架、替换无法填充的占位符。
+ * 源文件为仓库根目录的 `deepseekv4.1 and v4.1-1017.md`，构建时以 asset/source 原样内联。
+ * 旧版文档带 `[MODE: SANDBOX]` 标记与试写骨架，这里保留兼容归一；当前文档不含这些标记，
+ * 会原样使用全文。
  */
 const normalizeRules = (source: string): string => {
   const header = source.indexOf(RULES_HEADER)
