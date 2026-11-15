@@ -209,6 +209,7 @@ export const zh = {
   retry: '重试',
   labEntry: '实验台',
   labBack: '返回聊天',
+  labRenderError: '实验台渲染出错，可以返回聊天后重试',
   labTitle: '越狱实验台',
   labSubtitle: '连接本地 EasyJailbreak MCP 后端',
   labEndpoint: 'MCP 地址',

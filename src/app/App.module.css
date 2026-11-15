@@ -60,3 +60,32 @@
     height: var(--app-viewport-height, 100dvh);
   }
 }
+
+/* 实验台渲染错误兜底 */
+.labFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  padding: 32px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.labFallbackDetail {
+  max-width: 720px;
+  max-height: 200px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: var(--dsw-alias-markdown-code-block);
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-wrap;
+  overflow: auto;
+}

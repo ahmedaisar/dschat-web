@@ -222,6 +222,7 @@ export const en = {
   retry: 'Retry',
   labEntry: 'Lab',
   labBack: 'Back to chat',
+  labRenderError: 'The lab failed to render. Go back to chat and try again.',
   labTitle: 'Jailbreak lab',
   labSubtitle: 'Connect to the local EasyJailbreak MCP backend',
   labEndpoint: 'MCP endpoint',

@@ -19,6 +19,9 @@ type MethodInfo = {
 
 type DatasetInfo = { id: string; name: string; size: number }
 
+const asText = (value: unknown): string =>
+  typeof value === 'string' ? value : JSON.stringify(value ?? '')
+
 type JobResult = {
   query: string
   prompt: string
@@ -359,34 +362,39 @@ export const LabView = () => {
               </div>
               {job.error ? <div className={styles.error}>{job.error}</div> : null}
               <div className={styles.list}>
-                {job.results.map((item, index) => (
-                  <details
-                    className={styles.result}
-                    key={`${item.query}-${index}`}
-                    open={index === 0}
-                  >
-                    <summary className={styles.resultSummary}>
-                      <span className={clsx(styles.badge, item.jailbroken && styles.badgeOk)}>
-                        {item.jailbroken ? t('labJailbroken') : t('labRejected')}
-                      </span>
-                      <span className={styles.resultQuery}>{item.query}</span>
-                    </summary>
-                    <div className={styles.resultBody}>
-                      <div className={styles.resultBlock}>
-                        <div className={styles.resultLabel}>{t('labPrompt')}</div>
-                        <pre className={styles.pre}>{item.prompt}</pre>
+                {job.results.map((item, index) => {
+                  const queryText = asText(item.query)
+                  return (
+                    <details
+                      className={styles.result}
+                      key={`${queryText}-${index}`}
+                      open={index === 0}
+                    >
+                      <summary className={styles.resultSummary}>
+                        <span className={clsx(styles.badge, item.jailbroken && styles.badgeOk)}>
+                          {item.jailbroken ? t('labJailbroken') : t('labRejected')}
+                        </span>
+                        <span className={styles.resultQuery}>{queryText}</span>
+                      </summary>
+                      <div className={styles.resultBody}>
+                        <div className={styles.resultBlock}>
+                          <div className={styles.resultLabel}>{t('labPrompt')}</div>
+                          <pre className={styles.pre}>{asText(item.prompt)}</pre>
+                        </div>
+                        <div className={styles.resultBlock}>
+                          <div className={styles.resultLabel}>{t('labResponse')}</div>
+                          <pre className={styles.pre}>
+                            {item.responses.map(asText).join('\n---\n')}
+                          </pre>
+                        </div>
+                        <div className={styles.resultBlock}>
+                          <div className={styles.resultLabel}>{t('labJudge')}</div>
+                          <pre className={styles.pre}>{JSON.stringify(item.eval)}</pre>
+                        </div>
                       </div>
-                      <div className={styles.resultBlock}>
-                        <div className={styles.resultLabel}>{t('labResponse')}</div>
-                        <pre className={styles.pre}>{item.responses.join('\n---\n')}</pre>
-                      </div>
-                      <div className={styles.resultBlock}>
-                        <div className={styles.resultLabel}>{t('labJudge')}</div>
-                        <pre className={styles.pre}>{JSON.stringify(item.eval)}</pre>
-                      </div>
-                    </div>
-                  </details>
-                ))}
+                    </details>
+                  )
+                })}
                 {job.results.length === 0 ? (
                   <div className={styles.empty}>{t('labNoResults')}</div>
                 ) : null}

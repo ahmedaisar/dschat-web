@@ -340,18 +340,25 @@ def _serialize_instance(instance: Any) -> dict:
     eval_results = list(getattr(instance, 'eval_results', []) or [])
     responses = list(getattr(instance, 'target_responses', []) or [])
     success = _is_jailbroken(eval_results)
-    prompt = getattr(instance, 'jailbreak_prompt', '')
-    if not isinstance(prompt, str):
-        # PAIR 在 OpenaiModel 分支里会把 prompt 存成消息列表；转成可读文本再返回前端
+    def as_text(value: Any) -> str:
+        if isinstance(value, str):
+            return value
         try:
-            prompt = json.dumps(prompt, ensure_ascii=False, indent=2)
+            return json.dumps(value, ensure_ascii=False, indent=2)
         except (TypeError, ValueError):
-            prompt = str(prompt)
+            return str(value)
+
+    # CodeChameleon 会把 query 换成二叉树结构（dict），PAIR 会把 prompt 存成消息列表；
+    # 统一转成文本，前端只渲染字符串。
+    prompt = as_text(getattr(instance, 'jailbreak_prompt', ''))
+    query = as_text(getattr(instance, 'query', '') or '')
+    responses = [as_text(item) for item in responses]
+    eval_results_text = [as_text(item) for item in eval_results]
     return {
-        'query': getattr(instance, 'query', '') or '',
+        'query': query,
         'prompt': prompt,
         'responses': responses,
-        'eval': eval_results,
+        'eval': eval_results_text,
         'jailbroken': success,
     }
 
