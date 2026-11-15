@@ -388,6 +388,6 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 ## 11. License and credits
 
 - Code based on [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo), under the [MIT](LICENSE) license. The build copies the license to `dist/LICENSE`; keep it when redistributing.
-- `brand.jpg` is artwork provided by the repository author and remains theirs; "Yes, Sun Xiaochuan Chat" is an inside joke and is not affiliated with DeepSeek or with Sun Xiaochuan.
+- `brand.jpg` is artwork provided by the repository author and remains theirs; "Yes, Sun Xiaochuan Chat" is an inside joke and is not affiliated with DeepSeek.
 - This is a personal fork, not an official DeepSeek project. Check the terms and costs of whichever API service you point it at.
 - Thanks to the [EasyJailbreak project](https://github.com/EasyJailbreak/EasyJailbreak) for the theoretical foundation.
