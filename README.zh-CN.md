@@ -341,6 +341,17 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 6. **改写只作用于本地上下文**：不重新请求模型，也不会改变服务端已有的输出；导出的归档里保存的是改写后的内容，原始快照不写入归档。
 7. **附件限制、密钥校验、语音接口**仍走原版逻辑，与本文档的开关无关。
 8. **自定义提示词会覆盖自动组装**：填写后越狱模式不再替换 `system`，但仍会跳过安全审核、放开被拒续写；清空输入框即可回到默认流水线。
+---
+
+## Star 历史
+
+<a href="https://www.star-history.com/?repos=xiaohuangbo%2Fchat-demo-unrestricted&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiaohuangbo/chat-demo-unrestricted&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiaohuangbo/chat-demo-unrestricted&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiaohuangbo/chat-demo-unrestricted&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ---
 
