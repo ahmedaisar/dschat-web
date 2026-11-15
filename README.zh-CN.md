@@ -14,7 +14,9 @@
 > API Key 与对话记录仍只保存在你自己的浏览器里。
 >
 > 🔗在线版：<https://chat-unrestricted.fur0.com/>
+> 
 > 📦仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
+> 
 > 🎥介绍视频：<https://www.bilibili.com/video/BV1p5sL6LEfd/>
 ---
 
