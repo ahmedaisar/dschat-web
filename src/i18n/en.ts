@@ -221,6 +221,7 @@ export const en = {
   ttsFailed: 'Failed to read aloud. Please try again later.',
   retry: 'Retry',
   labEntry: 'Lab',
+  labBack: 'Back to chat',
   labTitle: 'Jailbreak lab',
   labSubtitle: 'Connect to the local EasyJailbreak MCP backend',
   labEndpoint: 'MCP endpoint',

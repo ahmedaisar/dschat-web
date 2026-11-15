@@ -148,6 +148,10 @@
   }
 }
 
+.settingsActive {
+  background-color: var(--dsw-specific-sidebar-nav-item-hover);
+}
+
 .settingsIcon {
   display: flex;
   align-items: center;

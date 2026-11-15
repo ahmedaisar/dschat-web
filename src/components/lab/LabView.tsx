@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { useTranslate } from '../../i18n/index.js'
 import { useSettings } from '../../services/settings.js'
 import { McpClient } from '../../services/lab/mcpClient.js'
-import { setLabEndpoint, useLab } from '../../services/lab/labStore.js'
+import { closeLab, setLabEndpoint, useLab } from '../../services/lab/labStore.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
 import styles from './LabView.module.css'
@@ -190,6 +190,9 @@ export const LabView = () => {
           <div className={styles.subtitle}>{t('labSubtitle')}</div>
         </div>
         <div className={styles.connection}>
+          <Button variant="outlined" size="s" onClick={closeLab}>
+            {t('labBack')}
+          </Button>
           <input
             className={styles.endpoint}
             value={draftEndpoint}

@@ -208,6 +208,7 @@ export const zh = {
   ttsFailed: '朗读失败，请稍后再试',
   retry: '重试',
   labEntry: '实验台',
+  labBack: '返回聊天',
   labTitle: '越狱实验台',
   labSubtitle: '连接本地 EasyJailbreak MCP 后端',
   labEndpoint: 'MCP 地址',

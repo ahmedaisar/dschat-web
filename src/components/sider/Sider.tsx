@@ -16,7 +16,7 @@ import { IconButton } from '../base/IconButton.js'
 import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
-import { openLab } from '../../services/lab/labStore.js'
+import { closeLab, openLab, useLab } from '../../services/lab/labStore.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
@@ -25,6 +25,7 @@ import styles from './Sider.module.css'
 export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const t = useTranslate()
   const sessions = useChatStore((state) => state.sessions)
+  const labOpen = useLab((state) => state.open)
   const activeId = useChatStore((state) => state.activeId)
   const [now, setNow] = useState(Date.now)
   const groups = useMemo(() => groupSessions(sessions, now, t), [sessions, now, t])
@@ -71,6 +72,7 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         type="button"
         className={styles.newChat}
         onClick={() => {
+          closeLab()
           newChat()
           closeMobileSider()
         }}
@@ -98,7 +100,11 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         </div>
       </div>
       <div className={styles.bottom}>
-        <button type="button" className={styles.settings} onClick={() => openLab()}>
+        <button
+          type="button"
+          className={clsx(styles.settings, labOpen && styles.settingsActive)}
+          onClick={() => (labOpen ? closeLab() : openLab())}
+        >
           <span className={styles.settingsIcon}>
             <IconThinkOutline16 />
           </span>
