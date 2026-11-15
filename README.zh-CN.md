@@ -387,6 +387,6 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 ## 11. 许可与致谢
 
 - 代码基于 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo)，遵循 [MIT](LICENSE) 许可；构建会把许可证复制到 `dist/LICENSE`，分发时请一并保留。
-- 头图 `brand.jpg` 为仓库作者提供的素材，版权归其作者；「是，孙笑川聊天」只是项目玩笑，与 DeepSeek 官方、孙笑川本人均无关联。
+- 头图 `brand.jpg` 为仓库作者提供的素材，版权归其作者；「是，孙笑川聊天」只是项目玩笑，与 DeepSeek 官方无关联。
 - 本仓库是个人修改版，不是 DeepSeek 官方项目；使用前请自行确认所用 API 服务的规则与费用。
 - 感谢[EasyJailbreak项目](https://github.com/EasyJailbreak/EasyJailbreak)的理论支持
