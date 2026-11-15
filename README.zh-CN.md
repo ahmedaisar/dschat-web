@@ -13,8 +13,9 @@
 > 所有改动都在浏览器里完成：请求体怎么拼、回复怎么存、界面怎么显示。没有后端、没有代理、没有中转服务，
 > API Key 与对话记录仍只保存在你自己的浏览器里。
 >
-> 在线版：<https://chat-unrestricted.fur0.com/>　仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
-
+> 🔗在线版：<https://chat-unrestricted.fur0.com/>
+> 📦仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
+> 🎥介绍视频：<https://www.bilibili.com/video/BV1p5sL6LEfd/>
 ---
 
 ## 目录
