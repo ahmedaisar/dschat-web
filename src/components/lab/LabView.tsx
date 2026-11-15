@@ -4,6 +4,8 @@ import { useTranslate } from '../../i18n/index.js'
 import { useSettings } from '../../services/settings.js'
 import { McpClient } from '../../services/lab/mcpClient.js'
 import { closeLab, setLabEndpoint, useLab } from '../../services/lab/labStore.js'
+import { importPromptToChat } from '../../services/lab/importToChat.js'
+import { showToast } from '../base/toastState.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
 import styles from './LabView.module.css'
@@ -178,6 +180,67 @@ export const LabView = () => {
     }
   }
 
+  /** 把当前实验结果下载成 JSON。 */
+  const exportResults = () => {
+    if (!job) {
+      return
+    }
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      method: methodId,
+      job,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `jailbreak-lab-${methodId || 'result'}-${Date.now()}.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
+  /** 导入一份之前导出的结果文件（只展示，不重新跑）。 */
+  const importResults = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
+      const raw = (parsed.job ?? parsed) as Record<string, unknown>
+      const rawResults = Array.isArray(raw.results) ? raw.results : null
+      if (!rawResults) {
+        throw new Error('missing results')
+      }
+      const calls = (raw.calls ?? {}) as Record<string, unknown>
+      const results = rawResults.map((item) => {
+        const record = (item ?? {}) as Record<string, unknown>
+        return {
+          query: asText(record.query),
+          prompt: asText(record.prompt),
+          responses: Array.isArray(record.responses) ? record.responses.map(asText) : [],
+          eval: Array.isArray(record.eval) ? record.eval : [],
+          jailbroken: record.jailbroken === true,
+        }
+      })
+      setJob({
+        id: String(raw.id ?? 'imported'),
+        status: String(raw.status ?? 'done'),
+        total: Number(raw.total ?? results.length),
+        done: Number(raw.done ?? results.length),
+        calls: {
+          attack: Number(calls.attack ?? 0),
+          target: Number(calls.target ?? 0),
+          eval: Number(calls.eval ?? 0),
+        },
+        asr: Number(raw.asr ?? 0),
+        error: typeof raw.error === 'string' ? raw.error : null,
+        results,
+      })
+      setError(null)
+      showToast({ key: 'labImportedResults' })
+    } catch {
+      setError(t('labImportFailed'))
+    }
+  }
+
   const cancel = async () => {
     const client = clientRef.current
     if (client && jobId) {
@@ -196,6 +259,29 @@ export const LabView = () => {
           <Button variant="outlined" size="s" onClick={closeLab}>
             {t('labBack')}
           </Button>
+          <Button variant="outlined" size="s" disabled={!job} onClick={exportResults}>
+            {t('labExport')}
+          </Button>
+          <Button
+            variant="outlined"
+            size="s"
+            onClick={() => document.getElementById('lab-import-input')?.click()}
+          >
+            {t('labImport')}
+          </Button>
+          <input
+            id="lab-import-input"
+            className={styles.hiddenInput}
+            type="file"
+            accept=".json,application/json"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file) {
+                void importResults(file)
+              }
+            }}
+          />
           <input
             className={styles.endpoint}
             value={draftEndpoint}
@@ -377,6 +463,16 @@ export const LabView = () => {
                         <span className={styles.resultQuery}>{queryText}</span>
                       </summary>
                       <div className={styles.resultBody}>
+                        {item.jailbroken ? (
+                          <div className={styles.resultActions}>
+                            <Button
+                              size="s"
+                              onClick={() => importPromptToChat(asText(item.prompt))}
+                            >
+                              {t('labImportChat')}
+                            </Button>
+                          </div>
+                        ) : null}
                         <div className={styles.resultBlock}>
                           <div className={styles.resultLabel}>{t('labPrompt')}</div>
                           <pre className={styles.pre}>{asText(item.prompt)}</pre>

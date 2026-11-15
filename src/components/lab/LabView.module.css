@@ -277,3 +277,13 @@
     overflow-y: auto;
   }
 }
+
+.hiddenInput {
+  display: none;
+}
+
+.resultActions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
