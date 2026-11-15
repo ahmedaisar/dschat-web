@@ -2,7 +2,7 @@
   <img src="./brand.jpg" alt="chat-demo-unrestricted — 是，孙笑川聊天" width="760">
 </p>
 
-<h1 align="center">chat-demo-unrestricted</h1>
+<h1 align="center">deepseek unrestricted</h1>
 
 <p align="center">
   是，孙笑川聊天 —— 基于 DeepSeek API 的静态聊天前端，带解除限制模式、回复改写与参数直调<br>
@@ -46,7 +46,8 @@
 - **模型参数直调**：温度、Top P、最大输出 Token；
 - **防撤回**：模型撤回已输出内容时，保留已经流式发出的正文与思维链；
 - **回复改写**：每条 AI 回复都能改正文或思维链，之后的每一轮都使用改过的版本；
-- **自定义系统提示词**：在设置里直接改写 `system` 字段，覆盖自动组装的结果。
+- **自定义系统提示词**：在设置里直接改写 `system` 字段，覆盖自动组装的结果；
+- **越狱实验台**：通过本地 MCP 后端跑 EasyJailbreak 的攻击器（PAIR、TAP、GPTFuzzer、ReNeLLM、ICA、DeepInception、Jailbroken、Cipher、CodeChameleon、Multilingual），逐条查看最终提示词、目标回复与判分。
 
 所有开关都只影响**这台浏览器发出的请求与本地保存的对话**，不会改变 API 服务端的行为。
 
@@ -195,6 +196,18 @@ Persona（官方身份分块）
 
 > `deepseek-unrestricted-v3.md` 是构建依赖，提交代码时请一并纳入版本管理，否则别人 clone 下来会构建失败。
 
+### 3.9 越狱实验台（可选，需本地 MCP 后端）
+
+侧边栏底部新增「实验台」：通过 MCP 连接本地 `mcp-server/`，把 EasyJailbreak 的攻击器搬进浏览器界面。
+
+- 后端：`mcp-server/`（Python，MCP Streamable HTTP，默认 `http://127.0.0.1:8765/mcp`），启动 `./mcp-server/run.sh`；
+- 前端：`src/services/lab/`（MCP 客户端）+ `src/components/lab/`（实验台页面），只负责调度与展示；
+- 支持自定义测试语句、数据集条数、方法参数 JSON，以及 target / attack / eval 三通道模型配置（默认复用设置里的 API Key）；
+- 逐条展示最终提示词、目标回复、判分结果与 ASR，可取消任务、导出结果；
+- 可用方法：PAIR、TAP、GPTFuzzer、ReNeLLM、ICA、DeepInception、Jailbroken、Cipher、CodeChameleon、Multilingual（已用本地假模型冒烟通过；TAP 与 GPTFuzzer 的实际效果取决于评估模型能否返回可解析判分）；MJP 待适配；GCG / AutoDAN 依赖本地白盒模型，纯 API 环境不支持。详见 [`mcp-server/README.md`](mcp-server/README.md)；
+- 数据集：安装 `datasets` 后可在线加载 AdvBench（520 条）/ HarmBench / StrongREJECT，默认走 `hf-mirror.com` 镜像，可用环境变量 `HF_ENDPOINT` 覆盖；未安装时回退到内置测试语句；
+- 起步三步：`pip install datasets`（可选）→ `./mcp-server/run.sh` → `pnpm dev`，然后在侧栏「实验台」里连接并运行。
+
 ---
 
 ## 4. 行为对照表
@@ -290,6 +303,9 @@ Persona（官方身份分块）
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx) | 回复编辑器（思维链 / 正文） |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | 编辑入口、「继续生成」按钮、拒绝回复的展示分支 |
 | [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md) | 破限规则文本，构建时内联 |
+| [`mcp-server/`](mcp-server/README.md) | 本地 EasyJailbreak MCP 后端 |
+| [`src/components/lab/`](src/components/lab/LabView.tsx) | 越狱实验台页面 |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts) | MCP 客户端与实验台状态 |
 
 ---
 
@@ -343,6 +359,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 5. **`max_tokens` 含思考 token**：设置过小可能连思考一起截断。
 6. **改写只作用于本地上下文**：不重新请求模型，也不会改变服务端已有的输出；导出的归档里保存的是改写后的内容，原始快照不写入归档。
 7. **附件限制、密钥校验、语音接口**仍走原版逻辑，与本文档的开关无关。
+8. **越狱实验台不是纯静态能力**：需要本地 Python + MCP 后端（`mcp-server/`），且一次任务会发起大量模型调用，请先用 `limit=1` 和小迭代次数试跑。
 8. **自定义提示词会覆盖自动组装**：填写后越狱模式不再替换 `system`，但仍会跳过安全审核、放开被拒续写；清空输入框即可回到默认流水线。
 ---
 

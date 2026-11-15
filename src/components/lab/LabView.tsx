@@ -1,0 +1,399 @@
+import { useEffect, useRef, useState } from 'react'
+import clsx from 'clsx'
+import { useTranslate } from '../../i18n/index.js'
+import { useSettings } from '../../services/settings.js'
+import { McpClient } from '../../services/lab/mcpClient.js'
+import { setLabEndpoint, useLab } from '../../services/lab/labStore.js'
+import { Button } from '../base/Button.js'
+import { Select } from '../base/Select.js'
+import styles from './LabView.module.css'
+
+type MethodInfo = {
+  id: string
+  name: string
+  kind: string
+  needs: string[]
+  defaults: Record<string, unknown>
+  notes?: string
+}
+
+type DatasetInfo = { id: string; name: string; size: number }
+
+type JobResult = {
+  query: string
+  prompt: string
+  responses: string[]
+  eval: unknown[]
+  jailbroken: boolean
+}
+
+type JobState = {
+  id: string
+  status: string
+  total: number
+  done: number
+  calls: { attack: number; target: number; eval: number }
+  asr: number
+  error?: string | null
+  results: JobResult[]
+}
+
+/** 越狱实验台：连接本地 easyjailbreak-mcp 后端，跑 EasyJailbreak 的攻击器并展示逐条结果。 */
+export const LabView = () => {
+  const t = useTranslate()
+  const endpoint = useLab((state) => state.endpoint)
+  const apiKey = useSettings((state) => state.apiKey) ?? ''
+
+  const [draftEndpoint, setDraftEndpoint] = useState(endpoint)
+  const clientRef = useRef<McpClient | null>(null)
+  const [connected, setConnected] = useState(false)
+  const [connecting, setConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [methods, setMethods] = useState<MethodInfo[]>([])
+  const [datasets, setDatasets] = useState<DatasetInfo[]>([])
+  const [methodId, setMethodId] = useState('')
+  const [datasetId, setDatasetId] = useState('advbench')
+  const [limit, setLimit] = useState(3)
+  const [queries, setQueries] = useState('')
+  const [params, setParams] = useState('{}')
+  const [baseUrl, setBaseUrl] = useState('https://api.deepseek.com/v1')
+  const [model, setModel] = useState('deepseek-chat')
+  const [job, setJob] = useState<JobState | null>(null)
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+      }
+    },
+    []
+  )
+
+  const connect = async () => {
+    setConnecting(true)
+    setError(null)
+    try {
+      setLabEndpoint(draftEndpoint)
+      const client = new McpClient(draftEndpoint)
+      await client.connect()
+      const health = await client.callTool<{ ok: boolean; error?: string | null }>('health')
+      if (!health.ok) {
+        throw new Error(health.error || t('labBackendUnavailable'))
+      }
+      const [methodList, datasetList] = await Promise.all([
+        client.callTool<{ methods: MethodInfo[] }>('list_methods'),
+        client.callTool<{ datasets: DatasetInfo[] }>('list_datasets'),
+      ])
+      clientRef.current = client
+      setMethods(methodList.methods.filter((item) => item.kind !== 'white-box'))
+      setDatasets(datasetList.datasets)
+      setConnected(true)
+      const first = methodList.methods.find((item) => item.kind !== 'white-box')
+      if (first) {
+        setMethodId(first.id)
+        setParams(JSON.stringify(first.defaults, null, 2))
+      }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure))
+      setConnected(false)
+      clientRef.current = null
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const disconnect = () => {
+    clientRef.current = null
+    setConnected(false)
+    setJobId(null)
+    setRunning(false)
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  const selectMethod = (nextId: string) => {
+    setMethodId(nextId)
+    const method = methods.find((item) => item.id === nextId)
+    setParams(JSON.stringify(method?.defaults ?? {}, null, 2))
+  }
+
+  const run = async () => {
+    const client = clientRef.current
+    if (!client || !methodId) {
+      return
+    }
+    setError(null)
+    setJob(null)
+    setRunning(true)
+    try {
+      const methodParams = JSON.parse(params || '{}') as Record<string, unknown>
+      const queryList = queries
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+      const payload = {
+        method: methodId,
+        queries: queryList,
+        dataset: queryList.length > 0 ? 'custom' : datasetId,
+        limit: queryList.length > 0 ? queryList.length : limit,
+        models: {
+          target: { baseUrl, model, apiKey },
+          attack: { baseUrl, model, apiKey },
+          eval: { baseUrl, model, apiKey },
+        },
+        method_params: methodParams,
+      }
+      const started = await client.callTool<{ jobId: string }>('start_attack', payload)
+      setJobId(started.jobId)
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+      }
+      pollRef.current = setInterval(async () => {
+        try {
+          const next = await client.callTool<JobState>('get_job', { job_id: started.jobId })
+          setJob(next)
+          if (['done', 'error', 'cancelled'].includes(next.status)) {
+            setRunning(false)
+            setJobId(null)
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+              pollRef.current = null
+            }
+          }
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : String(failure))
+        }
+      }, 1200)
+    } catch (failure) {
+      setRunning(false)
+      setError(failure instanceof Error ? failure.message : String(failure))
+    }
+  }
+
+  const cancel = async () => {
+    const client = clientRef.current
+    if (client && jobId) {
+      await client.callTool('cancel_job', { job_id: jobId }).catch(() => undefined)
+    }
+  }
+
+  return (
+    <div className={styles.lab}>
+      <header className={styles.header}>
+        <div className={styles.heading}>
+          <div className={styles.title}>{t('labTitle')}</div>
+          <div className={styles.subtitle}>{t('labSubtitle')}</div>
+        </div>
+        <div className={styles.connection}>
+          <input
+            className={styles.endpoint}
+            value={draftEndpoint}
+            aria-label={t('labEndpoint')}
+            onChange={(event) => setDraftEndpoint(event.target.value)}
+            spellCheck={false}
+          />
+          {connected ? (
+            <Button variant="outlined" size="s" onClick={disconnect}>
+              {t('labDisconnect')}
+            </Button>
+          ) : (
+            <Button size="s" disabled={connecting} onClick={() => void connect()}>
+              {connecting ? t('labConnecting') : t('labConnect')}
+            </Button>
+          )}
+          <span className={clsx(styles.dot, connected && styles.dotOn)} />
+          <span className={styles.statusText}>
+            {connected ? t('labConnected') : t('labDisconnected')}
+          </span>
+        </div>
+      </header>
+
+      {error ? <div className={styles.error}>{error}</div> : null}
+
+      <div className={styles.grid}>
+        <section className={styles.panel}>
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labMethod')}</span>
+            <Select
+              ariaLabel={t('labMethod')}
+              value={methodId}
+              disabled={!connected}
+              options={methods.map((item) => ({ value: item.id, label: item.name }))}
+              onChange={selectMethod}
+              placeholder={t('labNeedConnect')}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labDataset')}</span>
+            <Select
+              ariaLabel={t('labDataset')}
+              value={datasetId}
+              disabled={!connected || queries.trim().length > 0}
+              options={datasets.map((item) => ({
+                value: item.id,
+                label: `${item.name}${item.size ? ` (${item.size})` : ''}`,
+              }))}
+              onChange={setDatasetId}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labLimit')}</span>
+            <input
+              className={styles.input}
+              type="number"
+              min={1}
+              max={50}
+              value={limit}
+              disabled={!connected}
+              onChange={(event) => setLimit(Math.max(1, Number(event.target.value) || 1))}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labQueries')}</span>
+            <textarea
+              className={styles.textarea}
+              rows={4}
+              value={queries}
+              disabled={!connected}
+              placeholder={t('labQueriesPlaceholder')}
+              onChange={(event) => setQueries(event.target.value)}
+            />
+          </div>
+
+          <div className={styles.fieldRow}>
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labBaseUrl')}</span>
+              <input
+                className={styles.input}
+                value={baseUrl}
+                disabled={!connected}
+                onChange={(event) => setBaseUrl(event.target.value)}
+                spellCheck={false}
+              />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labModel')}</span>
+              <input
+                className={styles.input}
+                value={model}
+                disabled={!connected}
+                onChange={(event) => setModel(event.target.value)}
+                spellCheck={false}
+              />
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labApiKey')}</span>
+            <input
+              className={styles.input}
+              value={apiKey}
+              readOnly
+              placeholder={t('labApiKeyPlaceholder')}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>{t('labMethodParams')}</span>
+            <textarea
+              className={styles.textarea}
+              rows={6}
+              value={params}
+              disabled={!connected}
+              onChange={(event) => setParams(event.target.value)}
+              spellCheck={false}
+            />
+          </div>
+
+          <div className={styles.actions}>
+            <Button
+              size="m"
+              disabled={!connected || !methodId || running}
+              onClick={() => void run()}
+            >
+              {running ? t('labRunning') : t('labRun')}
+            </Button>
+            {running ? (
+              <Button variant="outlined" size="m" onClick={() => void cancel()}>
+                {t('labCancel')}
+              </Button>
+            ) : null}
+          </div>
+        </section>
+
+        <section className={styles.results}>
+          {job ? (
+            <>
+              <div className={styles.metrics}>
+                <div className={styles.metric}>
+                  <span className={styles.metricLabel}>{t('labProgress')}</span>
+                  <span className={styles.metricValue}>
+                    {job.done}/{job.total}
+                  </span>
+                </div>
+                <div className={styles.metric}>
+                  <span className={styles.metricLabel}>{t('labCalls')}</span>
+                  <span className={styles.metricValue}>
+                    {job.calls.target + job.calls.attack + job.calls.eval}
+                  </span>
+                </div>
+                <div className={styles.metric}>
+                  <span className={styles.metricLabel}>{t('labAsr')}</span>
+                  <span className={styles.metricValue}>{Math.round(job.asr * 100)}%</span>
+                </div>
+                <div className={styles.metric}>
+                  <span className={styles.metricLabel}>{t('labStatus')}</span>
+                  <span className={styles.metricValue}>{job.status}</span>
+                </div>
+              </div>
+              {job.error ? <div className={styles.error}>{job.error}</div> : null}
+              <div className={styles.list}>
+                {job.results.map((item, index) => (
+                  <details
+                    className={styles.result}
+                    key={`${item.query}-${index}`}
+                    open={index === 0}
+                  >
+                    <summary className={styles.resultSummary}>
+                      <span className={clsx(styles.badge, item.jailbroken && styles.badgeOk)}>
+                        {item.jailbroken ? t('labJailbroken') : t('labRejected')}
+                      </span>
+                      <span className={styles.resultQuery}>{item.query}</span>
+                    </summary>
+                    <div className={styles.resultBody}>
+                      <div className={styles.resultBlock}>
+                        <div className={styles.resultLabel}>{t('labPrompt')}</div>
+                        <pre className={styles.pre}>{item.prompt}</pre>
+                      </div>
+                      <div className={styles.resultBlock}>
+                        <div className={styles.resultLabel}>{t('labResponse')}</div>
+                        <pre className={styles.pre}>{item.responses.join('\n---\n')}</pre>
+                      </div>
+                      <div className={styles.resultBlock}>
+                        <div className={styles.resultLabel}>{t('labJudge')}</div>
+                        <pre className={styles.pre}>{JSON.stringify(item.eval)}</pre>
+                      </div>
+                    </div>
+                  </details>
+                ))}
+                {job.results.length === 0 ? (
+                  <div className={styles.empty}>{t('labNoResults')}</div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className={styles.empty}>{t('labHint')}</div>
+          )}
+        </section>
+      </div>
+    </div>
+  )
+}

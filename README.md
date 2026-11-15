@@ -2,7 +2,7 @@
   <img src="./brand.jpg" alt="chat-demo-unrestricted — Yes, Sun Xiaochuan Chat" width="760">
 </p>
 
-<h1 align="center">chat-demo-unrestricted</h1>
+<h1 align="center">deepseek unrestricted</h1>
 
 <p align="center">
   Yes, Sun Xiaochuan Chat — a static DeepSeek chat front end with an unrestricted mode, editable replies, and direct control over model parameters<br>
@@ -46,7 +46,8 @@ On top of that, this fork turns the **hard-coded limits of the original** into c
 - **Direct model parameters** — temperature, Top P, and max output tokens.
 - **Anti-retraction** — when the model retracts a reply, keep the text and thinking that were already streamed.
 - **Editable replies** — rewrite the body or the chain of thought of any AI reply; every later turn uses the edited version.
-- **Custom system prompt** — rewrite the `system` field directly in Settings, overriding the assembled result.
+- **Custom system prompt** — rewrite the `system` field directly in Settings, overriding the assembled result;
+- **Jailbreak lab** — run EasyJailbreak attackers through a local MCP backend (PAIR, TAP, GPTFuzzer, ReNeLLM, ICA, DeepInception, Jailbroken, Cipher, CodeChameleon, Multilingual) and inspect the final prompt, target response and judge result for every instance.
 
 Every switch only affects **requests sent from this browser and conversations stored locally**. Nothing changes the behaviour of the API service itself.
 
@@ -195,6 +196,18 @@ All other continuation rules are unchanged: template notices, server tool blocks
 
 > `deepseek-unrestricted-v3.md` is a build dependency. Commit it together with the code, otherwise a fresh clone will fail to build.
 
+### 3.9 Jailbreak lab (optional, requires the local MCP backend)
+
+The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over MCP and brings the EasyJailbreak attackers into the UI.
+
+- Backend: `mcp-server/` (Python, MCP Streamable HTTP, default `http://127.0.0.1:8765/mcp`); start it with `./mcp-server/run.sh`;
+- Frontend: `src/services/lab/` (MCP client) and `src/components/lab/` (lab page) only handle scheduling and display;
+- Custom queries, dataset size, method-parameter JSON, and three model channels (target / attack / eval, reusing the API key from Settings by default);
+- Shows the final prompt, target response, judge result and ASR per instance; supports cancelling and exporting;
+- Available: PAIR, TAP, GPTFuzzer, ReNeLLM, ICA, DeepInception, Jailbroken, Cipher, CodeChameleon, Multilingual (all smoke-tested with the local mock model; the real behaviour of TAP and GPTFuzzer depends on the judge model returning parseable scores). MJP is not adapted yet; GCG / AutoDAN need a local white-box model and do not work with an API-only setup. See [`mcp-server/README.md`](mcp-server/README.md);
+- Datasets: after `pip install datasets`, AdvBench (520 rows) / HarmBench / StrongREJECT can be loaded online through the `hf-mirror.com` mirror by default (override with `HF_ENDPOINT`); without the package the built-in sample queries are used;
+- Three steps: `pip install datasets` (optional) → `./mcp-server/run.sh` → `pnpm dev`, then connect from the sidebar Lab entry and run.
+
 ---
 
 ## 4. Behaviour matrix
@@ -290,6 +303,9 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx) | Reply editor (thinking / body) |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch |
 | [`deepseek-unrestricted-v3.md`](./deepseek-unrestricted-v3.md) | Unrestricted rules text, inlined at build time |
+| [`mcp-server/`](mcp-server/README.md) | Local EasyJailbreak MCP backend |
+| [`src/components/lab/`](src/components/lab/LabView.tsx) | Jailbreak lab page |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts) | MCP client and lab state |
 
 ---
 
@@ -343,6 +359,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 5. **`max_tokens` includes thinking tokens**: setting it too low can truncate the thinking as well.
 6. **Edits only affect the local context**: they do not re-request the model and do not change what the server already produced. Exports store the edited content; the original snapshot is not exported.
 7. **Attachment limits, key validation, and speech endpoints** still follow the original logic and are independent of the switches described here.
+8. **The lab is not a purely static capability**: it needs the local Python + MCP backend (`mcp-server/`), and a single job can issue a large number of model calls. Start with `limit=1` and small iteration counts.
 8. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
 
 ---

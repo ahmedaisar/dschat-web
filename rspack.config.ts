@@ -80,6 +80,8 @@ export const createConfig = ({
     new rspack.HtmlRspackPlugin({
       template: './src/index.html',
       scriptLoading: 'defer',
+      // 浏览器标签页小图标，构建时复制到产物根目录并注入 <link rel="icon">
+      favicon: './src/favicon.png',
       meta: { 'application-version': version },
     }),
     new rspack.DefinePlugin({ __API_ORIGIN__: JSON.stringify(apiOrigin) }),

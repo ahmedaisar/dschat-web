@@ -16,6 +16,8 @@ import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
 import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
+import { LabView } from '../components/lab/LabView.js'
+import { useLab } from '../services/lab/labStore.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
@@ -49,6 +51,7 @@ export const App = () => {
     state.activeId === null ? false : Object.hasOwn(state.streaming, state.activeId)
   )
   const activeId = useChatStore((state) => state.activeId)
+  const labOpen = useLab((state) => state.open)
 
   usePreventPageScroll(isMobile)
 
@@ -93,7 +96,9 @@ export const App = () => {
           ) : null}
           <div className={styles.content}>
             {siderCollapsed ? <CollapsedSider /> : null}
-            {!ready || (activeId !== null && !session) ? (
+            {labOpen ? (
+              <LabView />
+            ) : !ready || (activeId !== null && !session) ? (
               <div className={styles.loadingView}>
                 {isMobile ? <MobileHeader /> : null}
                 <div className={styles.loadingState} role="status" aria-live="polite">
