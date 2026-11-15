@@ -1,6 +1,7 @@
 <p align="center">
   <img src="./brand.jpg" alt="chat-demo-unrestricted — Yes, Sun Xiaochuan Chat" width="760">
 </p>
+<h1 align="center"><img src="https://github.com/EasyJailbreak/EasyJailbreak/blob/master/image/README/logo.png" alt="EasyJailbreak Logo" height="60"></h1>
 
 <h1 align="center">deepseek unrestricted</h1>
 
@@ -11,13 +12,15 @@
 
 > This is an **unofficial fork** of the official demo [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo), MIT licensed.
 > Every change lives in the browser: how the request body is assembled, how replies are stored, and how they are rendered.
-> There is no backend, no proxy, and no relay service. Your API key and conversations stay in your own browser.
+> There is no proxy and no relay service. Your API key and conversations stay in your own browser.
 >
 > 🔗Live demo: <https://chat-unrestricted.fur0.com/>
 > 
 > 📦Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
 > 
-> 🎥Intro video： <https://www.bilibili.com/video/BV1p5sL6LEfd/>
+> 🎥Intro video: <https://www.bilibili.com/video/BV1p5sL6LEfd/>
+>
+> 📚Reference paper: <https://arxiv.org/pdf/2403.12171>
 ---
 
 ## Contents
@@ -361,7 +364,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 6. **Edits only affect the local context**: they do not re-request the model and do not change what the server already produced. Exports store the edited content; the original snapshot is not exported.
 7. **Attachment limits, key validation, and speech endpoints** still follow the original logic and are independent of the switches described here.
 8. **The lab is not a purely static capability**: it needs the local Python + MCP backend (`mcp-server/`), and a single job can issue a large number of model calls. Start with `limit=1` and small iteration counts.
-8. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
+9. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
 
 ---
 
@@ -382,3 +385,4 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 - Code based on [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo), under the [MIT](LICENSE) license. The build copies the license to `dist/LICENSE`; keep it when redistributing.
 - `brand.jpg` is artwork provided by the repository author and remains theirs; "Yes, Sun Xiaochuan Chat" is an inside joke and is not affiliated with DeepSeek or with Sun Xiaochuan.
 - This is a personal fork, not an official DeepSeek project. Check the terms and costs of whichever API service you point it at.
+- Thanks to the [EasyJailbreak project](https://github.com/EasyJailbreak/EasyJailbreak) for the theoretical foundation.
