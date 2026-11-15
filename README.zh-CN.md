@@ -1,6 +1,7 @@
 <p align="center">
   <img src="./brand.jpg" alt="chat-demo-unrestricted — 是，孙笑川聊天" width="760">
 </p>
+<h1 align="center"><img src="https://github.com/EasyJailbreak/EasyJailbreak/blob/master/image/README/logo.png" alt="EasyJailbreak Logo" height="60"></h1>
 
 <h1 align="center">deepseek unrestricted</h1>
 
@@ -10,7 +11,7 @@
 </p>
 
 > 本项目是官方示例 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) 的**非官方修改版**（fork），MIT 许可。
-> 所有改动都在浏览器里完成：请求体怎么拼、回复怎么存、界面怎么显示。没有后端、没有代理、没有中转服务，
+> 所有改动都在浏览器里完成：请求体怎么拼、回复怎么存、界面怎么显示。没有代理、没有中转服务，
 > API Key 与对话记录仍只保存在你自己的浏览器里。
 >
 > 🔗在线版：<https://chat-unrestricted.fur0.com/>
@@ -18,6 +19,8 @@
 > 📦仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
 > 
 > 🎥介绍视频：<https://www.bilibili.com/video/BV1p5sL6LEfd/>
+>
+> 📚参考论文：<https://arxiv.org/pdf/2403.12171>
 ---
 
 ## 目录
@@ -381,3 +384,4 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 - 代码基于 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo)，遵循 [MIT](LICENSE) 许可；构建会把许可证复制到 `dist/LICENSE`，分发时请一并保留。
 - 头图 `brand.jpg` 为仓库作者提供的素材，版权归其作者；「是，孙笑川聊天」只是项目玩笑，与 DeepSeek 官方、孙笑川本人均无关联。
 - 本仓库是个人修改版，不是 DeepSeek 官方项目；使用前请自行确认所用 API 服务的规则与费用。
+- 感谢[EasyJailbreak项目](https://github.com/EasyJailbreak/EasyJailbreak)的理论支持
