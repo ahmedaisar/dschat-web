@@ -21,6 +21,11 @@
 > 🎥介绍视频：<https://www.bilibili.com/video/BV1p5sL6LEfd/>
 >
 > 📚参考论文：<https://arxiv.org/pdf/2403.12171>
+
+<p align="center">
+  <img src="./Demo%20Picture.png" alt="聊天界面演示：解除限制模式下的技术问答" width="860">
+</p>
+
 ---
 
 ## 目录

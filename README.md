@@ -21,6 +21,11 @@
 > 🎥Intro video: <https://www.bilibili.com/video/BV1p5sL6LEfd/>
 >
 > 📚Reference paper: <https://arxiv.org/pdf/2403.12171>
+
+<p align="center">
+  <img src="./Demo%20Picture.png" alt="Chat demo — technical Q&A in unrestricted mode" width="860">
+</p>
+
 ---
 
 ## Contents
