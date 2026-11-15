@@ -121,6 +121,55 @@ def _ensure_easyjailbreak() -> None:
 
 
 _MODEL_CLASS_CACHE: dict[type, type] = {}
+_COMPAT_MODEL_CLASS: type | None = None
+
+
+def _compat_openai_class() -> type:
+    """OpenaiModel 的子类：兼容「消息列表」入参。
+
+    PAIR 在 OpenaiModel 分支里会把 attack_conversation 转成
+    [{'role': 'system', 'content': ...}, {'role': 'user', 'content': ...}] 这样的消息列表，
+    再作为 prompt 传给 generate()。原生 OpenaiModel 会把每个 dict 当成一条文本消息 append，
+    最终 content 变成对象，服务端返回 422（content should be a string or a list）。
+    这里识别 list[dict] 直接作为 OpenAI messages 发送。
+    """
+    global _COMPAT_MODEL_CLASS
+    if _COMPAT_MODEL_CLASS is not None:
+        return _COMPAT_MODEL_CLASS
+
+    from easyjailbreak.models import OpenaiModel
+
+    class CompatOpenaiModel(OpenaiModel):
+        def generate(self, messages, clear_old_history=True, **kwargs):
+            if (
+                isinstance(messages, list)
+                and messages
+                and all(isinstance(item, dict) for item in messages)
+            ):
+                if clear_old_history:
+                    self.conversation.messages = []
+                api_messages = []
+                for item in messages:
+                    role = item.get('role') or 'user'
+                    content = item.get('content') or ''
+                    if role == 'system':
+                        self.conversation.system_message = content
+                    else:
+                        self.conversation.append_message(role, content)
+                    api_messages.append({'role': role, 'content': content})
+                config = {**self.generation_config, **kwargs}
+                for key in ('max_new_tokens', 'eos_token_id', 'do_sample'):
+                    config.pop(key, None)
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=api_messages,
+                    **config,
+                )
+                return response.choices[0].message.content or ''
+            return super().generate(messages, clear_old_history=clear_old_history, **kwargs)
+
+    _COMPAT_MODEL_CLASS = CompatOpenaiModel
+    return _COMPAT_MODEL_CLASS
 
 
 def _wrap_generate(model: Any) -> Any:
@@ -166,9 +215,7 @@ def _make_model(
     api_key = config.get('apiKey') or os.environ.get('DEEPSEEK_API_KEY') or os.environ.get('OPENAI_API_KEY')
     if not api_key:
         raise RuntimeError('缺少 API Key：请在任务参数里传入 target.apiKey，或设置环境变量 DEEPSEEK_API_KEY。')
-    from easyjailbreak.models import OpenaiModel
-
-    model = OpenaiModel(
+    model = _compat_openai_class()(
         model_name=config.get('model') or 'deepseek-chat',
         api_keys=api_key,
         base_url=config.get('baseUrl') or 'https://api.deepseek.com/v1',
@@ -293,9 +340,16 @@ def _serialize_instance(instance: Any) -> dict:
     eval_results = list(getattr(instance, 'eval_results', []) or [])
     responses = list(getattr(instance, 'target_responses', []) or [])
     success = _is_jailbroken(eval_results)
+    prompt = getattr(instance, 'jailbreak_prompt', '')
+    if not isinstance(prompt, str):
+        # PAIR 在 OpenaiModel 分支里会把 prompt 存成消息列表；转成可读文本再返回前端
+        try:
+            prompt = json.dumps(prompt, ensure_ascii=False, indent=2)
+        except (TypeError, ValueError):
+            prompt = str(prompt)
     return {
-        'query': getattr(instance, 'query', ''),
-        'prompt': getattr(instance, 'jailbreak_prompt', ''),
+        'query': getattr(instance, 'query', '') or '',
+        'prompt': prompt,
         'responses': responses,
         'eval': eval_results,
         'jailbroken': success,

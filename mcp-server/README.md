@@ -142,6 +142,14 @@ MCP_ALLOWED_ORIGINS="https://your-domain.example,https://your.domain:*" ./run.sh
 
 白名单之外的 Origin 仍然会返回 403，这是有意的：防止任意网页操作你本机的实验台后端。
 
+**跑 PAIR 时报 422 `messages[1]: content should be a string or a list`**
+
+EasyJailbreak 的 PAIR 在 `OpenaiModel` 分支里会把对话转成
+`[{"role": "system", ...}, {"role": "user", ...}]` 这样的消息列表当 prompt 传给 `generate()`，
+原生 `OpenaiModel` 会把每个 dict 当成一条文本消息塞进 conversation，最终 content 变成对象。
+后端已用 `CompatOpenaiModel` 兼容这种入参：识别 `list[dict]` 后直接作为 OpenAI messages 发送。
+重启后端即可生效；如果仍报错，确认运行的是最新代码。
+
 **从 https 页面连 `http://127.0.0.1:8765` 失败**
 
 浏览器会拦混合内容 / 私有网络访问。用 `pnpm dev` 或本地 `dist/index.html`（`file://`）打开，或者给后端套一层 https 反向代理。
