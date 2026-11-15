@@ -124,6 +124,29 @@ curl -s -X POST http://127.0.0.1:8765/mcp \
 `datasets` 装好后，`start_attack` 的 `dataset` 可填 `advbench`（520 条）、`harmbench`、`strongreject`，
 首次加载会下载并缓存到 `.cache/dataset-<id>.json`（已 gitignore）。也可以直接传 `queries` 绕过数据集。
 
+## 故障排查
+
+**连接时提示 `MCP 请求失败：HTTP 403`**
+
+后端启用了 DNS rebinding 保护，会校验浏览器带来的 `Origin`。已内置白名单：
+
+- `http://127.0.0.1:*`、`http://localhost:*`（`pnpm dev`）
+- `null`（直接双击 `dist/index.html`，`file://` 页面的 Origin 是字符串 `null`）
+
+如果你改了前端端口或从别的地址访问，在 `server.py` 的 `TransportSecuritySettings` 里补上对应 origin 即可。
+
+**从 https 页面连 `http://127.0.0.1:8765` 失败**
+
+浏览器会拦混合内容 / 私有网络访问。用 `pnpm dev` 或本地 `dist/index.html`（`file://`）打开，或者给后端套一层 https 反向代理。
+
+**页面提示缺少 API Key**
+
+实验台复用「设置 → 数据管理」里的 Key；也可以后端环境变量 `DEEPSEEK_API_KEY` 提供。
+
+**启动报 `No module named 'mcp'`**
+
+虚拟环境没建好或没装依赖，按上面的安装步骤重来。
+
 ## 费用与风险
 
 - 一次任务会发起大量模型调用（PAIR 约「轮数 × stream 数 × 3」起），请在实验台里先用 `limit=1` 和较小的迭代次数试跑。

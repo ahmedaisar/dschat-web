@@ -167,7 +167,21 @@ def main() -> None:
 
     from starlette.middleware.cors import CORSMiddleware
 
-    app = mcp.streamable_http_app(host=args.host, streamable_http_path='/mcp')
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    # 浏览器直连本地后端时，Origin 可能是 http://127.0.0.1:8090（dev server）、
+    # http://localhost:8090，或 null（直接双击 dist/index.html 的 file:// 页面）。
+    transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=['127.0.0.1:*', 'localhost:*', '[::1]:*'],
+        allowed_origins=['http://127.0.0.1:*', 'http://localhost:*', 'null'],
+    )
+
+    app = mcp.streamable_http_app(
+        host=args.host,
+        streamable_http_path='/mcp',
+        transport_security=transport_security,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=['*'],

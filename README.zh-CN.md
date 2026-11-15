@@ -206,7 +206,7 @@ Persona（官方身份分块）
 - 逐条展示最终提示词、目标回复、判分结果与 ASR，可取消任务、导出结果；
 - 可用方法：PAIR、TAP、GPTFuzzer、ReNeLLM、ICA、DeepInception、Jailbroken、Cipher、CodeChameleon、Multilingual（已用本地假模型冒烟通过；TAP 与 GPTFuzzer 的实际效果取决于评估模型能否返回可解析判分）；MJP 待适配；GCG / AutoDAN 依赖本地白盒模型，纯 API 环境不支持。详见 [`mcp-server/README.md`](mcp-server/README.md)；
 - 数据集：安装 `datasets` 后可在线加载 AdvBench（520 条）/ HarmBench / StrongREJECT，默认走 `hf-mirror.com` 镜像，可用环境变量 `HF_ENDPOINT` 覆盖；未安装时回退到内置测试语句；
-- 起步三步：`pip install datasets`（可选）→ `./mcp-server/run.sh` → `pnpm dev`，然后在侧栏「实验台」里连接并运行。
+- 起步三步：`pip install datasets`（可选）→ `./mcp-server/run.sh` → `pnpm dev`，然后在侧栏「实验台」里连接并运行。连接报 403 时见 [`mcp-server/README.md`](mcp-server/README.md) 的故障排查（浏览器 Origin 白名单，含 `file://` 的 `null`）。
 
 ---
 
