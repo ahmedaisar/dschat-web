@@ -13,8 +13,9 @@
 > Every change lives in the browser: how the request body is assembled, how replies are stored, and how they are rendered.
 > There is no backend, no proxy, and no relay service. Your API key and conversations stay in your own browser.
 >
-> Live demo: <https://chat-unrestricted.fur0.com/>　Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
-
+> 🔗Live demo: <https://chat-unrestricted.fur0.com/>
+> 📦Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
+> 🎥Intro video： <https://www.bilibili.com/video/BV1p5sL6LEfd/>
 ---
 
 ## Contents
