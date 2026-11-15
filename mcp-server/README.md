@@ -132,8 +132,15 @@ curl -s -X POST http://127.0.0.1:8765/mcp \
 
 - `http://127.0.0.1:*`、`http://localhost:*`（`pnpm dev`）
 - `null`（直接双击 `dist/index.html`，`file://` 页面的 Origin 是字符串 `null`）
+- `https://chat-unrestricted.fur0.com`、`https://chat-unrestricted.furries.fun`、`https://xiaohuangbo.github.io`（线上站点）
 
-如果你改了前端端口或从别的地址访问，在 `server.py` 的 `TransportSecuritySettings` 里补上对应 origin 即可。
+换成别的域名/端口时，用环境变量追加，然后重启后端：
+
+```bash
+MCP_ALLOWED_ORIGINS="https://your-domain.example,https://your.domain:*" ./run.sh
+```
+
+白名单之外的 Origin 仍然会返回 403，这是有意的：防止任意网页操作你本机的实验台后端。
 
 **从 https 页面连 `http://127.0.0.1:8765` 失败**
 
