@@ -281,6 +281,10 @@
 }
 
 @media (max-width: 720px) {
+  .headRow {
+    flex-wrap: wrap;
+  }
+
   .variant {
     overflow-y: auto;
   }

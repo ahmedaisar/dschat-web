@@ -10,6 +10,7 @@ import {
   type RaceStatus,
 } from '../../services/lab/race.js'
 import { importComboToChat } from '../../services/lab/importToChat.js'
+import { readRaceFile } from '../../services/lab/ioValidation.js'
 import { applySTMs, getEnabledModules } from '../../services/unrestricted/stm.js'
 import { copyText } from '../../utils/clipboard.js'
 import { showToast } from '../base/toastState.js'
@@ -113,11 +114,12 @@ export const RaceView = () => {
   /** 导入一份之前导出的赛跑结果（只展示，不重新请求） */
   const importResults = async (file: File) => {
     try {
-      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
-      const raw = Array.isArray(parsed.results) ? parsed.results : null
-      if (!raw) {
-        throw new Error('missing results')
+      const parsed: unknown = JSON.parse(await file.text())
+      const data = readRaceFile(parsed)
+      if (!data) {
+        throw new Error('invalid race file')
       }
+      const raw = data.results
       const imported: RaceResult[] = raw.map((item, index) => {
         const record = (item ?? {}) as Record<string, unknown>
         const status = record.status
@@ -144,7 +146,7 @@ export const RaceView = () => {
         }
       })
       setResults(imported)
-      setStartedQuery(typeof parsed.query === 'string' ? parsed.query : '')
+      setStartedQuery(data.query)
       setError(null)
       showToast({ key: 'labRaceImportedResults' })
     } catch {

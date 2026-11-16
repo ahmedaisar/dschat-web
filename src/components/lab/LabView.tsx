@@ -11,6 +11,7 @@ import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
 import { applyParseltongue } from '../../services/unrestricted/parseltongue.js'
 import { RaceView } from './RaceView.js'
+import { readAttackFile } from '../../services/lab/ioValidation.js'
 import { VariantView } from './VariantView.js'
 import styles from './LabView.module.css'
 
@@ -223,8 +224,12 @@ export const LabView = () => {
   /** 导入一份之前导出的结果文件（只展示，不重新跑）。 */
   const importResults = async (file: File) => {
     try {
-      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
-      const raw = (parsed.job ?? parsed) as Record<string, unknown>
+      const parsed: unknown = JSON.parse(await file.text())
+      const data = readAttackFile(parsed)
+      if (!data) {
+        throw new Error('invalid attack file')
+      }
+      const raw = data.job
       const rawResults = Array.isArray(raw.results) ? raw.results : null
       if (!rawResults) {
         throw new Error('missing results')

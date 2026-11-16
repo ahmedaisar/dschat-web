@@ -25,6 +25,7 @@ import { depthDirective, jailbreakSystemPrompt } from '../../services/unrestrict
 import { formatMoney } from '../../services/chat/sessionStats.js'
 import { createSeededChat } from '../../services/chat/store.js'
 import { closeLab } from '../../services/lab/labStore.js'
+import { readVariantFile } from '../../services/lab/ioValidation.js'
 import type { VariantTier } from '../../services/unrestricted/techniques.js'
 import styles from './VariantView.module.css'
 
@@ -180,11 +181,12 @@ export const VariantView = () => {
   /** 导入之前导出的赛跑结果（只回放，不重新请求，也不改动设置） */
   const importResults = async (file: File) => {
     try {
-      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
-      const raw = Array.isArray(parsed.results) ? parsed.results : null
-      if (!raw) {
-        throw new Error('missing results')
+      const parsed: unknown = JSON.parse(await file.text())
+      const data = readVariantFile(parsed)
+      if (!data) {
+        throw new Error('invalid variant file')
       }
+      const raw = data.results
       const results: VariantResult[] = raw.map((item, index) => {
         const record = (item ?? {}) as Record<string, unknown>
         const status = record.status
@@ -219,18 +221,14 @@ export const VariantView = () => {
         variants: results.length,
         skipped: results.filter((result) => result.status === 'skipped').length,
       })
-      setQuery(typeof parsed.query === 'string' ? parsed.query : '')
-      if (parsed.tier === 'light' || parsed.tier === 'standard' || parsed.tier === 'heavy') {
-        setTier(parsed.tier)
+      setQuery(data.query)
+      if (data.tier) {
+        setTier(data.tier)
       }
-      if (parsed.model === 'deepseek-flash' || parsed.model === 'deepseek-v4-pro') {
-        setModel(parsed.model)
+      if (data.model) {
+        setModel(data.model)
       }
-      setRunSystem(
-        typeof parsed.system === 'string' && parsed.system !== ''
-          ? parsed.system
-          : variantSystem(translateJailbreak)
-      )
+      setRunSystem(data.system !== '' ? data.system : variantSystem(translateJailbreak))
       setError(null)
       showToast({ key: 'variantImported' })
     } catch {

@@ -289,6 +289,24 @@
 }
 
 @media not all and (min-width: 768px) {
+  /* 窄屏下标签与控件可以换行，避免滑块/下拉把文字挤出屏幕 */
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .text {
+    flex: 1 1 180px;
+    padding-right: 0;
+  }
+
+  .cell {
+    min-height: 0;
+  }
+
+  .promptPreviewBody {
+    max-height: 220px;
+  }
+
   .dialog {
     align-self: flex-end;
     width: 100%;

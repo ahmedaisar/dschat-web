@@ -129,6 +129,10 @@ export const en = {
     'Settings → Data gains "Restore default settings", keeping the API key and chats',
   changelogV25Fork:
     'New "Branch to new chat": copies the current conversation into a new chat without touching the original',
+  changelogV25Mobile:
+    'Mobile polish: scrollable input toolbar, wrapping settings rows, narrower lab and stats dialogs',
+  changelogV25IO:
+    'Import/export now validates the file type so race, variant-race and lab results cannot be imported into each other',
   changelogV25VariantIO:
     'Variant race results can be exported/imported, and any finished result can continue in a new chat with a per-chat prompt',
   changelogV246Title: 'v2.4.6 · 2026-11',

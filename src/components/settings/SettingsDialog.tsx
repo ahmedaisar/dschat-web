@@ -486,6 +486,8 @@ const ChangelogSetting = () => {
         'changelogV25Reset',
         'changelogV25Fork',
         'changelogV25VariantIO',
+        'changelogV25Mobile',
+        'changelogV25IO',
       ],
     },
     {

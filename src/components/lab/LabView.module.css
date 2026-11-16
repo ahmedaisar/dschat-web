@@ -278,6 +278,21 @@
   }
 }
 
+@media (max-width: 640px) {
+  .lab {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .title {
+    font-size: 16px;
+  }
+
+  .endpoint {
+    width: 100%;
+  }
+}
+
 .hiddenInput {
   display: none;
 }
