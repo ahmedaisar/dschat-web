@@ -1,0 +1,54 @@
+name: Star History
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+
+  watch:
+    types: [started]
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: star-history
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # Update English README without committing
+      - name: Update English README
+        uses: narayann7/star-history-action@v1
+        with:
+          repos: ${{ github.repository }}
+          type: Date
+          themes: light,dark
+          width: 800
+          output-dir: assets/star-history
+          update-readme: true
+          readme: README.md
+          readme-format: picture
+          commit: false
+
+      # Update Chinese README and commit everything
+      - name: Update Chinese README
+        uses: narayann7/star-history-action@v1
+        with:
+          repos: ${{ github.repository }}
+          type: Date
+          themes: light,dark
+          width: 800
+          output-dir: assets/star-history
+          update-readme: true
+          readme: README.zh-CN.md
+          readme-format: picture
+          commit: true
+          commit-message: "docs: update bilingual star history"
