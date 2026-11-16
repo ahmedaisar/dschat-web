@@ -4,10 +4,11 @@ import {
   IconDataOutline16,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
+  IconRefreshOutline16,
   IconSendOutline16,
   IconStopFill16,
 } from '../base/icons.js'
-import { setSearch, useSettings } from '../../services/settings.js'
+import { setAutoJailbreak, setSearch, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -56,6 +57,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const autoJailbreak = useSettings((state) => state.autoJailbreak)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -205,6 +207,18 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       <div className={styles.functionRow}>
         {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
+          <Tooltip content={t('autoJailbreakTooltip')}>
+            <button
+              type="button"
+              className={clsx(styles.toggle, autoJailbreak && styles.selected)}
+              aria-label={t('autoJailbreak')}
+              aria-pressed={autoJailbreak}
+              onClick={() => setAutoJailbreak(!autoJailbreak)}
+            >
+              <IconRefreshOutline16 />
+              <span className={styles.toggleLabel}>{t('autoJailbreak')}</span>
+            </button>
+          </Tooltip>
           <ThinkingSlider />
           <Tooltip content={t('deactivatedSearchTooltip')}>
             <button

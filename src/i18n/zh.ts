@@ -112,6 +112,11 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV231Title: 'v2.3.1 · 2026-11',
+  changelogV231Hover: '修复会话列表悬停时标题与「重命名 / 删除」按钮位置漂移',
+  changelogV231Combo: '赛跑「用此组合开新会话」改为会话级系统提示词，不再覆盖全局提示词设置',
+  changelogV231Auto: '新增自动越狱：GODMODE 提示词 + 自动扰动与调参，被拒绝时自动换组合重试',
+  changelogV231Feedback: '新增回复评分，AutoTune 会按点赞 / 点踩学习参数',
   changelogV23Title: 'v2.3.0 · 2026-11',
   changelogV23Thinking:
     '深度思考改为 0–4 档滑轨：按档位下发 budget_tokens 与 reasoning_effort，服务端不支持时自动去掉强度重试',
@@ -318,6 +323,7 @@ export const zh = {
     'DeepSeek 的 Anthropic 兼容接口只接受 temperature 与 top_p，其余参数不会随请求下发。',
   settingsStm: '输出整形',
   settingsStmDescription: '对回复正文做后处理：去掉退让语气，或改成直给、口语化的风格。',
+  settingsFeedbackStats: '已收集 {count} 条回复评分，开启自动调参后会参考这些反馈',
   settingsStmHint: '只影响聊天里的显示与实验台赛跑结果，不改写本地保存的原始回复。',
   settingsStmHedge: '去退让语气',
   settingsStmDirect: '直给模式',
@@ -390,11 +396,24 @@ export const zh = {
   thinkingLevel4: '极致',
   thinkingMaxWarning: '更快消耗额度',
   thinkingBudgetNote: '预算约 {tokens} tokens',
+  autoJailbreak: '自动越狱',
+  autoJailbreakTooltip: 'GODMODE 提示词 + 自动扰动与调参，被拒绝时自动换组合重试',
+  autoJailbreakDescription:
+    '发送时改用 GODMODE 提示词，自动开启输入扰动与自动调参；被安全拒绝时自动换一套 L1B3RT4S 组合重试两次。',
+  autoJailbreakRetrying: '被拒绝，已换用更强的组合重试',
+  autoJailbreakGiveUp: '多次重试仍被拒绝，已停止自动重试',
+  feedbackHelpful: '这条回复有帮助',
+  feedbackNotHelpful: '这条回复没帮上忙',
+  feedbackThanks: '已记录，自动调参会参考你的反馈',
+
   thinkingFallbackToast: '服务端不支持思考强度，已退回普通思考请求',
 
   contextUsageLabel: '上下文占用 {percent}%',
   contextUsageTip: '上下文 {used} / {total}（{percent}%）',
   contextUsageEmpty: '发送消息后显示上下文占用',
+
+  sessionPromptNotice: '本会话使用实验台组合的系统提示词',
+  sessionPromptClear: '恢复默认',
 
   statsOpen: '查看会话统计',
   statsTitle: '会话统计',

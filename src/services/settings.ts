@@ -21,6 +21,8 @@ type Settings = {
   thinking: boolean
   /** 思考强度 0-4；0 为关闭，与 thinking 保持同步 */
   reasoningEffort: number
+  /** 自动越狱：GODMODE 提示词 + 自动扰动 + 被拒绝后自动换组合重试 */
+  autoJailbreak: boolean
   search: boolean
   /** 采样温度 0–2，默认 1 */
   temperature: number
@@ -71,6 +73,7 @@ const KEYS = {
   ttsVoice: 'chat-demo:tts-voice',
   thinking: 'chat-demo:thinking',
   reasoningEffort: 'chat-demo:reasoning-effort',
+  autoJailbreak: 'chat-demo:auto-jailbreak',
   search: 'chat-demo:search',
   temperature: 'chat-demo:temperature',
   topP: 'chat-demo:top-p',
@@ -275,6 +278,7 @@ export const useSettings = create<Settings>(() => ({
   ttsVoice: initialTtsVoice(),
   thinking: initialReasoningEffort() > 0,
   reasoningEffort: initialReasoningEffort(),
+  autoJailbreak: read(KEYS.autoJailbreak) === 'true',
   search: read(KEYS.search) === 'true',
   temperature: initialNumber(KEYS.temperature, 1, 0, 2),
   topP: initialNumber(KEYS.topP, 1, 0.01, 1),
@@ -460,4 +464,9 @@ export const setAttachmentExts = (attachmentExts: string[] | null) => {
       : attachmentExts.map((ext) => ext.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
   write(KEYS.attachmentExts, value === null ? null : value.join(','))
   useSettings.setState({ attachmentExts: value })
+}
+
+export const setAutoJailbreak = (autoJailbreak: boolean) => {
+  write(KEYS.autoJailbreak, String(autoJailbreak))
+  useSettings.setState({ autoJailbreak })
 }

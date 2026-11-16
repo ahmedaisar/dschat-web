@@ -1,6 +1,6 @@
 import { showToast } from '../../components/base/toastState.js'
 import { setDraftText } from '../chat/drafts.js'
-import { setSystemPrompt, useSettings } from '../settings.js'
+import { useSettings } from '../settings.js'
 import { newChat } from '../chat/store.js'
 import { closeLab } from './labStore.js'
 
@@ -24,13 +24,12 @@ export const importPromptToChat = (prompt: string): boolean => {
 }
 
 /**
- * 把赛跑里的一套组合带进聊天：关闭实验台、新建会话，把组合的系统提示词设为自定义提示词，
- * 再把测试问题填进输入框。用户可以在设置里改回默认预设。
+ * 把赛跑里的一套组合带进聊天：关闭实验台，新建一个带「会话级系统提示词」的会话，
+ * 再把测试问题填进输入框。不修改全局提示词设置，其他会话不受影响。
  */
 export const importComboToChat = (system: string, query: string): void => {
   closeLab()
-  newChat()
-  setSystemPrompt(system)
+  newChat({ systemPrompt: system })
   setDraftText(null, query)
   showToast({ key: 'labRaceImported' })
 }

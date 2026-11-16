@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useIsMobile } from '../../app/viewport.js'
 import { useTranslate } from '../../i18n/index.js'
 import type { Session } from '../../services/chat/types.js'
+import { setSessionSystemPrompt } from '../../services/chat/store.js'
 import { ChatInput } from '../chatInput/ChatInput.js'
 import { MessageList } from '../messages/MessageList.js'
 import { MobileHeader } from './MobileHeader.js'
@@ -31,6 +32,18 @@ export const SessionView = ({
           </div>
         </div>
       )}
+      {session.systemPrompt ? (
+        <div className={styles.promptNotice}>
+          <span className={styles.promptNoticeText}>{t('sessionPromptNotice')}</span>
+          <button
+            type="button"
+            className={styles.promptNoticeAction}
+            onClick={() => setSessionSystemPrompt(session.id, null)}
+          >
+            {t('sessionPromptClear')}
+          </button>
+        </div>
+      ) : null}
       <MessageList
         session={session}
         streaming={streaming}

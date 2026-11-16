@@ -27,6 +27,7 @@ import { regionCodes, getRegionName, provinces } from '../../services/location.j
 import {
   isChineseBrowser,
   setAttachmentExts,
+  setAutoJailbreak,
   setAttachmentLimits,
   setAttachmentMaxCount,
   setAttachmentMaxMB,
@@ -55,6 +56,7 @@ import {
 import type { AutoTuneStrategy } from '../../services/unrestricted/autotune.js'
 import type { ObfuscationTechnique } from '../../services/unrestricted/parseltongue.js'
 import type { PromptPreset } from '../../services/unrestricted/prompts.js'
+import { useFeedback } from '../../services/chat/feedbackStore.js'
 import { composeSystemPrompt } from '../../services/chat/systemPrompt.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
@@ -417,6 +419,15 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV231Title',
+      items: [
+        'changelogV231Hover',
+        'changelogV231Combo',
+        'changelogV231Auto',
+        'changelogV231Feedback',
+      ],
+    },
+    {
       title: 'changelogV23Title',
       items: [
         'changelogV23Thinking',
@@ -720,12 +731,14 @@ const SystemPromptSetting = () => {
 const AdvancedSettings = () => {
   const t = useTranslate()
   const promptPreset = useSettings((state) => state.promptPreset)
+  const autoJailbreak = useSettings((state) => state.autoJailbreak)
   const parseltongue = useSettings((state) => state.parseltongue)
   const technique = useSettings((state) => state.parseltongueTechnique)
   const intensity = useSettings((state) => state.parseltongueIntensity)
   const autoTune = useSettings((state) => state.autoTune)
   const strategy = useSettings((state) => state.autoTuneStrategy)
   const stmModules = useSettings((state) => state.stmModules)
+  const feedbackSamples = useFeedback((state) => state.state.history.length)
 
   const presets: { value: PromptPreset; label: string }[] = [
     { value: 'deepseek', label: t('settingsPromptPresetDeepseek') },
@@ -772,6 +785,14 @@ const AdvancedSettings = () => {
             onChange={setPromptPreset}
             ariaLabel={t('settingsPromptPreset')}
           />
+        }
+      />
+      <SettingCell
+        label={t('autoJailbreak')}
+        description={t('autoJailbreakDescription')}
+        status={null}
+        action={
+          <Switch checked={autoJailbreak} onChange={setAutoJailbreak} label={t('autoJailbreak')} />
         }
       />
       <SettingCell
@@ -853,6 +874,9 @@ const AdvancedSettings = () => {
         />
       ))}
       <div className={styles.pipeline}>{t('settingsStmHint')}</div>
+      <div className={styles.pipeline}>
+        {t('settingsFeedbackStats', { count: feedbackSamples })}
+      </div>
     </>
   )
 }

@@ -7,11 +7,14 @@ import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from 
 import { reasoningEffortValue, thinkingBudget, useSettings } from '../settings.js'
 import { composeSystemPrompt } from './systemPrompt.js'
 import { noteContextUsage } from './contextUsage.js'
+import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { noteRunTiming } from './sessionStats.js'
 import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
+import { DEPTH_DIRECTIVE, GODMODE_SYSTEM_PROMPT } from '../unrestricted/prompts.js'
+import { applyHallOfFameCombo, HALL_OF_FAME } from '../unrestricted/libertas.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -44,6 +47,15 @@ import {
 
 /** deepseek-flash 同时支持深度思考与图片输入 */
 const MODEL: ChatModel = 'deepseek-flash'
+
+/**
+ * 自动越狱的临时状态：
+ * - 被拒绝后，用下一套 L1B3RT4S 组合的系统提示词覆盖一次请求；
+ * - 计数按提问 id 累计，避免同一问题无限重试。
+ */
+let autoRetryOverride: string | null = null
+const autoRetryCounts = new Map<string, number>()
+const AUTO_RETRY_LIMIT = 2
 /** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
 const SESSION_CACHE_LIMIT = 5
 /**
@@ -466,15 +478,40 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
   }
 }
 
-export const newChat = () => {
+/**
+ * 新建会话。`systemPrompt` 只作用于接下来创建的这个会话，
+ * 不写入全局设置，避免实验台导入的组合覆盖用户选择的提示词预设。
+ */
+let pendingSystemPrompt: string | null = null
+
+export const newChat = (options?: { systemPrompt?: string | null }) => {
   if (!get().importingHistory) {
+    pendingSystemPrompt = options?.systemPrompt?.trim() ? options.systemPrompt.trim() : null
     set({ activeId: null })
     trimSessionCache()
   }
 }
 
+/** 修改某个会话的系统提示词；传 null 恢复按全局设置组装 */
+export const setSessionSystemPrompt = (sessionId: string, systemPrompt: string | null) => {
+  if (get().importingHistory || deletingSessions.has(sessionId)) {
+    return
+  }
+  updateSession(sessionId, (session) => {
+    const next = { ...session }
+    if (systemPrompt !== null && systemPrompt.trim() !== '') {
+      next.systemPrompt = systemPrompt.trim()
+    } else {
+      delete next.systemPrompt
+    }
+    return next
+  })
+  persist(sessionId)
+}
+
 export const selectSession = (id: string) => {
   if (!get().importingHistory && get().sessions.some((session) => session.id === id)) {
+    pendingSystemPrompt = null
     touchSession(id)
     set({ activeId: id })
     void ensureSessionLoaded(id)
@@ -581,12 +618,18 @@ export const sendMessage = (targetSessionId: string | null) => {
   }
   const { text, files } = prepared
   // 输入扰动：在写入会话前改写，界面上看到的就是实际下发的文本，重发与续写也保持一致。
-  const { parseltongue, parseltongueTechnique, parseltongueIntensity } = useSettings.getState()
+  // 新消息不继承上一次自动重试遗留的系统提示词
+  autoRetryOverride = null
+  const { parseltongue, parseltongueTechnique, parseltongueIntensity, autoJailbreak } =
+    useSettings.getState()
+  // 自动越狱时即使用户没开扰动也强制改写：默认用全角（中文会自动退化为细空格）
+  const perturb = parseltongue || autoJailbreak
+  const technique = parseltongue ? parseltongueTechnique : 'fullwidth'
   const content =
-    parseltongue && text !== ''
+    perturb && text !== ''
       ? applyParseltongue(text, {
           enabled: true,
-          technique: parseltongueTechnique,
+          technique,
           intensity: parseltongueIntensity,
           customTriggers: [],
         }).transformedText
@@ -607,7 +650,9 @@ export const sendMessage = (targetSessionId: string | null) => {
       updatedAt: now,
       messages: [],
       rootMessageId: null,
+      ...(pendingSystemPrompt ? { systemPrompt: pendingSystemPrompt } : {}),
     }
+    pendingSystemPrompt = null
     sessionId = session.id
     touchSession(session.id)
     set((state) => ({
@@ -1058,6 +1103,44 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>
     signal.addEventListener('abort', onAbort, { once: true })
   })
 
+/** 取出并清空一次性的自动重试系统提示词 */
+const takeAutoRetryOverride = (): string | null => {
+  const override = autoRetryOverride
+  autoRetryOverride = null
+  return override
+}
+
+/**
+ * 自动越狱：被安全拒绝且没有保留正文时，换下一套 L1B3RT4S 组合重新生成，
+ * 每个提问最多重试 AUTO_RETRY_LIMIT 次；用户停止或关闭开关时不重试。
+ */
+const maybeAutoRetry = (
+  sessionId: string,
+  reply: AssistantMessage,
+  questionId: string,
+  question: string,
+  aborted: boolean
+) => {
+  if (aborted || !useSettings.getState().autoJailbreak) {
+    return
+  }
+  if (reply.stopReason !== 'refusal' || getReplyAnswerText(reply).trim() !== '') {
+    return
+  }
+  const count = autoRetryCounts.get(questionId) ?? 0
+  if (count >= AUTO_RETRY_LIMIT) {
+    showToast({ key: 'autoJailbreakGiveUp' })
+    return
+  }
+  autoRetryCounts.set(questionId, count + 1)
+  const combo = HALL_OF_FAME[count % HALL_OF_FAME.length]
+  const { system } = applyHallOfFameCombo(combo, question)
+  autoRetryOverride = `${system}${DEPTH_DIRECTIVE}`
+  showToast({ key: 'autoJailbreakRetrying' })
+  // 等当前流的收尾（移除 streaming 标记）完成后再发起新版本
+  setTimeout(() => regenerateReply(sessionId, reply.id), 0)
+}
+
 /**
  * 请求并消费流：先补齐附件的 serverId，再发请求；流式增量按动画帧刷新内存，完成、失败或停止后落盘。
  * 补传失败时回复记为 upload 错误，可重试。
@@ -1117,25 +1200,36 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           autoTune,
           autoTuneStrategy,
           reasoningEffort,
+          autoJailbreak,
         } = useSettings.getState()
         const effort = initial.thinking ? reasoningEffort : 0
         // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
-        const autoTuned = autoTune
-          ? computeAutoTuneParams({
-              strategy: autoTuneStrategy,
-              message: prepared.question.content,
-              conversationHistory: prepared.history.slice(-8).map((message) => ({
-                role: message.role,
-                content: message.role === 'user' ? message.content : getReplyAnswerText(message),
-              })),
-            })
-          : null
+        const autoTuned =
+          autoTune || autoJailbreak
+            ? computeAutoTuneParams({
+                strategy: autoTuneStrategy,
+                message: prepared.question.content,
+                conversationHistory: prepared.history.slice(-8).map((message) => ({
+                  role: message.role,
+                  content: message.role === 'user' ? message.content : getReplyAnswerText(message),
+                })),
+                learnedProfiles: useFeedback.getState().state.learnedProfiles,
+              })
+            : null
+        if (autoTuned) {
+          noteAutoTune(initial.id, autoTuned.detectedContext, autoTuned.params)
+        }
         const events = streamMessage(
           apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            // 组装流水线：默认预设按 Persona + 破限规则分块，godmode 预设整段替换
-            system: composeSystemPrompt(unrestricted, systemPrompt, promptPreset),
+            // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
+            system:
+              takeAutoRetryOverride() ??
+              getSession(sessionId)?.systemPrompt ??
+              (autoJailbreak
+                ? `${GODMODE_SYSTEM_PROMPT}${DEPTH_DIRECTIVE}`
+                : composeSystemPrompt(unrestricted, systemPrompt, promptPreset)),
             messages,
             thinking: initial.thinking
               ? fallbackNoReasoning
@@ -1149,7 +1243,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             temperature: autoTuned?.params.temperature ?? temperature,
             top_p: autoTuned?.params.top_p ?? topP,
             ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
-            safety_check: safetyCheck(unrestricted, skipSafetyCheck),
+            safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
             tools: serverTools(initial.search ?? false),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },
@@ -1259,6 +1353,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         firstTokenMs: firstTokenAt === null ? null : firstTokenAt - runStartedAt,
       })
     }
+    maybeAutoRetry(
+      sessionId,
+      reply,
+      request.question.id,
+      request.question.content,
+      controller.signal.aborted
+    )
     finishLiveRun(sessionId)
     titleRequests.delete(controller)
     streamFlushes.delete(sessionId)

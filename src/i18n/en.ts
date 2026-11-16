@@ -118,6 +118,14 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV231Title: 'v2.3.1 · 2026-11',
+  changelogV231Hover:
+    'Fixed the session row shifting when the rename / delete button appears on hover',
+  changelogV231Combo:
+    'Race "start a chat with this combo" now sets a per-chat system prompt instead of the global one',
+  changelogV231Auto:
+    'New auto jailbreak: GODMODE prompt with automatic perturbation and AutoTune, retrying with another combo on refusal',
+  changelogV231Feedback: 'Reply ratings now feed the AutoTune feedback loop',
   changelogV23Title: 'v2.3.0 · 2026-11',
   changelogV23Thinking:
     'Thinking effort is now a 0–4 slider that sends budget_tokens and reasoning_effort, retrying without them when the server rejects',
@@ -349,6 +357,7 @@ export const en = {
   settingsStm: 'Output shaping',
   settingsStmDescription:
     'Post-processes reply text to drop hedging, or to be more direct and casual.',
+  settingsFeedbackStats: '{count} reply ratings collected; AutoTune uses them when enabled',
   settingsStmHint:
     'Affects the rendered chat and race results only; the stored reply is left untouched.',
   settingsStmHedge: 'Remove hedging',
@@ -423,11 +432,25 @@ export const en = {
   thinkingLevel4: 'Max',
   thinkingMaxWarning: 'Burns quota faster',
   thinkingBudgetNote: 'About {tokens} tokens budget',
+  autoJailbreak: 'Auto jailbreak',
+  autoJailbreakTooltip:
+    'GODMODE prompt with automatic perturbation and AutoTune, retrying with another combo on refusal',
+  autoJailbreakDescription:
+    'Sends with the GODMODE prompt and turns on perturbation and AutoTune automatically; on a safety refusal it retries with another L1B3RT4S combo, up to twice.',
+  autoJailbreakRetrying: 'Refused — retrying with a stronger combo',
+  autoJailbreakGiveUp: 'Still refused after retries, stopped auto-retrying',
+  feedbackHelpful: 'This reply helped',
+  feedbackNotHelpful: 'This reply did not help',
+  feedbackThanks: 'Noted — AutoTune will learn from your feedback',
+
   thinkingFallbackToast: 'Server rejected the effort fields, retried with plain thinking',
 
   contextUsageLabel: 'Context used {percent}%',
   contextUsageTip: 'Context {used} / {total} ({percent}%)',
   contextUsageEmpty: 'Context usage appears after the first message',
+
+  sessionPromptNotice: 'This chat uses a lab combo system prompt',
+  sessionPromptClear: 'Use default',
 
   statsOpen: 'Session statistics',
   statsTitle: 'Session statistics',

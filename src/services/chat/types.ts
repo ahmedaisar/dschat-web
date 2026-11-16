@@ -120,6 +120,8 @@ export type Session = {
   updatedAt: number
   /** 包含所有分支的消息，按创建顺序存储。 */
   messages: Message[]
+  /** 本会话专用的系统提示词（如实验台组合）；为空时按全局设置组装 */
+  systemPrompt?: string
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
 }

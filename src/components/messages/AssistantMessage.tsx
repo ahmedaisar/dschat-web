@@ -2,7 +2,13 @@ import { useTranslate } from '../../i18n/index.js'
 import { useSettings } from '../../services/settings.js'
 import clsx from 'clsx'
 import { memo, useMemo, useState } from 'react'
-import { IconEditOutline16, IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
+import {
+  IconCheckOutline16,
+  IconCloseOutline16,
+  IconEditOutline16,
+  IconRefreshOutline16,
+  IconWarningOutline16,
+} from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply, getReplyThinking, hasReplyContent } from '../../services/chat/reply.js'
 import {
@@ -18,6 +24,7 @@ import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
+import { rateReply } from '../../services/chat/feedbackStore.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
@@ -208,6 +215,30 @@ export const AssistantMessage = memo(function AssistantMessage({
                 messageId={message.id}
                 text={shapedText ?? responseText}
               />
+            ) : null}
+            {responseText && !refused ? (
+              <>
+                <IconButton
+                  icon={<IconCheckOutline16 />}
+                  tooltip={t('feedbackHelpful')}
+                  tooltipPlacement="bottom"
+                  disabled={busy}
+                  onClick={() => {
+                    rateReply(message.id, shapedText ?? responseText, 1)
+                    showToast({ key: 'feedbackThanks' })
+                  }}
+                />
+                <IconButton
+                  icon={<IconCloseOutline16 />}
+                  tooltip={t('feedbackNotHelpful')}
+                  tooltipPlacement="bottom"
+                  disabled={busy}
+                  onClick={() => {
+                    rateReply(message.id, shapedText ?? responseText, -1)
+                    showToast({ key: 'feedbackThanks' })
+                  }}
+                />
+              </>
             ) : null}
             {editable ? (
               <IconButton

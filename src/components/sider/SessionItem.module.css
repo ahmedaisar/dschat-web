@@ -4,7 +4,8 @@
   align-items: center;
   box-sizing: border-box;
   height: 40px;
-  padding: 9px 6px 9px 10px;
+  /* 右侧始终留出操作按钮的位置，悬停时不再因为按钮出现而挤动标题 */
+  padding: 9px 34px 9px 10px;
   border-radius: 12px;
   font-size: 14px;
   line-height: 22px;
@@ -20,13 +21,6 @@
     &:not(.active):hover {
       background-color: var(--dsw-specific-sidebar-nav-item-hover);
     }
-
-    &:hover,
-    &.active {
-      .action {
-        display: flex;
-      }
-    }
   }
 }
 
@@ -39,10 +33,26 @@
   line-height: 18px;
 }
 
+/* 绝对定位在行尾：显示与隐藏都不参与布局，悬停不会让标题或整行发生位移 */
 .action {
-  display: none;
-  flex-shrink: 0;
-  margin-left: 4px;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease;
+}
+
+@media (hover: hover) {
+  .item:hover .action,
+  .item.active .action,
+  .item:focus-within .action {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .renameInput {
@@ -61,14 +71,15 @@
 
 @media (hover: none) {
   .action {
-    display: flex;
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
 @media not all and (min-width: 768px) {
   .item {
     height: 44px;
-    padding: 11px 6px 11px 12px;
+    padding: 11px 38px 11px 12px;
     border-radius: 16px;
     font-size: 16px;
   }
