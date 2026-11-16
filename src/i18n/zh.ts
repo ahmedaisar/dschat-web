@@ -121,6 +121,7 @@ export const zh = {
   changelogV25Reset: '设置 → 数据管理新增「恢复默认设置」，保留 API Key 与对话数据',
   changelogV25Fork: '新增「分支到新对话」：复制当前对话到新会话，原对话不受影响',
   changelogV25Mobile: '手机端适配：输入框工具行横向滚动、设置控件可换行、实验台与统计弹窗收窄',
+  changelogV25Popover: '修复窄屏下扰动 / 思考等宽浮层从左侧伸出屏幕',
   changelogV25IO: '导入导出增加格式校验，多路赛跑 / 变体赛跑 / 实验台结果不会互相误导入',
   changelogV25VariantIO:
     '变体赛跑支持结果导入导出；完成的结果可「接着聊」，使用会话级提示词，不影响设置',

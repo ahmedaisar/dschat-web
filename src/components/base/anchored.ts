@@ -146,12 +146,18 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     const available = Math.max(0, resolved === 'top' ? spaceAbove : spaceBelow)
     // 内容比可用空间小时按内容收口，避免浮层留出多余空白
     const height = Math.max(40, Math.min(maxHeight, available, floating.scrollHeight + 2))
+    // 横向仍然走 alignLeft：之前固定用 right 贴边，宽浮层（扰动面板、思考面板）
+    // 在窄屏会从左侧伸出屏幕；alignLeft 会把 left 收口到视口内。
+    const width = Math.min(
+      floating.getBoundingClientRect().width,
+      Math.max(0, window.innerWidth - VIEWPORT_PADDING * 2)
+    )
     applyPosition({
       top:
         resolved === 'top'
           ? Math.max(VIEWPORT_PADDING, rect.top - offset - height)
           : rect.bottom + offset,
-      right: Math.max(VIEWPORT_PADDING, window.innerWidth - rect.right),
+      left: alignLeft(rect, width, align, alignOffset),
       maxHeight: height,
     })
   }, [align, alignOffset, applyPosition, floatingRef, getAnchor, maxHeight, minSpace, offset, side])

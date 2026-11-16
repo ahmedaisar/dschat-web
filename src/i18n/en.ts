@@ -131,6 +131,8 @@ export const en = {
     'New "Branch to new chat": copies the current conversation into a new chat without touching the original',
   changelogV25Mobile:
     'Mobile polish: scrollable input toolbar, wrapping settings rows, narrower lab and stats dialogs',
+  changelogV25Popover:
+    'Fixed wide popovers (perturbation, thinking) extending past the left edge on narrow screens',
   changelogV25IO:
     'Import/export now validates the file type so race, variant-race and lab results cannot be imported into each other',
   changelogV25VariantIO:
