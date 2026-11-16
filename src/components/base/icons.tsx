@@ -1,3 +1,17 @@
+export const IconBranchOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx={4} cy={2.8} r={1.6} fill="currentColor" />
+    <circle cx={4} cy={13.2} r={1.6} fill="currentColor" />
+    <circle cx={12} cy={5.6} r={1.6} fill="currentColor" />
+    <path
+      d="M4 4.4v7.2M4 8.6c0-2 1.6-3.6 3.6-3.6H12"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 export const IconCheckOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

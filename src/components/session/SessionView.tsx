@@ -2,8 +2,14 @@ import clsx from 'clsx'
 import { useIsMobile } from '../../app/viewport.js'
 import { useTranslate } from '../../i18n/index.js'
 import type { Session } from '../../services/chat/types.js'
-import { setSessionCompression, setSessionSystemPrompt } from '../../services/chat/store.js'
+import {
+  forkSession,
+  setSessionCompression,
+  setSessionSystemPrompt,
+} from '../../services/chat/store.js'
 import { ChatInput } from '../chatInput/ChatInput.js'
+import { Button } from '../base/Button.js'
+import { showToast } from '../base/toastState.js'
 import { MessageList } from '../messages/MessageList.js'
 import { MobileHeader } from './MobileHeader.js'
 import styles from './SessionView.module.css'
@@ -30,6 +36,17 @@ export const SessionView = ({
           <div className={clsx(styles.title, siderCollapsed && styles.withCollapsedSider)}>
             {title}
           </div>
+          <Button
+            variant="outlined"
+            size="s"
+            className={styles.headerAction}
+            onClick={() => {
+              const forked = forkSession(session.id)
+              showToast(forked ? { key: 'forkCreated' } : { key: 'forkFailed' })
+            }}
+          >
+            {t('forkToNewChat')}
+          </Button>
         </div>
       )}
       {session.systemPrompt ? (

@@ -1,12 +1,18 @@
 import clsx from 'clsx'
 import { memo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
-import { IconEditOutline16, IconEllipsisOutline16, IconTrashOutline16 } from '../base/icons.js'
-import { renameSession, selectSession } from '../../services/chat/store.js'
+import {
+  IconBranchOutline16,
+  IconEditOutline16,
+  IconEllipsisOutline16,
+  IconTrashOutline16,
+} from '../base/icons.js'
+import { forkSession, renameSession, selectSession } from '../../services/chat/store.js'
 import type { SessionSummary } from '../../services/chat/types.js'
 import { IconButton } from '../base/IconButton.js'
 import { Menu } from '../base/Menu.js'
 import { closeMobileSider } from './mobileSiderState.js'
+import { showToast } from '../base/toastState.js'
 import styles from './SessionItem.module.css'
 
 export const SessionItem = memo(function SessionItem({
@@ -64,6 +70,19 @@ export const SessionItem = memo(function SessionItem({
               label: t('sessionItemMenuRenameOption'),
               icon: <IconEditOutline16 />,
               onSelect: () => setEditing(true),
+            },
+            {
+              key: 'fork',
+              label: t('forkToNewChat'),
+              icon: <IconBranchOutline16 />,
+              onSelect: () => {
+                if (forkSession(session.id)) {
+                  closeMobileSider()
+                  showToast({ key: 'forkCreated' })
+                } else {
+                  showToast({ key: 'forkFailed' })
+                }
+              },
             },
             {
               key: 'delete',

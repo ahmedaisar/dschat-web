@@ -516,3 +516,52 @@ export const setAutoCompress = (autoCompress: boolean) => {
   write(KEYS.autoCompress, String(autoCompress))
   useSettings.setState({ autoCompress })
 }
+
+/**
+ * 恢复默认设置：清空本机所有设置键并回到默认值。
+ * API Key 是凭据不是偏好，保留；对话、附件、统计等数据不在设置键里，同样不受影响。
+ */
+export const resetSettings = () => {
+  const apiKey = useSettings.getState().apiKey
+  for (const key of Object.values(KEYS)) {
+    if (key !== KEYS.apiKey) {
+      write(key, null)
+    }
+  }
+  useSettings.setState({
+    apiKey,
+    locale: isChineseBrowser() ? 'zh-CN' : 'en-US',
+    themePreference: 'system',
+    location: null,
+    ttsVoice: 'stella',
+    thinking: false,
+    reasoningEffort: 0,
+    autoJailbreak: false,
+    injectPromptEveryTurn: false,
+    translateJailbreakZh: false,
+    autoCompress: false,
+    variantRaceBudget: 1,
+    variantRaceConfirmDismissed: false,
+    search: false,
+    temperature: 1,
+    topP: 1,
+    maxTokens: null,
+    unrestricted: false,
+    keepReplyContent: false,
+    skipSafetyCheck: false,
+    continueRefused: false,
+    systemPrompt: null,
+    promptPreset: 'deepseek',
+    parseltongue: false,
+    parseltongueTechnique: 'leetspeak',
+    parseltongueIntensity: 'medium',
+    autoTune: false,
+    autoTuneStrategy: 'adaptive',
+    stmModules: [],
+    attachmentLimits: true,
+    attachmentMaxMB: null,
+    attachmentMaxCount: null,
+    attachmentExts: null,
+    siderCollapsed: false,
+  })
+}

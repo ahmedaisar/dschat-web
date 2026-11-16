@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
+import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import type { SessionCompression } from './types.js'
@@ -531,6 +532,65 @@ export const setSessionCompression = (
     return next
   })
   persist(sessionId)
+}
+
+/**
+ * 把当前会话的可见分支复制到一个全新会话：消息 id 全部重建，原会话保持不变。
+ * 用于从长对话里另开一条线的场景；系统提示词与压缩摘要一并继承。
+ * 生成中、导入中或会话未加载时返回 null。
+ */
+export const forkSession = (sessionId: string): string | null => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return null
+  }
+  const source = getSession(sessionId)
+  if (!source) {
+    return null
+  }
+  const visible = getVisibleMessages(source)
+  if (visible.length === 0) {
+    return null
+  }
+  const now = Date.now()
+  const idMap = new Map<string, string>()
+  const messages = visible.map((message) => {
+    const id = createId()
+    idMap.set(message.id, id)
+    const copy = { ...message, id }
+    // 对齐 DSH 的 fork 归属：继承来的用量不计入新会话统计，避免父子重复计费
+    if (copy.role === 'assistant') {
+      delete copy.usage
+    }
+    return copy as Message
+  })
+  const remapped = messages.map((message, index) => ({
+    ...message,
+    parentId: index === 0 ? null : messages[index - 1].id,
+    selectedChildId: messages[index + 1]?.id,
+  })) as Message[]
+  // 压缩摘要只有在截止消息也复制过来时才继承，避免新会话引用不到旧 id
+  const mappedCutoff = source.compression ? idMap.get(source.compression.upToMessageId) : undefined
+  const session: Session = {
+    id: createId(),
+    title: `${source.title || translate('untitledChat')}${translate('forkTitleSuffix')}`,
+    createdAt: now,
+    updatedAt: now,
+    messages: remapped,
+    rootMessageId: remapped[0]?.id ?? null,
+    ...(source.systemPrompt ? { systemPrompt: source.systemPrompt } : {}),
+    ...(source.compression && mappedCutoff
+      ? { compression: { ...source.compression, upToMessageId: mappedCutoff } }
+      : {}),
+  }
+  touchSession(session.id)
+  set((state) => ({
+    sessions: [toSessionSummary(session), ...state.sessions],
+    sessionCache: { ...state.sessionCache, [session.id]: session },
+    activeId: session.id,
+  }))
+  persist(session.id)
+  trimSessionCache()
+  return session.id
 }
 
 export const selectSession = (id: string) => {

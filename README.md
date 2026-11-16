@@ -48,7 +48,16 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-On top of that, this fork turns the **hard-coded limits of the original** into configurable settings, and adds a capability the original never had: **editable replies**.
+> Current version: **2.5.0 (stable)**
+
+On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
+
+- **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
+- **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
+- **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
+- **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
+- **Context and cost**: input-box context ring, session statistics, and cost estimates at official prices;
+- **Data and attachments**: configurable size / count / extension limits, history import/export, and one-click restore-default-settings.
 
 - **Unrestricted mode** — swap the system prompt, automatically skip the safety check, and allow continuing refused replies.
 - **Direct model parameters** — temperature, Top P, and max output tokens.
@@ -97,16 +106,16 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 The settings dialog grows from two groups to eight:
 
-| Group           | Contents                                                                                                |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| General         | Theme, language, read-aloud voice, location (original, untouched)                                       |
-| **Model**       | Temperature, Top P, max output tokens, anti-retraction, skip safety check, continue refused replies     |
-| **Prompt**      | Unrestricted mode, custom system prompt, prompt-assembly explanation, full preview of what will be sent |
-| **Advanced**    | System prompt preset, input perturbation, AutoTune, output shaping                                      |
-| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                             |
-| Data            | API key, import, export, delete all (original, untouched)                                               |
-| About           | Repository, demo and upstream links                                                                     |
-| Changelog       | Version history and upstream credits                                                                    |
+| Group           | Contents                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| General         | Theme, language, read-aloud voice, location (original, untouched)                                                  |
+| **Model**       | Temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
+| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview            |
+| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping      |
+| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                        |
+| Data            | API key, import, export, restore default settings, delete all                                                      |
+| About           | Repository, demo and upstream links                                                                                |
+| Changelog       | Version history and upstream credits                                                                               |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -290,6 +299,19 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 
 ---
 
+### 3.15 Branch to a new chat
+
+Use the session menu (⋯ → **Branch to new chat**) or the button in the desktop session header to copy the current visible branch into a **brand-new chat**:
+
+- The new session id and every message id are regenerated; the original chat is untouched;
+- The current system prompt (lab combo) and compression summary are inherited;
+- The new title carries a " (branch)" suffix, and both lines evolve independently;
+- Branching is disabled while generating, importing, or before the session loads.
+
+This is different from the in-session branch switcher (which keeps alternative answer versions inside one chat): here you get a separate line in the session list.
+
+---
+
 ## 4. Behaviour matrix
 
 | Scenario                    | Original                    | This fork, defaults (all switches off)                                               | Unrestricted mode on                                      |
@@ -386,32 +408,38 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 
 ## 7. Implementation index
 
-| File                                                                                           | Purpose                                                                                                              |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                       | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                     | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard                  |
-| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                     | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
-| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                               | Refusal notices: a hint line when content was kept, the template otherwise                                           |
-| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)             | Export status and template handling for refused replies                                                              |
-| [`src/services/settings.ts`](src/services/settings.ts)                                         | New settings, defaults, and persistence                                                                              |
-| [`src/services/api/types.ts`](src/services/api/types.ts)                                       | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)     | Settings page: Model group, Prompt group, switches and preview                                                       |
-| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)       | Slider + number input control                                                                                        |
-| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                       | Session aggregates, timings and cost estimate                                                                        |
-| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                       | Context usage cached per session                                                                                     |
-| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)   | Thinking effort 0–4 track                                                                                            |
-| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)             | Statistics and billing dialog                                                                                        |
-| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)           | 33 perturbation techniques (ported from the standalone build)                                                        |
-| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                 | 44 refusal patterns                                                                                                  |
-| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                           | Variant race: budget, batches, scoring                                                                               |
-| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                     | Variant race UI and start confirmation                                                                               |
-| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                             | Switch component                                                                                                     |
-| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)           | Reply editor (thinking / body)                                                                                       |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch                                                          |
-| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                           | Unrestricted rules text, inlined at build time                                                                       |
-| [`mcp-server/`](mcp-server/README.md)                                                          | Local EasyJailbreak MCP backend                                                                                      |
-| [`src/components/lab/`](src/components/lab/LabView.tsx)                                        | Jailbreak lab page                                                                                                   |
-| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                           | MCP client and lab state                                                                                             |
+| File                                                                                               | Purpose                                                                                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard                  |
+| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
+| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | Refusal notices: a hint line when content was kept, the template otherwise                                           |
+| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | Export status and template handling for refused replies                                                              |
+| [`src/services/settings.ts`](src/services/settings.ts)                                             | New settings, defaults, and persistence                                                                              |
+| [`src/services/api/types.ts`](src/services/api/types.ts)                                           | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | Settings page: Model group, Prompt group, switches and preview                                                       |
+| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | Slider + number input control                                                                                        |
+| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                           | Session aggregates, timings and cost estimate                                                                        |
+| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                           | Context usage cached per session                                                                                     |
+| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)       | Thinking effort 0–4 track                                                                                            |
+| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                 | Statistics and billing dialog                                                                                        |
+| [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | Long-chat compression: structured summary, auto trigger and savings                                                  |
+| [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | Context pressure and compaction reserve (matching DSH)                                                               |
+| [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                         | Reply ratings and the AutoTune EMA profile                                                                           |
+| [`src/components/chatInput/ContextRing.tsx`](src/components/chatInput/ContextRing.tsx)             | Context ring linked with compression                                                                                 |
+| [`src/components/chatInput/ParseltonguePanel.tsx`](src/components/chatInput/ParseltonguePanel.tsx) | Input perturbation panel                                                                                             |
+| [`src/services/unrestricted/promptsZh.ts`](src/services/unrestricted/promptsZh.ts)                 | Chinese translation of GODMODE and the depth directive                                                               |
+| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)               | 33 perturbation techniques (ported from the standalone build)                                                        |
+| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                     | 44 refusal patterns                                                                                                  |
+| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                               | Variant race: budget, batches, scoring                                                                               |
+| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                         | Variant race UI and start confirmation                                                                               |
+| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                 | Switch component                                                                                                     |
+| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)               | Reply editor (thinking / body)                                                                                       |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | Edit entry point, Continue button, refusal rendering branch                                                          |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                               | Unrestricted rules text, inlined at build time                                                                       |
+| [`mcp-server/`](mcp-server/README.md)                                                              | Local EasyJailbreak MCP backend                                                                                      |
+| [`src/components/lab/`](src/components/lab/LabView.tsx)                                            | Jailbreak lab page                                                                                                   |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                               | MCP client and lab state                                                                                             |
 
 ---
 
@@ -472,6 +500,10 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 7. **Attachment limits, key validation, and speech endpoints** still follow the original logic and are independent of the switches described here.
 8. **The lab is not a purely static capability**: it needs the local Python + MCP backend (`mcp-server/`), and a single job can issue a large number of model calls. Start with `limit=1` and small iteration counts.
 9. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
+10. **Long-chat compression is lossy**: summaries drop detail, and auto-compression triggers at 80% of the window (about 800k tokens on a 1M window), so manual compression is the practical option. Per-chat system prompts and compression summaries live only in local sessions and are not included in history exports.
+11. **Branch to new chat copies the current visible branch**: other answer versions and drafts are not copied; attachments reuse the original file ids; the new chat starts its statistics at zero and inherited usage is not counted.
+12. **Restore default settings keeps the API key**: it only resets preferences and switches, never chats, attachments or statistics.
+13. **Auto jailbreak and variant races cost extra**: every retry and every variant is a real request; variant races are bounded by the budget cap.
 
 ---
 

@@ -48,7 +48,16 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-在这个基础上，本仓库把**原版里写死的限制**改成可配置项，并补上了原版没有的「回复改写」能力：
+> 当前版本：**2.5.0（正式版）**
+
+在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
+
+- **解除限制与提示词**：解除限制模式、默认破限文档 / GODMODE 预设、每轮静默注入系统提示词、实验性中文翻译；
+- **高级引擎**：思考强度 0–4 档、输入扰动（33 种技术，可单技术或按档位生成变体）、AutoTune 自动调参、STM 输出整形、一键自动越狱（被拒绝自动换组合重试）；
+- **越狱实验台**：本地 MCP + EasyJailbreak 攻击器，多路提示词赛跑、变体赛跑（预算上限 + 开跑确认）、结果导入导出；
+- **会话能力**：回复改写、防撤回、分支到新对话（原对话不受影响）、长对话压缩（压力触发自动压缩 + 手动压缩）；
+- **上下文与费用**：输入框上下文圆环、会话统计、按官方价格的费用估算；
+- **数据与附件**：附件大小 / 数量 / 扩展名可配置、历史导入导出、一键恢复默认设置。
 
 - **解除限制模式（越狱模式）**：换掉系统提示词，自动跳过安全审核、允许继续生成被拒回复；
 - **模型参数直调**：温度、Top P、最大输出 Token；
@@ -97,16 +106,16 @@
 
 设置页从原来的「通用设置 / 数据管理」两组扩到八组：
 
-| 分组       | 内容                                                              |
-| ---------- | ----------------------------------------------------------------- |
-| 通用设置   | 主题、语言、朗读音色、位置（原版功能，未改动）                    |
-| **模型**   | 温度、Top P、最大输出 Token、防撤回、跳过安全审核、拒绝后继续生成 |
-| **提示词** | 解除限制模式、自定义系统提示词、组装流水线说明、实际下发全文预览  |
-| **高级**   | 系统提示词预设、输入扰动、自动调参、输出整形                      |
-| **附件**   | 附件限制开关、单文件大小、单会话数量、扩展名白名单                |
-| 数据管理   | API Key、导入、导出、删除全部对话（原版功能，未改动）             |
-| 关于       | 仓库地址、演示地址、上游项目                                      |
-| 更新日志   | 版本记录与上游鸣谢                                                |
+| 分组       | 内容                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------ |
+| 通用设置   | 主题、语言、朗读音色、位置（原版功能，未改动）                                       |
+| **模型**   | 温度、Top P、最大输出 Token、防撤回、自动压缩长对话、跳过安全审核、拒绝后继续生成    |
+| **提示词** | 解除限制模式、每轮注入系统提示词、自定义系统提示词、组装流水线说明、实际下发全文预览 |
+| **高级**   | 系统提示词预设、中文越狱提示词、输入扰动、自动越狱、自动调参、输出整形               |
+| **附件**   | 附件限制开关、单文件大小、单会话数量、扩展名白名单                                   |
+| 数据管理   | API Key、导入、导出、恢复默认设置、删除全部对话                                      |
+| 关于       | 仓库地址、演示地址、上游项目                                                         |
+| 更新日志   | 版本记录与上游鸣谢                                                                   |
 
 没有修改任何既有样式规则；新增控件只使用新增的 CSS 类（方块开关、滑块、编辑器各带独立 CSS Module，提示词预览的几条类追加在设置页样式里），颜色与圆角全部取自现有设计变量。
 
@@ -290,6 +299,19 @@ Persona（官方身份分块）
 
 ---
 
+### 3.15 分支到新对话
+
+在侧栏会话菜单（⋯ → **分支到新对话**）或桌面端会话标题栏点「分支到新对话」，会把当前会话的可见分支复制成一个**全新会话**：
+
+- 新会话 id 与所有消息 id 全部重新生成，原会话完全不受影响；
+- 继承当前系统提示词（实验台组合）与压缩摘要；
+- 新会话标题带「（分支）」后缀，之后两条线各自独立发展；
+- 生成中、导入中或会话未加载时不可分支。
+
+和消息级「分支切换」不同：后者在同一会话内保留回答版本，这里是在会话列表里开一条新线。
+
+---
+
 ## 4. 行为对照表
 
 | 场景                 | 原版                    | 本仓库默认（所有开关关闭）                             | 越狱模式开启               |
@@ -386,32 +408,38 @@ Persona（官方身份分块）
 
 ## 7. 实现位置索引
 
-| 文件                                                                                           | 作用                                                                                                                   |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                       | 系统提示词组装流水线：Persona + 破限规则分块，支持自定义覆盖                                                           |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                     | 请求体组装（system / 参数 / safety_check / 工具）、回复结束时的防撤回处理、续写守卫                                    |
-| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                     | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
-| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                               | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
-| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)             | 导出时拒绝回复的状态与模板处理                                                                                         |
-| [`src/services/settings.ts`](src/services/settings.ts)                                         | 新增设置的读写与默认值                                                                                                 |
-| [`src/services/api/types.ts`](src/services/api/types.ts)                                       | 请求类型：`temperature` / `top_p` / `max_tokens` / 可选 `safety_check`                                                 |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)     | 设置页：模型分组、提示词分组、开关与预览                                                                               |
-| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)       | 滑块 + 数字输入控件                                                                                                    |
-| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                       | 会话统计、计时与费用估算                                                                                               |
-| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                       | 上下文占用（按会话缓存）                                                                                               |
-| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)   | 思考强度 0–4 轨道                                                                                                      |
-| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)             | 统计与计费弹窗                                                                                                         |
-| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)           | 33 种扰动技术（移植自单文件版）                                                                                        |
-| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                 | 44 条拒绝文本模式                                                                                                      |
-| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                           | 变体赛跑：预算、批并发、打分选优                                                                                       |
-| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                     | 变体赛跑界面与开跑确认                                                                                                 |
-| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                             | 方块开关组件                                                                                                           |
-| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)           | 回复编辑器（思维链 / 正文）                                                                                            |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | 编辑入口、「继续生成」按钮、拒绝回复的展示分支                                                                         |
-| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                           | 破限规则文本，构建时内联                                                                                               |
-| [`mcp-server/`](mcp-server/README.md)                                                          | 本地 EasyJailbreak MCP 后端                                                                                            |
-| [`src/components/lab/`](src/components/lab/LabView.tsx)                                        | 越狱实验台页面                                                                                                         |
-| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                           | MCP 客户端与实验台状态                                                                                                 |
+| 文件                                                                                               | 作用                                                                                                                   |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | 系统提示词组装流水线：Persona + 破限规则分块，支持自定义覆盖                                                           |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、回复结束时的防撤回处理、续写守卫                                    |
+| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
+| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
+| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | 导出时拒绝回复的状态与模板处理                                                                                         |
+| [`src/services/settings.ts`](src/services/settings.ts)                                             | 新增设置的读写与默认值                                                                                                 |
+| [`src/services/api/types.ts`](src/services/api/types.ts)                                           | 请求类型：`temperature` / `top_p` / `max_tokens` / 可选 `safety_check`                                                 |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | 设置页：模型分组、提示词分组、开关与预览                                                                               |
+| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | 滑块 + 数字输入控件                                                                                                    |
+| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                           | 会话统计、计时与费用估算                                                                                               |
+| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                           | 上下文占用（按会话缓存）                                                                                               |
+| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)       | 思考强度 0–4 轨道                                                                                                      |
+| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                 | 统计与计费弹窗                                                                                                         |
+| [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | 长对话压缩：结构化摘要、自动触发与节省量                                                                               |
+| [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | 上下文压力与压缩预留阈值（对齐 DSH）                                                                                   |
+| [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                         | 回复评分与 AutoTune EMA 反馈画像                                                                                       |
+| [`src/components/chatInput/ContextRing.tsx`](src/components/chatInput/ContextRing.tsx)             | 上下文圆环与压缩联动                                                                                                   |
+| [`src/components/chatInput/ParseltonguePanel.tsx`](src/components/chatInput/ParseltonguePanel.tsx) | 输入扰动浮层                                                                                                           |
+| [`src/services/unrestricted/promptsZh.ts`](src/services/unrestricted/promptsZh.ts)                 | GODMODE 与深度指令的中文翻译                                                                                           |
+| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)               | 33 种扰动技术（移植自单文件版）                                                                                        |
+| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                     | 44 条拒绝文本模式                                                                                                      |
+| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                               | 变体赛跑：预算、批并发、打分选优                                                                                       |
+| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                         | 变体赛跑界面与开跑确认                                                                                                 |
+| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                 | 方块开关组件                                                                                                           |
+| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)               | 回复编辑器（思维链 / 正文）                                                                                            |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | 编辑入口、「继续生成」按钮、拒绝回复的展示分支                                                                         |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                               | 破限规则文本，构建时内联                                                                                               |
+| [`mcp-server/`](mcp-server/README.md)                                                              | 本地 EasyJailbreak MCP 后端                                                                                            |
+| [`src/components/lab/`](src/components/lab/LabView.tsx)                                            | 越狱实验台页面                                                                                                         |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                               | MCP 客户端与实验台状态                                                                                                 |
 
 ---
 
@@ -472,6 +500,10 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 7. **附件限制、密钥校验、语音接口**仍走原版逻辑，与本文档的开关无关。
 8. **越狱实验台不是纯静态能力**：需要本地 Python + MCP 后端（`mcp-server/`），且一次任务会发起大量模型调用，请先用 `limit=1` 和小迭代次数试跑。
 9. **自定义提示词会覆盖自动组装**：填写后越狱模式不再替换 `system`，但仍会跳过安全审核、放开被拒续写；清空输入框即可回到默认流水线。
+10. **长对话压缩会丢细节**：摘要有损，自动压缩按窗口 80% 触发（1M 窗口约 80 万 token 才触发），日常建议用统计弹窗手动压缩；会话级系统提示词与压缩摘要只存在本机会话里，历史导出包不含它们。
+11. **分支到新对话复制的是当前可见分支**：不包含其他回答版本，也不复制草稿；附件沿用原 file_id；新会话的统计从 0 开始，继承来的用量不计入。
+12. **恢复默认设置保留 API Key**：只重置偏好与开关，不删除对话、附件与统计。
+13. **自动越狱与变体赛跑会产生额外费用**：每次重试、每个变体都是真实请求，变体赛跑受预算上限约束。
 
 ---
 

@@ -3,6 +3,10 @@ export const zh = {
   contentCaveat: '内容由 AI 生成，请仔细甄别',
   expandSiderbarButton: '打开边栏',
   collapseSiderbarButton: '收起边栏',
+  forkToNewChat: '分支到新对话',
+  forkCreated: '已在新对话中继续，原对话未改动',
+  forkFailed: '当前无法分支：请等待生成结束或导入完成',
+  forkTitleSuffix: '（分支）',
   newChat: '开启新对话',
   untitledChat: '新对话',
   sessionLoading: '正在加载对话...',
@@ -112,6 +116,10 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV25Title: 'v2.5.0 · 2026-11（正式版）',
+  changelogV25Official: '正式版发布：整合越狱预设、输入扰动、多路/变体赛跑、统计计费与上下文压缩',
+  changelogV25Reset: '设置 → 数据管理新增「恢复默认设置」，保留 API Key 与对话数据',
+  changelogV25Fork: '新增「分支到新对话」：复制当前对话到新会话，原对话不受影响',
   changelogV246Title: 'v2.4.6 · 2026-11',
   changelogV246Pressure:
     '自动压缩改为上下文压力触发：窗口 80% 阈值，预留 64k 余量与输出空间（对齐 DSH）',
@@ -333,6 +341,13 @@ export const zh = {
   settingsTranslateJailbreak: '将越狱提示词翻译成中文（实验性）',
   settingsTranslateJailbreakDescription:
     '把内置的 GODMODE 与深度指令换成中文翻译。中文表达与训练语料差异可能降低越狱效果，建议先小范围试用。',
+  settingsResetAll: '恢复默认设置',
+  settingsResetAllDescription: '把本机所有设置恢复为默认值；API Key 会保留，对话与附件不受影响。',
+  resetSettings: '恢复默认',
+  resetSettingsModalTitle: '恢复默认设置',
+  resetSettingsModalDescription:
+    '所有设置将恢复默认值。API Key 会保留，对话记录、附件和统计不受影响。确认继续吗？',
+  resetSettingsDone: '已恢复默认设置',
   settingsAutoCompress: '自动压缩长对话',
   settingsAutoCompressDescription:
     '上下文占用达到窗口的 80% 时自动把较早内容压缩成摘要（预留 64k 余量与输出空间）；摘要只保存在本机，可随时清除。',

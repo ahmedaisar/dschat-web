@@ -5,6 +5,10 @@ export const en = {
   contentCaveat: 'AI-generated, for reference only',
   expandSiderbarButton: 'Open sidebar',
   collapseSiderbarButton: 'Close sidebar',
+  forkToNewChat: 'Branch to new chat',
+  forkCreated: 'Continued in a new chat; the original is untouched',
+  forkFailed: 'Cannot branch right now: wait for generation or import to finish',
+  forkTitleSuffix: ' (branch)',
   newChat: 'New chat',
   untitledChat: 'New chat',
   sessionLoading: 'Loading chats...',
@@ -118,6 +122,13 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV25Title: 'v2.5.0 · 2026-11 (stable)',
+  changelogV25Official:
+    'Stable release: jailbreak presets, perturbation, model/variant races, statistics and billing, and context compression',
+  changelogV25Reset:
+    'Settings → Data gains "Restore default settings", keeping the API key and chats',
+  changelogV25Fork:
+    'New "Branch to new chat": copies the current conversation into a new chat without touching the original',
   changelogV246Title: 'v2.4.6 · 2026-11',
   changelogV246Pressure:
     'Auto-compression now triggers on context pressure: 80% window threshold with 64k headroom and output reserve (matching DSH)',
@@ -374,6 +385,14 @@ export const en = {
   settingsTranslateJailbreak: 'Translate jailbreak prompts to Chinese (experimental)',
   settingsTranslateJailbreakDescription:
     'Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak; try it on a small scale first.',
+  settingsResetAll: 'Restore default settings',
+  settingsResetAllDescription:
+    'Resets every local setting to its default; the API key, chats and attachments are kept.',
+  resetSettings: 'Restore defaults',
+  resetSettingsModalTitle: 'Restore default settings',
+  resetSettingsModalDescription:
+    'All settings will return to their defaults. The API key, chats, attachments and statistics are kept. Continue?',
+  resetSettingsDone: 'Default settings restored',
   settingsAutoCompress: 'Auto-compress long chats',
   settingsAutoCompressDescription:
     'Once context usage reaches 80% of the window, older content is summarised (keeping a 64k headroom plus output reserve); summaries stay on this device and can be cleared anytime.',

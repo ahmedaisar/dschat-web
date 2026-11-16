@@ -25,6 +25,10 @@
   color: var(--dsw-alias-label-primary);
 }
 
+.headerAction {
+  margin-left: auto;
+}
+
 .withCollapsedSider {
   margin-left: 113px;
 }

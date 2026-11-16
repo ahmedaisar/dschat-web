@@ -26,6 +26,7 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  resetSettings,
   setAttachmentExts,
   setAutoJailbreak,
   setAttachmentLimits,
@@ -118,6 +119,7 @@ const SettingsContent = () => {
   const apiKeyEditor = useApiKeyEditor()
   const historyImport = useHistoryImport()
   const historyDelete = useHistoryDelete()
+  const [resetOpen, setResetOpen] = useState(false)
   const replacingHistory = useChatStore((state) => state.importingHistory)
   const historyBusy = historyImport.busy || historyDelete.busy || replacingHistory
   return (
@@ -174,6 +176,22 @@ const SettingsContent = () => {
               <ImportHistory historyImport={historyImport} disabled={historyBusy} />
               <ExportHistory disabled={historyBusy} />
               <SettingCell
+                label={t('settingsResetAll')}
+                description={t('settingsResetAllDescription')}
+                status={null}
+                action={
+                  <Button
+                    variant="dangerOutlined"
+                    size="m"
+                    className={styles.cellButton}
+                    disabled={historyBusy}
+                    onClick={() => setResetOpen(true)}
+                  >
+                    {t('resetSettings')}
+                  </Button>
+                }
+              />
+              <SettingCell
                 label={t('deleteAllSessions')}
                 status={null}
                 action={
@@ -195,7 +213,47 @@ const SettingsContent = () => {
       </Modal>
       {historyImport.file ? <ImportConfirm historyImport={historyImport} /> : null}
       {historyDelete.opened ? <DeleteAllConfirm historyDelete={historyDelete} /> : null}
+      {resetOpen ? (
+        <ResetSettingsConfirm
+          onCancel={() => setResetOpen(false)}
+          onConfirm={() => {
+            resetSettings()
+            setResetOpen(false)
+            showToast({ key: 'resetSettingsDone' })
+          }}
+        />
+      ) : null}
     </>
+  )
+}
+
+/** 恢复默认设置确认：只重置设置，API Key 与对话数据保留。 */
+const ResetSettingsConfirm = ({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+}) => {
+  const t = useTranslate()
+  return (
+    <Modal
+      title={t('resetSettingsModalTitle')}
+      className={styles.deleteConfirm}
+      onClose={onCancel}
+      footer={
+        <div className={styles.deleteActions}>
+          <Button variant="outlined" autoFocus onClick={onCancel}>
+            {t('cancel')}
+          </Button>
+          <Button variant="danger" onClick={onConfirm}>
+            {t('resetSettings')}
+          </Button>
+        </div>
+      }
+    >
+      {t('resetSettingsModalDescription')}
+    </Modal>
   )
 }
 
@@ -421,6 +479,10 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV25Title',
+      items: ['changelogV25Official', 'changelogV25Reset', 'changelogV25Fork'],
+    },
     {
       title: 'changelogV246Title',
       items: ['changelogV246Pressure', 'changelogV246Ring', 'changelogV246Summary'],
