@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import {
   IconDataOutline16,
   IconGlobeLanguageOutline14,
@@ -61,24 +61,6 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const togglesRef = useRef<HTMLDivElement>(null)
-
-  useLayoutEffect(() => {
-    const toggles = togglesRef.current
-    if (!toggles) {
-      return
-    }
-
-    const updateLabels = () => {
-      toggles.classList.remove(styles.collapsedToggles)
-      toggles.classList.toggle(styles.collapsedToggles, toggles.scrollWidth > toggles.clientWidth)
-    }
-
-    updateLabels()
-    const observer = new ResizeObserver(updateLabels)
-    observer.observe(toggles)
-    return () => observer.disconnect()
-  }, [t])
 
   const acceptFiles = (files: File[]) => {
     if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
@@ -207,7 +189,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       </div>
       <div className={styles.functionRow}>
         {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
-        <div ref={togglesRef} className={styles.toggles}>
+        <div className={styles.toggles}>
           <ModelPicker />
           <Tooltip content={t('autoJailbreakTooltip')}>
             <button

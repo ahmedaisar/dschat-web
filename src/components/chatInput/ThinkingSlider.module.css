@@ -366,13 +366,16 @@ body[data-ds-dark-theme] .panel {
   --accent: #8bb4ff;
 }
 
-@media not all and (min-width: 560px) {
-  .label {
+@media not all and (min-width: 768px) {
+  .label,
+  .level {
     display: none;
   }
 
   .trigger {
-    padding: 0 10px;
+    width: 34px;
+    padding: 0;
+    border-radius: 50%;
   }
 }
 

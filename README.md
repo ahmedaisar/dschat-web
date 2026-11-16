@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.1**
+> Current version: **2.5.2**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -233,6 +233,8 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 - Three steps: `pip install datasets` (optional) → `./mcp-server/run.sh` → `pnpm dev`, then connect from the sidebar Lab entry and run. If connecting returns 403, see the troubleshooting section in [`mcp-server/README.md`](mcp-server/README.md) (browser Origin allow-list: dev server, `null` for `file://`, and the deployed domains; extend it with `MCP_ALLOWED_ORIGINS`).
 
 ### 3.10 Advanced features: prompt presets, perturbation, AutoTune, output shaping, model race
+
+The input bar is responsive: on desktop the controls show their text labels (model, auto jailbreak, thinking, search, perturbation); below 768px they collapse to circular icons with horizontal scrolling instead of hiding desktop labels based on width measurement.
 
 Settings → **Advanced** (everything is off by default, so the out-of-the-box behaviour is unchanged):
 

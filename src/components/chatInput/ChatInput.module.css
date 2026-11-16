@@ -259,10 +259,6 @@
   display: none;
 }
 
-.collapsedToggles .toggleLabel {
-  display: none;
-}
-
 .toggle {
   display: inline-flex;
   flex-shrink: 0;
@@ -333,6 +329,27 @@
 
   .toggle {
     padding: 0 9px;
+  }
+}
+
+/* 桌面端展开文字标签；空间不够时换行，不再靠测量把文字藏起来 */
+@media (min-width: 768px) {
+  .toggles {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+}
+
+/* 手机端保持圆形图标按钮 */
+@media not all and (min-width: 768px) {
+  .toggle {
+    width: 34px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .toggleLabel {
+    display: none;
   }
 }
 

@@ -233,7 +233,7 @@
   line-height: 14px;
 }
 
-@media not all and (min-width: 560px) {
+@media not all and (min-width: 768px) {
   .trigger {
     max-width: 132px;
     padding: 0 8px 0 10px;
