@@ -69,6 +69,16 @@ if errorlevel 1 (
   )
 )
 
+rem GitHub 源码版（比 PyPI 的 0.1.3 新）的 openai_model 需要 httpx，模型加载还需要这些包
+"%PY%" -c "import httpx, accelerate, einops, sentencepiece, google.protobuf, transformers_stream_generator" >nul 2>nul
+if errorlevel 1 (
+  echo       安装 EasyJailbreak 源码版依赖（httpx / accelerate / einops / protobuf / sentencepiece / transformers-stream-generator）...
+  "%PY%" -m pip install httpx accelerate einops protobuf sentencepiece transformers-stream-generator
+  if errorlevel 1 (
+    echo       [提示] 部分依赖安装失败，稍后仍会重试并显示具体 import 错误
+  )
+)
+
 "%PY%" -c "import fastchat" >nul 2>nul
 if errorlevel 1 (
   echo       安装 fastchat（仅用 conversation 模块）...
