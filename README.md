@@ -95,14 +95,17 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to four:
+The settings dialog grows from two groups to seven:
 
 | Group | Contents |
 | --- | --- |
 | General | Theme, language, read-aloud voice, location (original, untouched) |
 | **Model** | Temperature, Top P, max output tokens, anti-retraction, skip safety check, continue refused replies |
 | **Prompt** | Unrestricted mode, custom system prompt, prompt-assembly explanation, full preview of what will be sent |
+| **Advanced** | System prompt preset, input perturbation, AutoTune, output shaping |
 | Data | API key, import, export, delete all (original, untouched) |
+| About | Repository, demo and upstream links |
+| Changelog | Version history and upstream credits |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -201,6 +204,7 @@ All other continuation rules are unchanged: template notices, server tool blocks
 | Slider + number control | `src/components/settings/ParamControls.tsx` + `ParamControls.module.css` (new) |
 | Reply editor | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css` (new) |
 | Translations | `src/i18n/zh.ts`, `src/i18n/en.ts` |
+| Perturbation / AutoTune / shaping / race engines | `src/services/unrestricted/` (ported from G0DM0D3, AGPL-3.0) |
 
 > `deepseekv4.1 and v4.1-1017.md` is a build dependency. Commit it together with the code, otherwise a fresh clone will fail to build.
 
@@ -216,6 +220,24 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 - Datasets: after `pip install datasets`, AdvBench (520 rows) / HarmBench / StrongREJECT can be loaded online through the `hf-mirror.com` mirror by default (override with `HF_ENDPOINT`); without the package the built-in sample queries are used;
 - Results can be exported to JSON and imported back for later review; a successful entry has a "Send to chat" button that starts a new chat draft with the final prompt (any `{query}` placeholder is replaced with a hint you can edit before sending).
 - Three steps: `pip install datasets` (optional) → `./mcp-server/run.sh` → `pnpm dev`, then connect from the sidebar Lab entry and run. If connecting returns 403, see the troubleshooting section in [`mcp-server/README.md`](mcp-server/README.md) (browser Origin allow-list: dev server, `null` for `file://`, and the deployed domains; extend it with `MCP_ALLOWED_ORIGINS`).
+
+### 3.10 Advanced features: prompt presets, perturbation, AutoTune, output shaping, model race
+
+Settings → **Advanced** (everything is off by default, so the out-of-the-box behaviour is unchanged):
+
+| Setting | What it does | Caveat |
+| --- | --- | --- |
+| System prompt preset | Switches between the default v4.1 document and GODMODE | GODMODE replaces the whole `system` field instead of appending the rules chunk; a custom prompt still overrides it |
+| Input perturbation | Rewrites matched trigger words before sending | The input box shows the rewritten text, i.e. exactly what is sent; resends and continuations reuse it |
+| Technique / intensity | 8 techniques, 3 intensities | Leetspeak, homoglyphs, mixed case and phonetic only affect Latin letters; full-width, thin spacing and zero-width work for Chinese too |
+| AutoTune | Picks sampling parameters from the prompt context | DeepSeek's Anthropic-compatible API only accepts `temperature` and `top_p`; `top_k` and friends are never sent |
+| Output shaping | Hedge reduction / direct / casual | Affects rendered chat and copied race results only; the stored reply is untouched |
+
+- The trigger table is bilingual (60+ English, 90+ Chinese); Chinese triggers match by substring and English ones by word boundary — see `src/services/unrestricted/parseltongue.ts`;
+- The input toolbar gains a **Perturb** button that opens a panel with the on/off switch, technique, matched-trigger count and a live preview;
+- The lab's attackers tab gains **Perturb test queries first**, which rewrites custom test queries before they are submitted;
+- The lab gains a **Model race** tab: 5 L1B3RT4S prompt combos run in parallel (optionally alternating `deepseek-v4-pro` / `deepseek-flash`), stream into cards, get a 0–100 composite score (length, structure, anti-refusal, directness, relevance) and a winner badge, and each card can **start a chat with this combo** (its system prompt becomes the custom prompt, the question goes into the input box);
+- Engine code lives in `src/services/unrestricted/`, ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3), with AGPL-3.0 headers and a license copy (`COPYING-AGPL-3.0`).
 
 ---
 
@@ -248,6 +270,13 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 | Model | Continue refused replies | off | `chat-demo:continue-refused` | Forced on, disabled |
 | Prompt | Unrestricted mode | off | `chat-demo:unrestricted` | — |
 | Prompt | Custom system prompt | empty (assembled) | `chat-demo:system-prompt` | Overrides the assembled result |
+| Advanced | System prompt preset | `deepseek` | `chat-demo:prompt-preset` | Unaffected |
+| Advanced | Input perturbation | off | `chat-demo:parseltongue` | Unaffected |
+| Advanced | Perturbation technique | `leetspeak` | `chat-demo:parseltongue-technique` | Unaffected |
+| Advanced | Perturbation intensity | `medium` | `chat-demo:parseltongue-intensity` | Unaffected |
+| Advanced | AutoTune | off | `chat-demo:autotune` | Unaffected |
+| Advanced | AutoTune strategy | `adaptive` | `chat-demo:autotune-strategy` | Unaffected |
+| Advanced | Output shaping | empty (off) | `chat-demo:stm-modules` | Unaffected |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -396,3 +425,4 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 - `brand.jpg` is artwork provided by the repository author and remains theirs; "Yes, Sun Xiaochuan Chat" is an inside joke and is not affiliated with DeepSeek.
 - This is a personal fork, not an official DeepSeek project. Check the terms and costs of whichever API service you point it at.
 - Thanks to the [EasyJailbreak project](https://github.com/EasyJailbreak/EasyJailbreak) for the theoretical foundation.
+- The engines under `src/services/unrestricted/` (input perturbation, AutoTune, STM, race scoring, GODMODE prompt) are ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3) and licensed [AGPL-3.0](src/services/unrestricted/COPYING-AGPL-3.0); that directory keeps its own license, separate from the MIT-licensed rest of the repo.

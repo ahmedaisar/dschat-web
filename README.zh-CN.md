@@ -95,14 +95,17 @@
 
 ### 3.1 设置页结构
 
-设置页从原来的「通用设置 / 数据管理」两组变成四组：
+设置页从原来的「通用设置 / 数据管理」两组扩到七组：
 
 | 分组 | 内容 |
 | --- | --- |
 | 通用设置 | 主题、语言、朗读音色、位置（原版功能，未改动） |
 | **模型** | 温度、Top P、最大输出 Token、防撤回、跳过安全审核、拒绝后继续生成 |
 | **提示词** | 解除限制模式、自定义系统提示词、组装流水线说明、实际下发全文预览 |
+| **高级** | 系统提示词预设、输入扰动、自动调参、输出整形 |
 | 数据管理 | API Key、导入、导出、删除全部对话（原版功能，未改动） |
+| 关于 | 仓库地址、演示地址、上游项目 |
+| 更新日志 | 版本记录与上游鸣谢 |
 
 没有修改任何既有样式规则；新增控件只使用新增的 CSS 类（方块开关、滑块、编辑器各带独立 CSS Module，提示词预览的几条类追加在设置页样式里），颜色与圆角全部取自现有设计变量。
 
@@ -201,6 +204,7 @@ Persona（官方身份分块）
 | 滑块 + 数字参数控件 | `src/components/settings/ParamControls.tsx` + `ParamControls.module.css`（新增） |
 | 回复编辑器 | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css`（新增） |
 | 中英文案 | `src/i18n/zh.ts`、`src/i18n/en.ts` |
+| 扰动 / 调参 / 整形 / 赛跑引擎 | `src/services/unrestricted/`（移植自 G0DM0D3，AGPL-3.0） |
 
 > `deepseekv4.1 and v4.1-1017.md` 是构建依赖，提交代码时请一并纳入版本管理，否则别人 clone 下来会构建失败。
 
@@ -216,6 +220,24 @@ Persona（官方身份分块）
 - 数据集：安装 `datasets` 后可在线加载 AdvBench（520 条）/ HarmBench / StrongREJECT，默认走 `hf-mirror.com` 镜像，可用环境变量 `HF_ENDPOINT` 覆盖；未安装时回退到内置测试语句；
 - 实验结果可「导出结果」保存为 JSON，也能「导入结果」回放之前的实验；判分成功的条目有「导入到聊天」按钮，会新建会话并把最终提示词填进输入框（模板里的 `{query}` 会替换成占位提示，先改再发）。
 - 起步三步：`pip install datasets`（可选）→ `./mcp-server/run.sh` → `pnpm dev`，然后在侧栏「实验台」里连接并运行。连接报 403 时见 [`mcp-server/README.md`](mcp-server/README.md) 的故障排查（浏览器 Origin 白名单：dev、`file://` 的 `null`、线上域名；其他域名可用 `MCP_ALLOWED_ORIGINS` 追加）。
+
+### 3.10 高级玩法：提示词预设、输入扰动、自动调参、输出整形与多路赛跑
+
+设置 → **高级**（全部默认关闭，开箱行为与之前一致）：
+
+| 设置项 | 作用 | 注意 |
+| --- | --- | --- |
+| 系统提示词预设 | 在默认的 v4.1 文档与 GODMODE 之间切换 | GODMODE 会整段替换 `system`，不再追加破限规则分块；仍可被自定义提示词覆盖 |
+| 输入扰动 | 发送前改写命中的敏感触发词 | 输入框里看到的就是实际下发的文本，重发与续写沿用改写结果 |
+| 扰动技术 / 强度 | 8 种技术、3 档强度 | L33tspeak、同形字、大小写、音近只影响拉丁字母；全角、细空格、零宽对中文同样有效 |
+| 自动调参 | 按上下文选择采样参数 | DeepSeek 的 Anthropic 兼容接口只接受 `temperature` 与 `top_p`，`top_k` 等参数不会下发 |
+| 输出整形 | 去退让语气 / 直给 / 口语 | 只影响聊天显示与赛跑结果的复制，不改写本地保存的原文 |
+
+- 触发词表是中英双语的（英文 60 余个、中文 90 余个），中文按子串匹配、英文按词边界匹配，见 `src/services/unrestricted/parseltongue.ts`；
+- 输入框工具行新增「扰动」按钮，点开可以开关、切换技术、查看命中数量与实时改写预览；
+- 实验台「越狱方法」页新增「先用扰动改写测试语句」，提交前会对自定义测试语句做同样的改写；
+- 实验台新增「多路赛跑」页：选 5 套 L1B3RT4S 提示词组合并发调用（可混合 `deepseek-v4-pro` / `deepseek-flash`），逐条流式展示，按 100 分制综合分（篇幅 / 结构 / 反拒绝 / 直接性 / 相关性）标出胜出者，并能「用此组合开新会话」——把该组合的系统提示词设为自定义提示词、问题填进输入框；
+- 引擎代码集中在 `src/services/unrestricted/`，移植自 [G0DM0D3](https://github.com/elder-plinius/G0DM0D3)，保留 AGPL-3.0 文件头与许可证副本（`COPYING-AGPL-3.0`）。
 
 ---
 
@@ -248,6 +270,13 @@ Persona（官方身份分块）
 | 模型 | 拒绝后继续生成 | 关 | `chat-demo:continue-refused` | 强制开启、置灰 |
 | 提示词 | 解除限制模式 | 关 | `chat-demo:unrestricted` | —— |
 | 提示词 | 自定义系统提示词 | 空（自动组装） | `chat-demo:system-prompt` | 覆盖自动组装结果 |
+| 高级 | 系统提示词预设 | `deepseek` | `chat-demo:prompt-preset` | 不受影响 |
+| 高级 | 输入扰动 | 关 | `chat-demo:parseltongue` | 不受影响 |
+| 高级 | 扰动技术 | `leetspeak` | `chat-demo:parseltongue-technique` | 不受影响 |
+| 高级 | 扰动强度 | `medium` | `chat-demo:parseltongue-intensity` | 不受影响 |
+| 高级 | 自动调参 | 关 | `chat-demo:autotune` | 不受影响 |
+| 高级 | 调参策略 | `adaptive` | `chat-demo:autotune-strategy` | 不受影响 |
+| 高级 | 输出整形 | 空（关闭） | `chat-demo:stm-modules` | 不受影响 |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 
@@ -395,3 +424,4 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 - 头图 `brand.jpg` 为仓库作者提供的素材，版权归其作者；「是，孙笑川聊天」只是项目玩笑，与 DeepSeek 官方无关联。
 - 本仓库是个人修改版，不是 DeepSeek 官方项目；使用前请自行确认所用 API 服务的规则与费用。
 - 感谢[EasyJailbreak项目](https://github.com/EasyJailbreak/EasyJailbreak)的理论支持
+- `src/services/unrestricted/` 下的引擎代码（输入扰动、AutoTune、STM、赛跑打分、GODMODE 提示词）移植自 [G0DM0D3](https://github.com/elder-plinius/G0DM0D3)，遵循 [AGPL-3.0](src/services/unrestricted/COPYING-AGPL-3.0)；该目录保留原始许可证，与仓库其余 MIT 代码分别适用。

@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import type { TtsVoice } from './api/speech.js'
 import { normalizeLocation, type UserLocation } from './location.js'
+import type { AutoTuneStrategy } from './unrestricted/autotune.js'
+import type { ObfuscationTechnique } from './unrestricted/parseltongue.js'
+import type { PromptPreset } from './unrestricted/prompts.js'
+import { STM_MODULE_IDS } from './unrestricted/stm.js'
 
 export type Locale = 'zh-CN' | 'en-US'
 
@@ -32,6 +36,20 @@ type Settings = {
   continueRefused: boolean
   /** 自定义系统提示词：null 表示使用自动组装结果（Persona，或 Persona + 破限规则分块） */
   systemPrompt: string | null
+  /** 提示词预设：deepseek 用仓库里的 v4.1 文档，godmode 用移植的 GODMODE 提示词 */
+  promptPreset: PromptPreset
+  /** 输入扰动（Parseltongue）：开启后发送前改写命中的触发词 */
+  parseltongue: boolean
+  /** 扰动技术 */
+  parseltongueTechnique: ObfuscationTechnique
+  /** 扰动强度 */
+  parseltongueIntensity: 'light' | 'medium' | 'heavy'
+  /** 自动调参（AutoTune）：按上下文改写采样参数 */
+  autoTune: boolean
+  /** 调参策略；adaptive 会先做上下文分类再取参数 */
+  autoTuneStrategy: AutoTuneStrategy
+  /** 输出整形（STM）模块 id；空数组表示不整形 */
+  stmModules: string[]
   siderCollapsed: boolean
 }
 
@@ -51,6 +69,13 @@ const KEYS = {
   skipSafetyCheck: 'chat-demo:skip-safety-check',
   continueRefused: 'chat-demo:continue-refused',
   systemPrompt: 'chat-demo:system-prompt',
+  promptPreset: 'chat-demo:prompt-preset',
+  parseltongue: 'chat-demo:parseltongue',
+  parseltongueTechnique: 'chat-demo:parseltongue-technique',
+  parseltongueIntensity: 'chat-demo:parseltongue-intensity',
+  autoTune: 'chat-demo:autotune',
+  autoTuneStrategy: 'chat-demo:autotune-strategy',
+  stmModules: 'chat-demo:stm-modules',
   siderCollapsed: 'chat-demo:sider-collapsed',
 } as const
 
@@ -137,6 +162,48 @@ const initialMaxTokens = (): number | null => {
   return Number.isFinite(value) && value >= 1 ? value : null
 }
 
+const PROMPT_PRESETS: PromptPreset[] = ['deepseek', 'godmode']
+
+const TECHNIQUES: ObfuscationTechnique[] = [
+  'leetspeak',
+  'unicode',
+  'zwj',
+  'mixedcase',
+  'phonetic',
+  'fullwidth',
+  'spacing',
+  'random',
+]
+
+const INTENSITIES: Array<'light' | 'medium' | 'heavy'> = ['light', 'medium', 'heavy']
+
+const STRATEGIES: AutoTuneStrategy[] = ['adaptive', 'precise', 'balanced', 'creative', 'chaotic']
+
+/** 枚举型设置：值不在允许集合里时回落到默认值 */
+const initialEnum = <T extends string>(key: string, values: readonly T[], fallback: T): T => {
+  const saved = read(key)
+  return saved !== null && (values as readonly string[]).includes(saved) ? (saved as T) : fallback
+}
+
+/** 输出整形模块：只保留已知 id，空数组表示关闭 */
+const initialStmModules = (): string[] => {
+  const raw = read(KEYS.stmModules)
+  if (raw === null) {
+    return []
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed.filter(
+      (id): id is string => typeof id === 'string' && STM_MODULE_IDS.includes(id)
+    )
+  } catch {
+    return []
+  }
+}
+
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
   locale: initialLocale(),
@@ -153,6 +220,13 @@ export const useSettings = create<Settings>(() => ({
   skipSafetyCheck: read(KEYS.skipSafetyCheck) === 'true',
   continueRefused: read(KEYS.continueRefused) === 'true',
   systemPrompt: initialSystemPrompt(),
+  promptPreset: initialEnum(KEYS.promptPreset, PROMPT_PRESETS, 'deepseek'),
+  parseltongue: read(KEYS.parseltongue) === 'true',
+  parseltongueTechnique: initialEnum(KEYS.parseltongueTechnique, TECHNIQUES, 'leetspeak'),
+  parseltongueIntensity: initialEnum(KEYS.parseltongueIntensity, INTENSITIES, 'medium'),
+  autoTune: read(KEYS.autoTune) === 'true',
+  autoTuneStrategy: initialEnum(KEYS.autoTuneStrategy, STRATEGIES, 'adaptive'),
+  stmModules: initialStmModules(),
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -241,4 +315,41 @@ export const setUnrestricted = (unrestricted: boolean) => {
 export const setSiderCollapsed = (siderCollapsed: boolean) => {
   write(KEYS.siderCollapsed, String(siderCollapsed))
   useSettings.setState({ siderCollapsed })
+}
+
+export const setPromptPreset = (promptPreset: PromptPreset) => {
+  write(KEYS.promptPreset, promptPreset)
+  useSettings.setState({ promptPreset })
+}
+
+export const setParseltongue = (parseltongue: boolean) => {
+  write(KEYS.parseltongue, String(parseltongue))
+  useSettings.setState({ parseltongue })
+}
+
+export const setParseltongueTechnique = (parseltongueTechnique: ObfuscationTechnique) => {
+  write(KEYS.parseltongueTechnique, parseltongueTechnique)
+  useSettings.setState({ parseltongueTechnique })
+}
+
+export const setParseltongueIntensity = (parseltongueIntensity: 'light' | 'medium' | 'heavy') => {
+  write(KEYS.parseltongueIntensity, parseltongueIntensity)
+  useSettings.setState({ parseltongueIntensity })
+}
+
+export const setAutoTune = (autoTune: boolean) => {
+  write(KEYS.autoTune, String(autoTune))
+  useSettings.setState({ autoTune })
+}
+
+export const setAutoTuneStrategy = (autoTuneStrategy: AutoTuneStrategy) => {
+  write(KEYS.autoTuneStrategy, autoTuneStrategy)
+  useSettings.setState({ autoTuneStrategy })
+}
+
+/** 传入的 id 会按 STM_MODULE_IDS 过滤，传空数组表示关闭输出整形 */
+export const setStmModules = (stmModules: string[]) => {
+  const value = stmModules.filter((id) => STM_MODULE_IDS.includes(id))
+  write(KEYS.stmModules, JSON.stringify(value))
+  useSettings.setState({ stmModules: value })
 }

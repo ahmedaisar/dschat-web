@@ -6,6 +6,8 @@ import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/er
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
 import { composeSystemPrompt } from './systemPrompt.js'
+import { computeAutoTuneParams } from '../unrestricted/autotune.js'
+import { applyParseltongue } from '../unrestricted/parseltongue.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -574,6 +576,17 @@ export const sendMessage = (targetSessionId: string | null) => {
     return false
   }
   const { text, files } = prepared
+  // 输入扰动：在写入会话前改写，界面上看到的就是实际下发的文本，重发与续写也保持一致。
+  const { parseltongue, parseltongueTechnique, parseltongueIntensity } = useSettings.getState()
+  const content =
+    parseltongue && text !== ''
+      ? applyParseltongue(text, {
+          enabled: true,
+          technique: parseltongueTechnique,
+          intensity: parseltongueIntensity,
+          customTriggers: [],
+        }).transformedText
+      : text
   const now = Date.now()
   let sessionId = targetSessionId
   if (
@@ -607,7 +620,7 @@ export const sendMessage = (targetSessionId: string | null) => {
   const question: UserMessage = {
     id: createId(),
     role: 'user',
-    content: text,
+    content,
     files: files.map(({ id, serverId, name, size, isImage, mimeType }) => ({
       id,
       serverId,
@@ -1088,20 +1101,34 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           maxTokens,
           skipSafetyCheck,
           systemPrompt,
+          promptPreset,
           temperature,
           topP,
           unrestricted,
+          autoTune,
+          autoTuneStrategy,
         } = useSettings.getState()
+        // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
+        const autoTuned = autoTune
+          ? computeAutoTuneParams({
+              strategy: autoTuneStrategy,
+              message: prepared.question.content,
+              conversationHistory: prepared.history.slice(-8).map((message) => ({
+                role: message.role,
+                content: message.role === 'user' ? message.content : getReplyAnswerText(message),
+              })),
+            })
+          : null
         const events = streamMessage(
           apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            // 组装流水线：Persona 恒定在前，解除限制模式再插入破限规则分块
-            system: composeSystemPrompt(unrestricted, systemPrompt),
+            // 组装流水线：默认预设按 Persona + 破限规则分块，godmode 预设整段替换
+            system: composeSystemPrompt(unrestricted, systemPrompt, promptPreset),
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            temperature,
-            top_p: topP,
+            temperature: autoTuned?.params.temperature ?? temperature,
+            top_p: autoTuned?.params.top_p ?? topP,
             ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
             safety_check: safetyCheck(unrestricted, skipSafetyCheck),
             tools: serverTools(initial.search ?? false),

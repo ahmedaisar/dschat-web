@@ -1,4 +1,5 @@
 import rulesSource from '../../../deepseekv4.1 and v4.1-1017.md'
+import { GODMODE_SYSTEM_PROMPT, type PromptPreset } from '../unrestricted/prompts.js'
 
 /**
  * 系统提示词组装流水线。
@@ -42,14 +43,19 @@ export const UNRESTRICTED_RULES = normalizeRules(rulesSource)
 /**
  * 组装后的系统提示词：
  * - 填写了自定义提示词时原样下发，覆盖自动组装结果；
- * - 否则关闭时只有 Persona，开启时 Persona + 破限规则分块。
+ * - 预设为 godmode 时整段替换为移植的 GODMODE 提示词（它本身就是完整越狱提示词，不再追加规则分块）；
+ * - 默认预设关闭时只有 Persona，开启时 Persona + 破限规则分块。
  */
 export const composeSystemPrompt = (
   unrestricted: boolean,
-  custom: string | null = null
+  custom: string | null = null,
+  preset: PromptPreset = 'deepseek'
 ): string => {
   if (custom !== null && custom.trim() !== '') {
     return custom
+  }
+  if (preset === 'godmode') {
+    return GODMODE_SYSTEM_PROMPT
   }
   return unrestricted
     ? `${OFFICIAL_SYSTEM_PROMPT}\n\n${UNRESTRICTED_RULES}`

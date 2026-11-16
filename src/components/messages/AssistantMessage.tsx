@@ -1,7 +1,7 @@
 import { useTranslate } from '../../i18n/index.js'
 import { useSettings } from '../../services/settings.js'
 import clsx from 'clsx'
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { IconEditOutline16, IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply, getReplyThinking, hasReplyContent } from '../../services/chat/reply.js'
@@ -13,6 +13,7 @@ import {
 } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
+import { applySTMs, getEnabledModules } from '../../services/unrestricted/stm.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
@@ -64,7 +65,23 @@ export const AssistantMessage = memo(function AssistantMessage({
   const responseText = [answer?.text, notice?.presentation === 'response' ? notice.text : null]
     .filter(Boolean)
     .join('\n\n')
-  const copyText = responseText || notice?.text
+  // 输出整形只在生成结束后作用于展示与复制，不改写已保存的正文
+  const stmModules = useSettings((state) => state.stmModules)
+  const shapedText = useMemo(
+    () =>
+      stmModules.length === 0 || streaming
+        ? null
+        : applySTMs(responseText, getEnabledModules(stmModules)),
+    [responseText, stmModules, streaming]
+  )
+  const shapedMarkdown = useMemo(
+    () =>
+      stmModules.length === 0 || streaming || !answer
+        ? null
+        : applySTMs(answer.markdown, getEnabledModules(stmModules)),
+    [answer, stmModules, streaming]
+  )
+  const copyText = (shapedText ?? responseText) || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
   // 失败、拒绝与模板提示没有可改写的模型正文；生成中不允许改写。
@@ -111,9 +128,9 @@ export const AssistantMessage = memo(function AssistantMessage({
       {answer ? (
         <Markdown
           className="ds-assistant-message-main-content"
-          content={answer.markdown}
+          content={shapedMarkdown ?? answer.markdown}
           loading={streaming}
-          cacheKey={message.id}
+          cacheKey={shapedMarkdown === null ? message.id : `${message.id}-stm`}
           disableLink={false}
           sources={view.sources}
         />
@@ -186,7 +203,7 @@ export const AssistantMessage = memo(function AssistantMessage({
           <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
             {copyText ? <CopyButton text={copyText} /> : null}
             {responseText && !refused ? (
-              <ReadAloudButton messageId={message.id} text={responseText} />
+              <ReadAloudButton messageId={message.id} text={shapedText ?? responseText} />
             ) : null}
             {editable ? (
               <IconButton

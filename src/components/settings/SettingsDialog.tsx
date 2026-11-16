@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  IconBrowseOutline16,
   IconDarkOutline16,
   IconDataOutline16,
   IconDownloadOutline16,
@@ -24,7 +25,14 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  setAutoTune,
+  setAutoTuneStrategy,
   setContinueRefused,
+  setParseltongue,
+  setParseltongueIntensity,
+  setParseltongueTechnique,
+  setPromptPreset,
+  setStmModules,
   setKeepReplyContent,
   setLocale,
   setLocation,
@@ -39,6 +47,9 @@ import {
   useSettings,
   type ThemePreference,
 } from '../../services/settings.js'
+import type { AutoTuneStrategy } from '../../services/unrestricted/autotune.js'
+import type { ObfuscationTechnique } from '../../services/unrestricted/parseltongue.js'
+import type { PromptPreset } from '../../services/unrestricted/prompts.js'
 import { composeSystemPrompt } from '../../services/chat/systemPrompt.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
@@ -69,6 +80,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   },
   { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
+  {
+    value: 'advanced',
+    label: 'settingDialogAsideAdvancedOptionLabel',
+    icon: <IconBrowseOutline16 />,
+  },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
   { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconLinkOutline16 /> },
   {
@@ -129,6 +145,8 @@ const SettingsContent = () => {
             <ModelSettings />
           ) : section === 'prompt' ? (
             <UnrestrictedSetting />
+          ) : section === 'advanced' ? (
+            <AdvancedSettings />
           ) : section === 'about' ? (
             <AboutSetting />
           ) : section === 'changelog' ? (
@@ -387,6 +405,16 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV22Title',
+      items: [
+        'changelogV22Preset',
+        'changelogV22Perturb',
+        'changelogV22AutoTune',
+        'changelogV22Stm',
+        'changelogV22Race',
+      ],
+    },
+    {
       title: 'changelogRecentTitle',
       items: [
         'changelogRecentLab',
@@ -416,6 +444,11 @@ const ChangelogSetting = () => {
       label: 'creditDeepseekChatLabel',
       note: 'creditDeepseekChatNote',
       href: 'https://github.com/deepseek-ai/chat-demo',
+    },
+    {
+      label: 'creditG0dm0d3Label',
+      note: 'creditG0dm0d3Note',
+      href: 'https://github.com/elder-plinius/G0DM0D3',
     },
   ]
   return (
@@ -561,6 +594,7 @@ const UnrestrictedSetting = () => {
   const t = useTranslate()
   const unrestricted = useSettings((state) => state.unrestricted)
   const systemPrompt = useSettings((state) => state.systemPrompt)
+  const promptPreset = useSettings((state) => state.promptPreset)
   return (
     <>
       <SettingCell
@@ -580,15 +614,17 @@ const UnrestrictedSetting = () => {
         {t(
           systemPrompt !== null
             ? 'settingsPipelineCustom'
-            : unrestricted
-              ? 'settingsPipelineUnrestricted'
-              : 'settingsPipelineDefault'
+            : promptPreset === 'godmode'
+              ? 'settingsPipelineGodmode'
+              : unrestricted
+                ? 'settingsPipelineUnrestricted'
+                : 'settingsPipelineDefault'
         )}
       </div>
       <details className={styles.promptPreview}>
         <summary className={styles.promptPreviewSummary}>{t('settingsPromptPreview')}</summary>
         <pre className={styles.promptPreviewBody}>
-          {composeSystemPrompt(unrestricted, systemPrompt)}
+          {composeSystemPrompt(unrestricted, systemPrompt, promptPreset)}
         </pre>
       </details>
     </>
@@ -603,6 +639,7 @@ const SystemPromptSetting = () => {
   const t = useTranslate()
   const unrestricted = useSettings((state) => state.unrestricted)
   const systemPrompt = useSettings((state) => state.systemPrompt)
+  const promptPreset = useSettings((state) => state.promptPreset)
   const [draft, setDraft] = useState(systemPrompt ?? '')
 
   // 外部重置（恢复默认）或切换分组后同步草稿
@@ -636,7 +673,7 @@ const SystemPromptSetting = () => {
         <Button
           variant="outlined"
           size="s"
-          onClick={() => commit(composeSystemPrompt(unrestricted))}
+          onClick={() => commit(composeSystemPrompt(unrestricted, null, promptPreset))}
         >
           {t('settingsCustomPromptFill')}
         </Button>
@@ -650,6 +687,150 @@ const SystemPromptSetting = () => {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * 高级设置：提示词预设、输入扰动、自动调参与输出整形。
+ * 这几项默认关闭，保持开箱行为与旧版本一致；改动只写入本机 localStorage。
+ */
+const AdvancedSettings = () => {
+  const t = useTranslate()
+  const promptPreset = useSettings((state) => state.promptPreset)
+  const parseltongue = useSettings((state) => state.parseltongue)
+  const technique = useSettings((state) => state.parseltongueTechnique)
+  const intensity = useSettings((state) => state.parseltongueIntensity)
+  const autoTune = useSettings((state) => state.autoTune)
+  const strategy = useSettings((state) => state.autoTuneStrategy)
+  const stmModules = useSettings((state) => state.stmModules)
+
+  const presets: { value: PromptPreset; label: string }[] = [
+    { value: 'deepseek', label: t('settingsPromptPresetDeepseek') },
+    { value: 'godmode', label: t('settingsPromptPresetGodmode') },
+  ]
+  const techniques: { value: ObfuscationTechnique; label: string }[] = [
+    { value: 'leetspeak', label: t('settingsTechniqueLeetspeak') },
+    { value: 'unicode', label: t('settingsTechniqueUnicode') },
+    { value: 'zwj', label: t('settingsTechniqueZwj') },
+    { value: 'mixedcase', label: t('settingsTechniqueMixedcase') },
+    { value: 'phonetic', label: t('settingsTechniquePhonetic') },
+    { value: 'fullwidth', label: t('settingsTechniqueFullwidth') },
+    { value: 'spacing', label: t('settingsTechniqueSpacing') },
+    { value: 'random', label: t('settingsTechniqueRandom') },
+  ]
+  const intensities: { value: 'light' | 'medium' | 'heavy'; label: string }[] = [
+    { value: 'light', label: t('settingsIntensityLight') },
+    { value: 'medium', label: t('settingsIntensityMedium') },
+    { value: 'heavy', label: t('settingsIntensityHeavy') },
+  ]
+  const strategies: { value: AutoTuneStrategy; label: string }[] = [
+    { value: 'adaptive', label: t('settingsAutoTuneAdaptive') },
+    { value: 'precise', label: t('settingsAutoTunePrecise') },
+    { value: 'balanced', label: t('settingsAutoTuneBalanced') },
+    { value: 'creative', label: t('settingsAutoTuneCreative') },
+    { value: 'chaotic', label: t('settingsAutoTuneChaotic') },
+  ]
+  const stmRows: { id: string; label: string }[] = [
+    { id: 'hedge_reducer', label: t('settingsStmHedge') },
+    { id: 'direct_mode', label: t('settingsStmDirect') },
+    { id: 'casual_mode', label: t('settingsStmCasual') },
+  ]
+
+  return (
+    <>
+      <SettingCell
+        label={t('settingsPromptPreset')}
+        description={t('settingsPromptPresetDescription')}
+        status={null}
+        action={
+          <Select
+            value={promptPreset}
+            options={presets}
+            onChange={setPromptPreset}
+            ariaLabel={t('settingsPromptPreset')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsParseltongue')}
+        description={t('settingsParseltongueDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={parseltongue}
+            onChange={setParseltongue}
+            label={t('settingsParseltongue')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsParseltongueTechnique')}
+        description={t('settingsParseltongueTechniqueDescription')}
+        status={null}
+        action={
+          <Select
+            value={technique}
+            options={techniques}
+            onChange={setParseltongueTechnique}
+            ariaLabel={t('settingsParseltongueTechnique')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsParseltongueIntensity')}
+        description={t('settingsParseltongueIntensityDescription')}
+        status={null}
+        action={
+          <Select
+            value={intensity}
+            options={intensities}
+            onChange={setParseltongueIntensity}
+            ariaLabel={t('settingsParseltongueIntensity')}
+          />
+        }
+      />
+      <div className={styles.pipeline}>{t('settingsParseltongueHint')}</div>
+      <SettingCell
+        label={t('settingsAutoTune')}
+        description={t('settingsAutoTuneDescription')}
+        status={null}
+        action={<Switch checked={autoTune} onChange={setAutoTune} label={t('settingsAutoTune')} />}
+      />
+      <SettingCell
+        label={t('settingsAutoTuneStrategy')}
+        description={t('settingsAutoTuneStrategyDescription')}
+        status={null}
+        action={
+          <Select
+            value={strategy}
+            options={strategies}
+            onChange={setAutoTuneStrategy}
+            ariaLabel={t('settingsAutoTuneStrategy')}
+          />
+        }
+      />
+      <div className={styles.pipeline}>{t('settingsAutoTuneHint')}</div>
+      {stmRows.map((row, index) => (
+        <SettingCell
+          key={row.id}
+          label={row.label}
+          description={index === 0 ? t('settingsStmDescription') : undefined}
+          status={null}
+          action={
+            <Switch
+              checked={stmModules.includes(row.id)}
+              onChange={(enabled) =>
+                setStmModules(
+                  enabled ? [...stmModules, row.id] : stmModules.filter((id) => id !== row.id)
+                )
+              }
+              label={row.label}
+            />
+          }
+        />
+      ))}
+      <div className={styles.pipeline}>{t('settingsStmHint')}</div>
+    </>
   )
 }
 

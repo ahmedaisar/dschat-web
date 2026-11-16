@@ -30,6 +30,7 @@ import { ACCEPT, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
+import { ParseltongueButton } from './ParseltonguePanel.js'
 import { Spectrum } from './Spectrum.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ChatInput.module.css'
@@ -225,6 +226,14 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
+          </Tooltip>
+          <Tooltip content={t('parseltongueToggleTooltip')}>
+            <ParseltongueButton
+              text={text}
+              triggerClassName={styles.toggle}
+              selectedClassName={styles.selected}
+              labelClassName={styles.toggleLabel}
+            />
           </Tooltip>
         </div>
         <div className={styles.right}>

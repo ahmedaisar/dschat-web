@@ -287,3 +287,48 @@
   justify-content: flex-end;
   padding-top: 2px;
 }
+
+/* 标签页：攻击方法 / 多路赛跑 */
+.tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.tab {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition-property: border, background, color;
+  transition-duration: 0.2s;
+}
+
+.tab:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tabActive {
+  background-color: var(--dsw-alias-button-ghost-active-fill);
+  color: var(--dsw-alias-brand-text);
+  border-color: var(--dsw-alias-button-ghost-active-border);
+}
+
+/* 赛跑视图容器：撑满剩余高度并自己滚动 */
+.tabBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preprocessRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

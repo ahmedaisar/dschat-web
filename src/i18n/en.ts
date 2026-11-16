@@ -118,6 +118,20 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV22Title: 'v2.2.0 · 2026-11',
+  changelogV22Preset:
+    'System prompt presets: the v4.1 document stays the default, GODMODE is one switch away',
+  changelogV22Perturb:
+    'Input perturbation: rewrites sensitive trigger words, with English and Chinese triggers plus 8 techniques',
+  changelogV22AutoTune:
+    'AutoTune: picks sampling parameters from context; only temperature and top_p are sent',
+  changelogV22Stm:
+    'Output shaping: hedge reduction, direct and casual post-processing that only affects display',
+  changelogV22Race:
+    'New lab tab: race several prompt combos in parallel and pick the best-scored reply',
+  creditG0dm0d3Label: 'G0DM0D3',
+  creditG0dm0d3Note:
+    'Upstream source for input perturbation, AutoTune, STM, race scoring and the GODMODE prompt (AGPL-3.0).',
   changelogRecentTitle: 'v2.1.0 · 2026-11',
   changelogRecentLab:
     'Jailbreak lab: run EasyJailbreak API attackers through the local MCP backend',
@@ -292,6 +306,102 @@ export const en = {
   labNoResults: 'No results yet',
   labHint: 'Connect the local backend, pick a method and a dataset, then run.',
   labBackendUnavailable: 'Backend unavailable',
+
+  settingDialogAsideAdvancedOptionLabel: 'Advanced',
+
+  settingsPromptPreset: 'System prompt preset',
+  settingsPromptPresetDescription:
+    'The default preset uses the v4.1 document from the repo; the GODMODE preset replaces it with the ported GODMODE prompt.',
+  settingsPipelineGodmode:
+    'Active preset: GODMODE — replaces the whole system prompt, no rules chunk is appended',
+  settingsPromptPresetDeepseek: 'DeepSeek v4.1 (default)',
+  settingsPromptPresetGodmode: 'GODMODE',
+  settingsParseltongue: 'Input perturbation',
+  settingsParseltongueDescription:
+    'Rewrites matched trigger words before sending so keyword filters miss them; the UI shows exactly what is sent.',
+  settingsParseltongueTechnique: 'Technique',
+  settingsParseltongueTechniqueDescription:
+    'Homoglyphs, zero-width characters, full-width forms and more. Case and phonetic tricks only affect Latin letters.',
+  settingsParseltongueIntensity: 'Intensity',
+  settingsParseltongueIntensityDescription:
+    'Higher intensity rewrites more characters and hurts readability.',
+  settingsParseltongueHint:
+    'For Chinese trigger words prefer Full-width, Spacing or Zero-width; leetspeak and mixed case only affect English.',
+  settingsAutoTune: 'AutoTune',
+  settingsAutoTuneDescription:
+    'Picks sampling parameters from the prompt context, overriding the temperature and top_p on this page.',
+  settingsAutoTuneStrategy: 'Strategy',
+  settingsAutoTuneStrategyDescription:
+    'Adaptive classifies the context first; the other options are fixed profiles.',
+  settingsAutoTuneHint:
+    'DeepSeek’s Anthropic-compatible API only accepts temperature and top_p; other parameters are never sent.',
+  settingsStm: 'Output shaping',
+  settingsStmDescription:
+    'Post-processes reply text to drop hedging, or to be more direct and casual.',
+  settingsStmHint:
+    'Affects the rendered chat and race results only; the stored reply is left untouched.',
+  settingsStmHedge: 'Remove hedging',
+  settingsStmDirect: 'Direct mode',
+  settingsStmCasual: 'Casual mode',
+  settingsAutoTuneAdaptive: 'Adaptive',
+  settingsAutoTunePrecise: 'Precise',
+  settingsAutoTuneBalanced: 'Balanced',
+  settingsAutoTuneCreative: 'Creative',
+  settingsAutoTuneChaotic: 'Chaotic',
+  settingsTechniqueLeetspeak: 'L33tspeak',
+  settingsTechniqueUnicode: 'Unicode homoglyphs',
+  settingsTechniqueZwj: 'Zero-width',
+  settingsTechniqueMixedcase: 'Mixed case',
+  settingsTechniquePhonetic: 'Phonetic',
+  settingsTechniqueFullwidth: 'Full-width',
+  settingsTechniqueSpacing: 'Thin spacing',
+  settingsTechniqueRandom: 'Random mix',
+  settingsIntensityLight: 'Light',
+  settingsIntensityMedium: 'Medium',
+  settingsIntensityHeavy: 'Heavy',
+
+  parseltongueToggle: 'Perturb',
+  parseltongueToggleTooltip: 'Rewrite sensitive trigger words before sending',
+  parseltonguePanelTitle: 'Input perturbation',
+  parseltonguePanelEnable: 'Enable perturbation',
+  parseltonguePanelTriggers: '{count} trigger(s) matched',
+  parseltonguePanelNoTriggers: 'No trigger words in the current input',
+  parseltonguePanelPreview: 'Rewrite preview',
+  parseltonguePanelEmpty: 'Type something to preview the rewrite',
+
+  labTabAttack: 'Attackers',
+  labTabRace: 'Model race',
+  labPreprocess: 'Perturb test queries first',
+  labRaceTitle: 'Model race',
+  labRaceSubtitle: 'Run several prompt combos in parallel and pick the best-scored reply',
+  labRaceQuery: 'Test question',
+  labRaceQueryPlaceholder: 'Ask something the model should answer head-on',
+  labRaceCombos: 'Prompt combos',
+  labRaceModel: 'Model',
+  labRaceModelMixed: 'Mixed (alternate both models)',
+  labRaceConcurrency: 'Concurrency',
+  labRaceDepth: 'Append depth directive',
+  labRaceDepthDescription:
+    'Appends the depth directive to the system prompt to suppress preambles and disclaimers.',
+  labRaceRun: 'Start race',
+  labRaceRunning: 'Racing…',
+  labRaceStop: 'Stop',
+  labRaceScore: 'Score',
+  labRaceDuration: 'Time',
+  labRaceWinner: 'Winner',
+  labRaceCopy: 'Copy reply',
+  labRaceImport: 'Start a chat with this combo',
+  labRaceImported: 'Opened a new chat with this combo’s system prompt',
+  labRaceEmpty: 'Pick combos and a question to start',
+  labRaceNeedApiKey: 'Add your API key under Settings → Data first',
+  labRaceNeedQuery: 'Enter a test question first',
+  labRaceNeedCombos: 'Select at least one prompt combo',
+  labRaceStatusPending: 'Pending',
+  labRaceStatusStreaming: 'Streaming',
+  labRaceStatusDone: 'Done',
+  labRaceStatusError: 'Failed',
+  labRaceStatusAborted: 'Stopped',
+  labRaceFailed: 'Request failed',
 
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',

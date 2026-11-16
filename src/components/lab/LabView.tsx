@@ -8,6 +8,9 @@ import { importPromptToChat } from '../../services/lab/importToChat.js'
 import { showToast } from '../base/toastState.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
+import { Switch } from '../base/Switch.js'
+import { applyParseltongue } from '../../services/unrestricted/parseltongue.js'
+import { RaceView } from './RaceView.js'
 import styles from './LabView.module.css'
 
 type MethodInfo = {
@@ -66,6 +69,8 @@ export const LabView = () => {
   const [job, setJob] = useState<JobState | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
+  const [tab, setTab] = useState<'attack' | 'race'>('attack')
+  const [preprocess, setPreprocess] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(
@@ -141,11 +146,25 @@ export const LabView = () => {
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean)
+      // 自定义测试语句可以先用扰动引擎改写，再交给攻击器，和聊天里的输入扰动保持同一套配置
+      const { parseltongueTechnique, parseltongueIntensity } = useSettings.getState()
+      const preparedQueries =
+        preprocess && queryList.length > 0
+          ? queryList.map(
+              (line) =>
+                applyParseltongue(line, {
+                  enabled: true,
+                  technique: parseltongueTechnique,
+                  intensity: parseltongueIntensity,
+                  customTriggers: [],
+                }).transformedText
+            )
+          : queryList
       const payload = {
         method: methodId,
-        queries: queryList,
-        dataset: queryList.length > 0 ? 'custom' : datasetId,
-        limit: queryList.length > 0 ? queryList.length : limit,
+        queries: preparedQueries,
+        dataset: preparedQueries.length > 0 ? 'custom' : datasetId,
+        limit: preparedQueries.length > 0 ? preparedQueries.length : limit,
         models: {
           target: { baseUrl, model, apiKey },
           attack: { baseUrl, model, apiKey },
@@ -259,248 +278,284 @@ export const LabView = () => {
           <Button variant="outlined" size="s" onClick={closeLab}>
             {t('labBack')}
           </Button>
-          <Button variant="outlined" size="s" disabled={!job} onClick={exportResults}>
-            {t('labExport')}
-          </Button>
-          <Button
-            variant="outlined"
-            size="s"
-            onClick={() => document.getElementById('lab-import-input')?.click()}
-          >
-            {t('labImport')}
-          </Button>
-          <input
-            id="lab-import-input"
-            className={styles.hiddenInput}
-            type="file"
-            accept=".json,application/json"
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file) {
-                void importResults(file)
-              }
-            }}
-          />
-          <input
-            className={styles.endpoint}
-            value={draftEndpoint}
-            aria-label={t('labEndpoint')}
-            onChange={(event) => setDraftEndpoint(event.target.value)}
-            spellCheck={false}
-          />
-          {connected ? (
-            <Button variant="outlined" size="s" onClick={disconnect}>
-              {t('labDisconnect')}
-            </Button>
-          ) : (
-            <Button size="s" disabled={connecting} onClick={() => void connect()}>
-              {connecting ? t('labConnecting') : t('labConnect')}
-            </Button>
-          )}
-          <span className={clsx(styles.dot, connected && styles.dotOn)} />
-          <span className={styles.statusText}>
-            {connected ? t('labConnected') : t('labDisconnected')}
-          </span>
+          {tab === 'attack' ? (
+            <>
+              <Button variant="outlined" size="s" disabled={!job} onClick={exportResults}>
+                {t('labExport')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="s"
+                onClick={() => document.getElementById('lab-import-input')?.click()}
+              >
+                {t('labImport')}
+              </Button>
+              <input
+                id="lab-import-input"
+                className={styles.hiddenInput}
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) {
+                    void importResults(file)
+                  }
+                }}
+              />
+              <input
+                className={styles.endpoint}
+                value={draftEndpoint}
+                aria-label={t('labEndpoint')}
+                onChange={(event) => setDraftEndpoint(event.target.value)}
+                spellCheck={false}
+              />
+              {connected ? (
+                <Button variant="outlined" size="s" onClick={disconnect}>
+                  {t('labDisconnect')}
+                </Button>
+              ) : (
+                <Button size="s" disabled={connecting} onClick={() => void connect()}>
+                  {connecting ? t('labConnecting') : t('labConnect')}
+                </Button>
+              )}
+              <span className={clsx(styles.dot, connected && styles.dotOn)} />
+              <span className={styles.statusText}>
+                {connected ? t('labConnected') : t('labDisconnected')}
+              </span>
+            </>
+          ) : null}
         </div>
       </header>
 
-      {error ? <div className={styles.error}>{error}</div> : null}
-
-      <div className={styles.grid}>
-        <section className={styles.panel}>
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labMethod')}</span>
-            <Select
-              ariaLabel={t('labMethod')}
-              value={methodId}
-              disabled={!connected}
-              options={methods.map((item) => ({ value: item.id, label: item.name }))}
-              onChange={selectMethod}
-              placeholder={t('labNeedConnect')}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labDataset')}</span>
-            <Select
-              ariaLabel={t('labDataset')}
-              value={datasetId}
-              disabled={!connected || queries.trim().length > 0}
-              options={datasets.map((item) => ({
-                value: item.id,
-                label: `${item.name}${item.size ? ` (${item.size})` : ''}`,
-              }))}
-              onChange={setDatasetId}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labLimit')}</span>
-            <input
-              className={styles.input}
-              type="number"
-              min={1}
-              max={50}
-              value={limit}
-              disabled={!connected}
-              onChange={(event) => setLimit(Math.max(1, Number(event.target.value) || 1))}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labQueries')}</span>
-            <textarea
-              className={styles.textarea}
-              rows={4}
-              value={queries}
-              disabled={!connected}
-              placeholder={t('labQueriesPlaceholder')}
-              onChange={(event) => setQueries(event.target.value)}
-            />
-          </div>
-
-          <div className={styles.fieldRow}>
-            <div className={styles.field}>
-              <span className={styles.label}>{t('labBaseUrl')}</span>
-              <input
-                className={styles.input}
-                value={baseUrl}
-                disabled={!connected}
-                onChange={(event) => setBaseUrl(event.target.value)}
-                spellCheck={false}
-              />
-            </div>
-            <div className={styles.field}>
-              <span className={styles.label}>{t('labModel')}</span>
-              <input
-                className={styles.input}
-                value={model}
-                disabled={!connected}
-                onChange={(event) => setModel(event.target.value)}
-                spellCheck={false}
-              />
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labApiKey')}</span>
-            <input
-              className={styles.input}
-              value={apiKey}
-              readOnly
-              placeholder={t('labApiKeyPlaceholder')}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{t('labMethodParams')}</span>
-            <textarea
-              className={styles.textarea}
-              rows={6}
-              value={params}
-              disabled={!connected}
-              onChange={(event) => setParams(event.target.value)}
-              spellCheck={false}
-            />
-          </div>
-
-          <div className={styles.actions}>
-            <Button
-              size="m"
-              disabled={!connected || !methodId || running}
-              onClick={() => void run()}
-            >
-              {running ? t('labRunning') : t('labRun')}
-            </Button>
-            {running ? (
-              <Button variant="outlined" size="m" onClick={() => void cancel()}>
-                {t('labCancel')}
-              </Button>
-            ) : null}
-          </div>
-        </section>
-
-        <section className={styles.results}>
-          {job ? (
-            <>
-              <div className={styles.metrics}>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>{t('labProgress')}</span>
-                  <span className={styles.metricValue}>
-                    {job.done}/{job.total}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>{t('labCalls')}</span>
-                  <span className={styles.metricValue}>
-                    {job.calls.target + job.calls.attack + job.calls.eval}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>{t('labAsr')}</span>
-                  <span className={styles.metricValue}>{Math.round(job.asr * 100)}%</span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>{t('labStatus')}</span>
-                  <span className={styles.metricValue}>{job.status}</span>
-                </div>
-              </div>
-              {job.error ? <div className={styles.error}>{job.error}</div> : null}
-              <div className={styles.list}>
-                {job.results.map((item, index) => {
-                  const queryText = asText(item.query)
-                  return (
-                    <details
-                      className={styles.result}
-                      key={`${queryText}-${index}`}
-                      open={index === 0}
-                    >
-                      <summary className={styles.resultSummary}>
-                        <span className={clsx(styles.badge, item.jailbroken && styles.badgeOk)}>
-                          {item.jailbroken ? t('labJailbroken') : t('labRejected')}
-                        </span>
-                        <span className={styles.resultQuery}>{queryText}</span>
-                      </summary>
-                      <div className={styles.resultBody}>
-                        {item.jailbroken ? (
-                          <div className={styles.resultActions}>
-                            <Button
-                              size="s"
-                              onClick={() => importPromptToChat(asText(item.prompt))}
-                            >
-                              {t('labImportChat')}
-                            </Button>
-                          </div>
-                        ) : null}
-                        <div className={styles.resultBlock}>
-                          <div className={styles.resultLabel}>{t('labPrompt')}</div>
-                          <pre className={styles.pre}>{asText(item.prompt)}</pre>
-                        </div>
-                        <div className={styles.resultBlock}>
-                          <div className={styles.resultLabel}>{t('labResponse')}</div>
-                          <pre className={styles.pre}>
-                            {item.responses.map(asText).join('\n---\n')}
-                          </pre>
-                        </div>
-                        <div className={styles.resultBlock}>
-                          <div className={styles.resultLabel}>{t('labJudge')}</div>
-                          <pre className={styles.pre}>{JSON.stringify(item.eval)}</pre>
-                        </div>
-                      </div>
-                    </details>
-                  )
-                })}
-                {job.results.length === 0 ? (
-                  <div className={styles.empty}>{t('labNoResults')}</div>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <div className={styles.empty}>{t('labHint')}</div>
-          )}
-        </section>
+      <div className={styles.tabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'attack'}
+          className={clsx(styles.tab, tab === 'attack' && styles.tabActive)}
+          onClick={() => setTab('attack')}
+        >
+          {t('labTabAttack')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'race'}
+          className={clsx(styles.tab, tab === 'race' && styles.tabActive)}
+          onClick={() => setTab('race')}
+        >
+          {t('labTabRace')}
+        </button>
       </div>
+
+      {error && tab === 'attack' ? <div className={styles.error}>{error}</div> : null}
+
+      {tab === 'race' ? (
+        <div className={styles.tabBody}>
+          <RaceView />
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          <section className={styles.panel}>
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labMethod')}</span>
+              <Select
+                ariaLabel={t('labMethod')}
+                value={methodId}
+                disabled={!connected}
+                options={methods.map((item) => ({ value: item.id, label: item.name }))}
+                onChange={selectMethod}
+                placeholder={t('labNeedConnect')}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labDataset')}</span>
+              <Select
+                ariaLabel={t('labDataset')}
+                value={datasetId}
+                disabled={!connected || queries.trim().length > 0}
+                options={datasets.map((item) => ({
+                  value: item.id,
+                  label: `${item.name}${item.size ? ` (${item.size})` : ''}`,
+                }))}
+                onChange={setDatasetId}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labLimit')}</span>
+              <input
+                className={styles.input}
+                type="number"
+                min={1}
+                max={50}
+                value={limit}
+                disabled={!connected}
+                onChange={(event) => setLimit(Math.max(1, Number(event.target.value) || 1))}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labQueries')}</span>
+              <textarea
+                className={styles.textarea}
+                rows={4}
+                value={queries}
+                disabled={!connected}
+                placeholder={t('labQueriesPlaceholder')}
+                onChange={(event) => setQueries(event.target.value)}
+              />
+            </div>
+
+            <div className={styles.preprocessRow}>
+              <Switch checked={preprocess} onChange={setPreprocess} label={t('labPreprocess')} />
+              <span className={styles.label}>{t('labPreprocess')}</span>
+            </div>
+
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <span className={styles.label}>{t('labBaseUrl')}</span>
+                <input
+                  className={styles.input}
+                  value={baseUrl}
+                  disabled={!connected}
+                  onChange={(event) => setBaseUrl(event.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+              <div className={styles.field}>
+                <span className={styles.label}>{t('labModel')}</span>
+                <input
+                  className={styles.input}
+                  value={model}
+                  disabled={!connected}
+                  onChange={(event) => setModel(event.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labApiKey')}</span>
+              <input
+                className={styles.input}
+                value={apiKey}
+                readOnly
+                placeholder={t('labApiKeyPlaceholder')}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>{t('labMethodParams')}</span>
+              <textarea
+                className={styles.textarea}
+                rows={6}
+                value={params}
+                disabled={!connected}
+                onChange={(event) => setParams(event.target.value)}
+                spellCheck={false}
+              />
+            </div>
+
+            <div className={styles.actions}>
+              <Button
+                size="m"
+                disabled={!connected || !methodId || running}
+                onClick={() => void run()}
+              >
+                {running ? t('labRunning') : t('labRun')}
+              </Button>
+              {running ? (
+                <Button variant="outlined" size="m" onClick={() => void cancel()}>
+                  {t('labCancel')}
+                </Button>
+              ) : null}
+            </div>
+          </section>
+
+          <section className={styles.results}>
+            {job ? (
+              <>
+                <div className={styles.metrics}>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>{t('labProgress')}</span>
+                    <span className={styles.metricValue}>
+                      {job.done}/{job.total}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>{t('labCalls')}</span>
+                    <span className={styles.metricValue}>
+                      {job.calls.target + job.calls.attack + job.calls.eval}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>{t('labAsr')}</span>
+                    <span className={styles.metricValue}>{Math.round(job.asr * 100)}%</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>{t('labStatus')}</span>
+                    <span className={styles.metricValue}>{job.status}</span>
+                  </div>
+                </div>
+                {job.error ? <div className={styles.error}>{job.error}</div> : null}
+                <div className={styles.list}>
+                  {job.results.map((item, index) => {
+                    const queryText = asText(item.query)
+                    return (
+                      <details
+                        className={styles.result}
+                        key={`${queryText}-${index}`}
+                        open={index === 0}
+                      >
+                        <summary className={styles.resultSummary}>
+                          <span className={clsx(styles.badge, item.jailbroken && styles.badgeOk)}>
+                            {item.jailbroken ? t('labJailbroken') : t('labRejected')}
+                          </span>
+                          <span className={styles.resultQuery}>{queryText}</span>
+                        </summary>
+                        <div className={styles.resultBody}>
+                          {item.jailbroken ? (
+                            <div className={styles.resultActions}>
+                              <Button
+                                size="s"
+                                onClick={() => importPromptToChat(asText(item.prompt))}
+                              >
+                                {t('labImportChat')}
+                              </Button>
+                            </div>
+                          ) : null}
+                          <div className={styles.resultBlock}>
+                            <div className={styles.resultLabel}>{t('labPrompt')}</div>
+                            <pre className={styles.pre}>{asText(item.prompt)}</pre>
+                          </div>
+                          <div className={styles.resultBlock}>
+                            <div className={styles.resultLabel}>{t('labResponse')}</div>
+                            <pre className={styles.pre}>
+                              {item.responses.map(asText).join('\n---\n')}
+                            </pre>
+                          </div>
+                          <div className={styles.resultBlock}>
+                            <div className={styles.resultLabel}>{t('labJudge')}</div>
+                            <pre className={styles.pre}>{JSON.stringify(item.eval)}</pre>
+                          </div>
+                        </div>
+                      </details>
+                    )
+                  })}
+                  {job.results.length === 0 ? (
+                    <div className={styles.empty}>{t('labNoResults')}</div>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <div className={styles.empty}>{t('labHint')}</div>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   )
 }
