@@ -43,13 +43,18 @@ if not exist ".venv\Scripts\python.exe" (
 set "PY=.venv\Scripts\python.exe"
 
 rem ---- 3. Python 依赖 ----
+rem pip 的 dependency-conflicts 提示是 --no-deps 安装带来的预期噪音，统一写入日志，避免刷红
+set "PIPLOG=%TEMP%\easyjailbreak_pip.log"
+set "PIPARGS=--disable-pip-version-check --no-input"
+
 "%PY%" -c "import mcp, openai, jsonlines, nltk" >nul 2>nul
 if errorlevel 1 (
   echo [3/5] 安装基础依赖 ...
-  "%PY%" -m pip install --upgrade pip
-  "%PY%" -m pip install mcp openai jsonlines nltk
+  "%PY%" -m pip install %PIPARGS% --upgrade pip >"%PIPLOG%" 2>&1
+  "%PY%" -m pip install %PIPARGS% mcp openai jsonlines nltk >"%PIPLOG%" 2>&1
   if errorlevel 1 (
-    echo       [错误] 基础依赖安装失败
+    echo       [错误] 基础依赖安装失败，最后的输出：
+    type "%PIPLOG%"
     pause
     exit /b 1
   )
@@ -61,9 +66,10 @@ rem EasyJailbreak 顶层 import 链还直接用到 numpy / pandas / requests / t
 "%PY%" -c "import numpy, pandas, requests, tqdm" >nul 2>nul
 if errorlevel 1 (
   echo       安装 EasyJailbreak 需要的 numpy / pandas / requests / tqdm ...
-  "%PY%" -m pip install numpy pandas requests tqdm
+  "%PY%" -m pip install %PIPARGS% numpy pandas requests tqdm >"%PIPLOG%" 2>&1
   if errorlevel 1 (
-    echo       [错误] numpy / pandas / requests / tqdm 安装失败
+    echo       [错误] numpy / pandas / requests / tqdm 安装失败，最后的输出：
+    type "%PIPLOG%"
     pause
     exit /b 1
   )
@@ -73,7 +79,7 @@ rem GitHub 源码版（比 PyPI 的 0.1.3 新）的 openai_model 需要 httpx，
 "%PY%" -c "import httpx, accelerate, einops, sentencepiece, google.protobuf, transformers_stream_generator" >nul 2>nul
 if errorlevel 1 (
   echo       安装 EasyJailbreak 源码版依赖（httpx / accelerate / einops / protobuf / sentencepiece / transformers-stream-generator）...
-  "%PY%" -m pip install httpx accelerate einops protobuf sentencepiece transformers-stream-generator
+  "%PY%" -m pip install %PIPARGS% httpx accelerate einops protobuf sentencepiece transformers-stream-generator >"%PIPLOG%" 2>&1
   if errorlevel 1 (
     echo       [提示] 部分依赖安装失败，稍后仍会重试并显示具体 import 错误
   )
@@ -82,22 +88,23 @@ if errorlevel 1 (
 "%PY%" -c "import fastchat" >nul 2>nul
 if errorlevel 1 (
   echo       安装 fastchat（仅用 conversation 模块）...
-  "%PY%" -m pip install --no-deps fschat==0.2.34
+  "%PY%" -m pip install %PIPARGS% --no-deps fschat==0.2.34 -i https://pypi.tuna.tsinghua.edu.cn/simple >"%PIPLOG%" 2>&1
+  if errorlevel 1 echo       [提示] fastchat 安装失败，稍后自检会显示具体错误
 )
 
 "%PY%" -c "import torch, transformers" >nul 2>nul
 if errorlevel 1 (
   echo       安装 torch（CPU 版）与 transformers，体积较大请耐心等待 ...
-  "%PY%" -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+  "%PY%" -m pip install %PIPARGS% torch --index-url https://download.pytorch.org/whl/cpu >"%PIPLOG%" 2>&1
   if errorlevel 1 echo       [提示] torch 安装失败，请手动安装 CPU 版 torch
-  "%PY%" -m pip install transformers
+  "%PY%" -m pip install %PIPARGS% transformers >"%PIPLOG%" 2>&1
   if errorlevel 1 echo       [提示] transformers 安装失败
 )
 
 "%PY%" -c "import datasets" >nul 2>nul
 if errorlevel 1 (
   echo       安装 datasets（可选，用于在线数据集）...
-  "%PY%" -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple datasets
+  "%PY%" -m pip install %PIPARGS% -i https://pypi.tuna.tsinghua.edu.cn/simple datasets >"%PIPLOG%" 2>&1
   if errorlevel 1 echo       [提示] datasets 安装失败，实验台会回退到内置测试语句
 )
 
@@ -105,7 +112,7 @@ rem ---- 4. EasyJailbreak ----
 if not exist "..\..\EasyJailbreak\easyjailbreak" (
   if "%EASYJAILBREAK_PATH%"=="" (
     echo [4/5] 未找到 EasyJailbreak 源码，先尝试 pip 安装（体积小，最省事）...
-    "%PY%" -m pip install --no-deps easyjailbreak -i https://pypi.tuna.tsinghua.edu.cn/simple
+    "%PY%" -m pip install %PIPARGS% --ignore-installed --no-deps easyjailbreak -i https://pypi.tuna.tsinghua.edu.cn/simple >"%PIPLOG%" 2>&1
     "%PY%" -c "import easyjailbreak" >nul 2>nul
     if errorlevel 1 (
       echo       pip 安装失败，尝试从 GitHub / 镜像克隆 ...

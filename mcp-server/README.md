@@ -143,6 +143,10 @@ MCP_ALLOWED_ORIGINS="https://your-domain.example,https://your.domain:*" ./run.sh
 
 白名单之外的 Origin 仍然会返回 403，这是有意的：防止任意网页操作你本机的实验台后端。
 
+**启动脚本里 pip 报红色的 dependency conflicts**
+
+这是 `--no-deps` 安装 `fschat==0.2.34` / `easyjailbreak` 的预期噪音（fschat 想要 pydantic<2，而 MCP 2.x 需要 pydantic 2）。启动脚本会把 pip 输出写入 `%TEMP%\easyjailbreak_pip.log`，只在安装失败时显示，不影响运行。
+
 **跑 PAIR 时报 422 `messages[1]: content should be a string or a list`**
 
 EasyJailbreak 的 PAIR 在 `OpenaiModel` 分支里会把对话转成
