@@ -35,8 +35,8 @@
   }
 
   &.open {
-    box-shadow: 0 0 0 3px rgba(109, 92, 255, 0.14);
-    border-color: rgba(109, 92, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(57, 100, 254, 0.14);
+    border-color: rgba(57, 100, 254, 0.55);
   }
 }
 
@@ -69,18 +69,18 @@
   border-radius: 18px;
   background: var(--dsw-specific-menu);
   box-shadow:
-    0 18px 48px rgba(37, 33, 92, 0.18),
-    0 2px 10px rgba(37, 33, 92, 0.08);
+    0 18px 48px rgba(15, 31, 74, 0.18),
+    0 2px 10px rgba(15, 31, 74, 0.08);
   backdrop-filter: blur(20px);
   animation: panelIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-  --accent: #6d5cff;
+  --accent: #3964fe;
 
   &[data-max] {
     box-shadow:
-      0 18px 52px rgba(91, 71, 235, 0.28),
-      0 0 0 1px rgba(124, 92, 255, 0.18),
-      0 2px 10px rgba(37, 33, 92, 0.1);
+      0 18px 52px rgba(37, 74, 180, 0.28),
+      0 0 0 1px rgba(57, 100, 254, 0.18),
+      0 2px 10px rgba(15, 31, 74, 0.1);
   }
 }
 
@@ -130,11 +130,11 @@
   right: 8px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(109, 92, 255, 0.14);
+  background: rgba(57, 100, 254, 0.14);
   transform: translateY(-50%);
 }
 
-/* 已填充部分：蓝紫 → 亮紫 → 白色，白色出现在推进方向的前端 */
+/* 已填充部分：深蓝 → 亮蓝 → 白色，白色出现在推进方向的前端 */
 .fill {
   position: absolute;
   top: 0;
@@ -142,12 +142,12 @@
   left: 0;
   width: calc(100% * var(--p));
   border-radius: 3px;
-  background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 52%, #a78bfa 82%, #ffffff 100%);
+  background: linear-gradient(90deg, #1d4ed8 0%, #3964fe 52%, #679efe 82%, #ffffff 100%);
   transition: width 0.16s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
 }
 
-/* 白色高光从左往右扫过，随后回落成蓝紫，拖动时持续呼吸 */
+/* 白色高光从左往右扫过，随后回落成蓝色，拖动时持续呼吸 */
 .fill::after {
   content: '';
   position: absolute;
@@ -183,7 +183,7 @@
   width: calc(100% * var(--p));
   height: 18px;
   border-radius: 9px;
-  background: linear-gradient(90deg, rgba(79, 70, 229, 0.28), rgba(167, 139, 250, 0.34));
+  background: linear-gradient(90deg, rgba(29, 78, 216, 0.28), rgba(103, 158, 254, 0.34));
   filter: blur(9px);
   transform: translateY(-50%);
   opacity: 0.7;
@@ -193,7 +193,7 @@
 
 [data-max] .glow {
   opacity: 1;
-  background: linear-gradient(90deg, rgba(79, 70, 229, 0.34), rgba(255, 255, 255, 0.42));
+  background: linear-gradient(90deg, rgba(29, 78, 216, 0.34), rgba(255, 255, 255, 0.42));
 }
 
 .tick {
@@ -203,7 +203,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(109, 92, 255, 0.3);
+  background: rgba(57, 100, 254, 0.3);
   transform: translate(-50%, -50%);
   transition: background-color 0.15s ease;
   pointer-events: none;
@@ -221,10 +221,10 @@
   height: 15px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #7c5cff;
+  border: 2px solid #3964fe;
   box-shadow:
-    0 0 0 4px rgba(124, 92, 255, 0.16),
-    0 2px 8px rgba(63, 46, 170, 0.35);
+    0 0 0 4px rgba(57, 100, 254, 0.16),
+    0 2px 8px rgba(30, 58, 138, 0.35);
   transform: translate(-50%, -50%);
   transition:
     left 0.16s cubic-bezier(0.22, 1, 0.36, 1),
@@ -236,8 +236,8 @@
   border-color: #fff;
   background: #fff;
   box-shadow:
-    0 0 0 5px rgba(124, 92, 255, 0.22),
-    0 0 18px 4px rgba(167, 139, 250, 0.65);
+    0 0 0 5px rgba(57, 100, 254, 0.22),
+    0 0 18px 4px rgba(103, 158, 254, 0.65);
   animation: thumbPulse 1.6s ease-in-out infinite;
 }
 
@@ -245,14 +245,14 @@
   0%,
   100% {
     box-shadow:
-      0 0 0 5px rgba(124, 92, 255, 0.2),
-      0 0 14px 2px rgba(167, 139, 250, 0.5);
+      0 0 0 5px rgba(57, 100, 254, 0.2),
+      0 0 14px 2px rgba(103, 158, 254, 0.5);
   }
 
   50% {
     box-shadow:
-      0 0 0 8px rgba(124, 92, 255, 0.12),
-      0 0 22px 6px rgba(167, 139, 250, 0.8);
+      0 0 0 8px rgba(57, 100, 254, 0.12),
+      0 0 22px 6px rgba(103, 158, 254, 0.8);
   }
 }
 
@@ -270,7 +270,7 @@
 }
 
 .trackArea:focus-within .track {
-  box-shadow: 0 0 0 3px rgba(109, 92, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(57, 100, 254, 0.18);
 }
 
 .legend {
@@ -306,7 +306,7 @@
 .legendActive {
   color: var(--accent);
   font-weight: 600;
-  background-color: rgba(109, 92, 255, 0.1);
+  background-color: rgba(57, 100, 254, 0.1);
 }
 
 .footer {
@@ -332,7 +332,7 @@
     gap: 4px;
     color: var(--accent);
     font-weight: 600;
-    text-shadow: 0 0 12px rgba(124, 92, 255, 0.45);
+    text-shadow: 0 0 12px rgba(57, 100, 254, 0.45);
 
     &::before {
       content: '✦';
@@ -363,7 +363,7 @@
 }
 
 body[data-ds-dark-theme] .panel {
-  --accent: #b3a4ff;
+  --accent: #8bb4ff;
 }
 
 @media not all and (min-width: 560px) {
