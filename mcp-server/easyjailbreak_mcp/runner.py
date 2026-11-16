@@ -119,11 +119,12 @@ def _ensure_easyjailbreak() -> None:
     if not source_available:
         try:
             import easyjailbreak  # noqa: F401
-        except ImportError:
+        except ImportError as error:
             raise RuntimeError(
-                f'找不到 EasyJailbreak：{path} 不存在，也没有通过 pip 安装 easyjailbreak。'
-                '请设置环境变量 EASYJAILBREAK_PATH 指向源码目录，'
-                '或执行 pip install --no-deps easyjailbreak。'
+                f'EasyJailbreak 导入失败（{error}）。'
+                f'源码目录：{path}（不存在时会使用 pip 安装的包）。'
+                '请确认已安装 tqdm / requests / numpy / pandas / torch / transformers，'
+                '或设置 EASYJAILBREAK_PATH 指向 EasyJailbreak 源码目录。'
             ) from None
 
 

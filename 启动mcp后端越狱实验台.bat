@@ -57,6 +57,18 @@ if errorlevel 1 (
   echo [3/5] 基础依赖已安装
 )
 
+rem EasyJailbreak 顶层 import 链还直接用到 numpy / pandas / requests / tqdm
+"%PY%" -c "import numpy, pandas, requests, tqdm" >nul 2>nul
+if errorlevel 1 (
+  echo       安装 EasyJailbreak 需要的 numpy / pandas / requests / tqdm ...
+  "%PY%" -m pip install numpy pandas requests tqdm
+  if errorlevel 1 (
+    echo       [错误] numpy / pandas / requests / tqdm 安装失败
+    pause
+    exit /b 1
+  )
+)
+
 "%PY%" -c "import fastchat" >nul 2>nul
 if errorlevel 1 (
   echo       安装 fastchat（仅用 conversation 模块）...
@@ -67,7 +79,9 @@ if errorlevel 1 (
 if errorlevel 1 (
   echo       安装 torch（CPU 版）与 transformers，体积较大请耐心等待 ...
   "%PY%" -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+  if errorlevel 1 echo       [提示] torch 安装失败，请手动安装 CPU 版 torch
   "%PY%" -m pip install transformers
+  if errorlevel 1 echo       [提示] transformers 安装失败
 )
 
 "%PY%" -c "import datasets" >nul 2>nul
@@ -114,11 +128,18 @@ if not exist "..\..\EasyJailbreak\easyjailbreak" (
   echo [4/5] EasyJailbreak 源码已存在
 )
 
+rem ---- nltk 数据（AutoDAN 用，下载失败不影响 API 方法）----
+"%PY%" -c "import nltk; nltk.download('stopwords', quiet=True)" >nul 2>nul
+
 rem ---- EasyJailbreak 导入自检 ----
 if "%EASYJAILBREAK_PATH%"=="" (set "CHECK_JB=..\..\EasyJailbreak") else (set "CHECK_JB=%EASYJAILBREAK_PATH%")
 set "PYTHONPATH=%CHECK_JB%"
-"%PY%" -c "import easyjailbreak" >nul 2>nul
-if errorlevel 1 echo       [提示] EasyJailbreak 仍无法导入，请检查 torch/transformers 是否装好、EASYJAILBREAK_PATH 是否指向源码目录
+"%PY%" -c "import easyjailbreak" 2>"%TEMP%\easyjailbreak_import_error.txt"
+if errorlevel 1 (
+  echo [提示] EasyJailbreak 仍无法导入，错误如下：
+  type "%TEMP%\easyjailbreak_import_error.txt"
+  echo [提示] 把上面的错误发给我即可定位；常见原因是缺少 tqdm / requests / torch 等依赖
+)
 set "PYTHONPATH=" 
 
 rem ---- 5. 启动 ----
