@@ -593,6 +593,66 @@ export const forkSession = (sessionId: string): string | null => {
   return session.id
 }
 
+export type SeededChat = {
+  title: string
+  /** 会话级系统提示词；不写入全局设置 */
+  systemPrompt?: string
+  userText: string
+  assistantText: string
+  model?: ChatModel | null
+}
+
+/**
+ * 用一条现成的问答新建会话（例如把变体赛跑的胜出结果带进聊天继续）。
+ * 系统提示词挂在会话上，不会覆盖设置里的提示词预设；用户消息保留实际发送的改写文本。
+ */
+export const createSeededChat = (seed: SeededChat): string | null => {
+  if (get().importingHistory) {
+    return null
+  }
+  const now = Date.now()
+  const userId = createId()
+  const replyId = createId()
+  const user: UserMessage = {
+    id: userId,
+    role: 'user',
+    content: seed.userText,
+    files: [],
+    createdAt: now,
+    parentId: null,
+    selectedChildId: replyId,
+  }
+  const reply: AssistantMessage = {
+    id: replyId,
+    role: 'assistant',
+    createdAt: now + 1,
+    model: seed.model ?? MODEL,
+    thinking: false,
+    search: false,
+    prefix: true,
+    status: 'done',
+    blocks: [{ type: 'text', text: seed.assistantText }],
+  }
+  const session: Session = {
+    id: createId(),
+    title: seed.title,
+    createdAt: now,
+    updatedAt: now + 1,
+    messages: [user, reply],
+    rootMessageId: userId,
+    ...(seed.systemPrompt ? { systemPrompt: seed.systemPrompt } : {}),
+  }
+  touchSession(session.id)
+  set((state) => ({
+    sessions: [toSessionSummary(session), ...state.sessions],
+    sessionCache: { ...state.sessionCache, [session.id]: session },
+    activeId: session.id,
+  }))
+  persist(session.id)
+  trimSessionCache()
+  return session.id
+}
+
 export const selectSession = (id: string) => {
   if (!get().importingHistory && get().sessions.some((session) => session.id === id)) {
     pendingSystemPrompt = null

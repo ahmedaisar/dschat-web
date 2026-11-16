@@ -16,12 +16,15 @@ import {
   estimateVariantRun,
   runVariantRace,
   type VariantModel,
+  type VariantResult,
   type VariantRun,
   type VariantStatus,
 } from '../../services/lab/variantRace.js'
 import { detectTriggers } from '../../services/unrestricted/parseltongue.js'
 import { depthDirective, jailbreakSystemPrompt } from '../../services/unrestricted/prompts.js'
 import { formatMoney } from '../../services/chat/sessionStats.js'
+import { createSeededChat } from '../../services/chat/store.js'
+import { closeLab } from '../../services/lab/labStore.js'
 import type { VariantTier } from '../../services/unrestricted/techniques.js'
 import styles from './VariantView.module.css'
 
@@ -60,7 +63,10 @@ export const VariantView = () => {
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [dismissChecked, setDismissChecked] = useState(false)
+  // 记录本次赛跑实际使用的系统提示词；导入/接着聊时复用它，而不是当前设置
+  const [runSystem, setRunSystem] = useState('')
   const controllerRef = useRef<AbortController | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(
     () => () => {
@@ -87,6 +93,7 @@ export const VariantView = () => {
   const execute = async () => {
     const controller = new AbortController()
     controllerRef.current = controller
+    setRunSystem(options.system)
     setRunning(true)
     setError(null)
     setRun(null)
@@ -145,6 +152,115 @@ export const VariantView = () => {
     showToast(ok ? { key: 'copied' } : { key: 'copyFailed' })
   }
 
+  /** 导出当前赛跑结果（含实际使用的系统提示词，便于之后原样接着聊） */
+  const exportResults = () => {
+    if (!run || run.results.length === 0) {
+      return
+    }
+    const payload = {
+      version: 1,
+      type: 'variant-race',
+      exportedAt: new Date().toISOString(),
+      query: query.trim(),
+      tier,
+      model,
+      budget,
+      system: runSystem || variantSystem(translateJailbreak),
+      results: run.results,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `variant-race-${Date.now()}.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
+  /** 导入之前导出的赛跑结果（只回放，不重新请求，也不改动设置） */
+  const importResults = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
+      const raw = Array.isArray(parsed.results) ? parsed.results : null
+      if (!raw) {
+        throw new Error('missing results')
+      }
+      const results: VariantResult[] = raw.map((item, index) => {
+        const record = (item ?? {}) as Record<string, unknown>
+        const status = record.status
+        return {
+          id: typeof record.id === 'string' ? record.id : `imported-${index}`,
+          technique: typeof record.technique === 'string' ? record.technique : 'unknown',
+          label: typeof record.label === 'string' ? record.label : `#${index + 1}`,
+          text: typeof record.text === 'string' ? record.text : '',
+          status:
+            status === 'done' ||
+            status === 'refused' ||
+            status === 'error' ||
+            status === 'skipped' ||
+            status === 'aborted'
+              ? status
+              : 'skipped',
+          score: typeof record.score === 'number' ? record.score : 0,
+          durationMs: typeof record.durationMs === 'number' ? record.durationMs : 0,
+          cost: typeof record.cost === 'number' ? record.cost : 0,
+          error: typeof record.error === 'string' ? record.error : undefined,
+          output: typeof record.output === 'string' ? record.output : undefined,
+        }
+      })
+      const done = results.filter((result) => result.status === 'done' && result.score > 0)
+      const leader = done.length
+        ? done.reduce((best, result) => (result.score > best.score ? result : best))
+        : null
+      setRun({
+        results,
+        leader,
+        spent: results.reduce((sum, result) => sum + result.cost, 0),
+        variants: results.length,
+        skipped: results.filter((result) => result.status === 'skipped').length,
+      })
+      setQuery(typeof parsed.query === 'string' ? parsed.query : '')
+      if (parsed.tier === 'light' || parsed.tier === 'standard' || parsed.tier === 'heavy') {
+        setTier(parsed.tier)
+      }
+      if (parsed.model === 'deepseek-flash' || parsed.model === 'deepseek-v4-pro') {
+        setModel(parsed.model)
+      }
+      setRunSystem(
+        typeof parsed.system === 'string' && parsed.system !== ''
+          ? parsed.system
+          : variantSystem(translateJailbreak)
+      )
+      setError(null)
+      showToast({ key: 'variantImported' })
+    } catch {
+      showToast({ key: 'variantImportFailed' })
+    }
+  }
+
+  /** 把某条完成的结果带进新会话继续聊：会话级系统提示词 + 实际发送的改写文本 */
+  const continueInChat = (result: VariantResult) => {
+    if (!result.output) {
+      return
+    }
+    const trimmed = query.trim().slice(0, 24)
+    const id = createSeededChat({
+      title: t('variantChatTitle', { query: trimmed || t('variantTitle') }),
+      systemPrompt: runSystem || variantSystem(translateJailbreak),
+      userText: result.text,
+      assistantText: result.output,
+      model: runModel,
+    })
+    if (id) {
+      closeLab()
+      showToast({ key: 'variantContinued' })
+    } else {
+      showToast({ key: 'variantImportFailed' })
+    }
+  }
+
+  // 接着聊时用本次赛跑的模型（导入结果时已按文件恢复）
+  const runModel = model
   const results = run?.results ?? []
   const leader = run?.leader ?? null
 
@@ -156,6 +272,37 @@ export const VariantView = () => {
             <div className={styles.heading}>
               <div className={styles.title}>{t('variantTitle')}</div>
               <div className={styles.subtitle}>{t('variantSubtitle')}</div>
+            </div>
+            <div className={styles.toolbar}>
+              <Button
+                variant="outlined"
+                size="s"
+                disabled={running || results.length === 0}
+                onClick={exportResults}
+              >
+                {t('labExport')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="s"
+                disabled={running}
+                onClick={() => fileRef.current?.click()}
+              >
+                {t('labImport')}
+              </Button>
+              <input
+                ref={fileRef}
+                className={styles.hiddenInput}
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) {
+                    void importResults(file)
+                  }
+                }}
+              />
             </div>
           </div>
 
@@ -296,6 +443,11 @@ export const VariantView = () => {
                     >
                       {t('variantCopy')}
                     </Button>
+                    {result.status === 'done' && result.output ? (
+                      <Button size="s" disabled={running} onClick={() => continueInChat(result)}>
+                        {t('variantContinue')}
+                      </Button>
+                    ) : null}
                   </div>
                 </article>
               )

@@ -129,6 +129,8 @@ export const en = {
     'Settings → Data gains "Restore default settings", keeping the API key and chats',
   changelogV25Fork:
     'New "Branch to new chat": copies the current conversation into a new chat without touching the original',
+  changelogV25VariantIO:
+    'Variant race results can be exported/imported, and any finished result can continue in a new chat with a per-chat prompt',
   changelogV246Title: 'v2.4.6 · 2026-11',
   changelogV246Pressure:
     'Auto-compression now triggers on context pressure: 80% window threshold with 64k headroom and output reserve (matching DSH)',
@@ -621,6 +623,11 @@ export const en = {
   variantCost: 'Cost',
   variantSpent: 'Spent {cost} / budget {budget}',
   variantWinner: 'Winner',
+  variantContinue: 'Continue in chat',
+  variantContinued: 'Continued this race result in a new chat',
+  variantChatTitle: 'Variant race · {query}',
+  variantImportFailed: 'Import failed: not a valid variant race result file',
+  variantImported: 'Variant race results imported',
   variantCopy: 'Copy reply',
   variantSkipped: 'Skipped',
   variantRefused: 'Refused',

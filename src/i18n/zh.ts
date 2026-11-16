@@ -120,6 +120,8 @@ export const zh = {
   changelogV25Official: '正式版发布：整合越狱预设、输入扰动、多路/变体赛跑、统计计费与上下文压缩',
   changelogV25Reset: '设置 → 数据管理新增「恢复默认设置」，保留 API Key 与对话数据',
   changelogV25Fork: '新增「分支到新对话」：复制当前对话到新会话，原对话不受影响',
+  changelogV25VariantIO:
+    '变体赛跑支持结果导入导出；完成的结果可「接着聊」，使用会话级提示词，不影响设置',
   changelogV246Title: 'v2.4.6 · 2026-11',
   changelogV246Pressure:
     '自动压缩改为上下文压力触发：窗口 80% 阈值，预留 64k 余量与输出空间（对齐 DSH）',
@@ -561,6 +563,11 @@ export const zh = {
   variantCost: '花费',
   variantSpent: '已花费 {cost} / 预算 {budget}',
   variantWinner: '胜出',
+  variantContinue: '接着聊',
+  variantContinued: '已在新对话中继续这次赛跑的结果',
+  variantChatTitle: '变体赛跑 · {query}',
+  variantImportFailed: '导入失败：不是有效的变体赛跑结果文件',
+  variantImported: '已导入变体赛跑结果',
   variantCopy: '复制回复',
   variantSkipped: '未发起',
   variantRefused: '被拒绝',
