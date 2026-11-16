@@ -78,12 +78,8 @@ class Job:
 
 def _ensure_easyjailbreak() -> None:
     path = os.path.abspath(EASYJAILBREAK_PATH)
-    if not os.path.isdir(path):
-        raise RuntimeError(
-            f'找不到 EasyJailbreak 源码目录：{path}。'
-            '请设置环境变量 EASYJAILBREAK_PATH 指向 EasyJailbreak 仓库根目录。'
-        )
-    if path not in sys.path:
+    source_available = os.path.isdir(path)
+    if source_available and path not in sys.path:
         sys.path.insert(0, path)
 
 
@@ -118,6 +114,17 @@ def _ensure_easyjailbreak() -> None:
         sys.modules.setdefault('fastchat', package)
         sys.modules.setdefault('fastchat.conversation', conversation)
         sys.modules.setdefault('fastchat.model', model)
+
+    # 没有源码目录时，允许使用 pip 安装的 easyjailbreak（wheel 里带完整源码与 seed 模板）
+    if not source_available:
+        try:
+            import easyjailbreak  # noqa: F401
+        except ImportError:
+            raise RuntimeError(
+                f'找不到 EasyJailbreak：{path} 不存在，也没有通过 pip 安装 easyjailbreak。'
+                '请设置环境变量 EASYJAILBREAK_PATH 指向源码目录，'
+                '或执行 pip install --no-deps easyjailbreak。'
+            ) from None
 
 
 _MODEL_CLASS_CACHE: dict[type, type] = {}

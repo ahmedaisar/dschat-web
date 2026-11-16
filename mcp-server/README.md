@@ -23,7 +23,8 @@ mcp-server/
 ## 依赖
 
 - Python 3.10+
-- 本机已 clone 的 EasyJailbreak 源码（默认找 `../../EasyJailbreak`，可用 `EASYJAILBREAK_PATH` 覆盖）
+- EasyJailbreak：源码目录（默认找 `../../EasyJailbreak`，可用 `EASYJAILBREAK_PATH` 覆盖），
+  或者直接 `pip install --no-deps easyjailbreak`（wheel 里带完整源码和 seed 模板，网络受限时最省事）
 - `torch`、`transformers`（EasyJailbreak 的包级 import 需要；CPU 版即可）
 - `mcp`、`openai`、`fastchat`、`nltk`、`jsonlines`
 - `datasets`（已安装，可在线加载 AdvBench / HarmBench / StrongREJECT；没装时回退到内置测试语句）

@@ -80,13 +80,32 @@ if errorlevel 1 (
 rem ---- 4. EasyJailbreak ----
 if not exist "..\..\EasyJailbreak\easyjailbreak" (
   if "%EASYJAILBREAK_PATH%"=="" (
-    where git >nul 2>nul
-    if not errorlevel 1 (
-      echo [4/5] 克隆 EasyJailbreak 源码到 ..\..\EasyJailbreak ...
-      git clone --depth 1 https://github.com/EasyJailbreak/EasyJailbreak.git "..\..\EasyJailbreak"
-      if errorlevel 1 echo       [提示] 克隆失败，请手动 clone 或设置 EASYJAILBREAK_PATH
-    ) else (
-      echo [4/5] [提示] 未找到 EasyJailbreak 与 git，请手动 clone 到 ..\..\EasyJailbreak 或设置 EASYJAILBREAK_PATH
+    echo [4/5] 未找到 EasyJailbreak 源码，先尝试 pip 安装（体积小，最省事）...
+    "%PY%" -m pip install --no-deps easyjailbreak -i https://pypi.tuna.tsinghua.edu.cn/simple
+    "%PY%" -c "import easyjailbreak" >nul 2>nul
+    if errorlevel 1 (
+      echo       pip 安装失败，尝试从 GitHub / 镜像克隆 ...
+      where git >nul 2>nul
+      if not errorlevel 1 (
+        git clone --depth 1 https://github.com/EasyJailbreak/EasyJailbreak.git "..\..\EasyJailbreak"
+        if not exist "..\..\EasyJailbreak\easyjailbreak" (
+          echo       尝试镜像 ghproxy ...
+          git clone --depth 1 https://ghproxy.net/https://github.com/EasyJailbreak/EasyJailbreak.git "..\..\EasyJailbreak"
+        )
+        if not exist "..\..\EasyJailbreak\easyjailbreak" (
+          echo       尝试镜像 kkgithub ...
+          git clone --depth 1 https://kkgithub.com/EasyJailbreak/EasyJailbreak.git "..\..\EasyJailbreak"
+        )
+      )
+    )
+    "%PY%" -c "import easyjailbreak" >nul 2>nul
+    if errorlevel 1 (
+      if not exist "..\..\EasyJailbreak\easyjailbreak" (
+        echo [提示] 未能自动获取 EasyJailbreak，任选一种方式：
+        echo    1. pip install --no-deps easyjailbreak
+        echo    2. 下载 https://github.com/EasyJailbreak/EasyJailbreak 压缩包，解压到 ..\..\EasyJailbreak
+        echo    3. 设置环境变量 EASYJAILBREAK_PATH 指向已下载的源码目录
+      )
     )
   ) else (
     echo [4/5] 使用 EASYJAILBREAK_PATH=%EASYJAILBREAK_PATH%

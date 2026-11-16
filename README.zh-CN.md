@@ -333,7 +333,7 @@ Persona（官方身份分块）
 **Windows 用户**可以直接双击仓库根目录的两个脚本：
 
 - `启动chat-web前端.bat`：自动检测 Node.js / pnpm / `node_modules`，缺失时通过 winget / corepack / npm 自动安装，然后启动 http://localhost:8090；
-- `启动mcp后端越狱实验台.bat`：自动检测 Python / `.venv` / MCP 依赖 / fastchat / torch / datasets / EasyJailbreak 源码，缺失时自动安装或克隆，然后启动 http://127.0.0.1:8765/mcp。
+- `启动mcp后端越狱实验台.bat`：自动检测 Python / `.venv` / MCP 依赖 / fastchat / torch / datasets / EasyJailbreak，缺失时自动安装；EasyJailbreak 会先尝试 pip 安装，失败再尝试 GitHub 与镜像克隆，最后启动 http://127.0.0.1:8765/mcp。
 
 手动方式（任意系统），准备 Node.js 22.12+ 与 pnpm：
 

@@ -333,7 +333,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 **On Windows**, double-click the two scripts in the repository root:
 
 - `启动chat-web前端.bat`: detects Node.js / pnpm / `node_modules` and installs whatever is missing (winget / corepack / npm), then starts the dev server on http://localhost:8090;
-- `启动mcp后端越狱实验台.bat`: detects Python / `.venv` / MCP deps / fastchat / torch / datasets / the EasyJailbreak checkout, installs or clones what is missing, then starts the MCP backend on http://127.0.0.1:8765/mcp.
+- `启动mcp后端越狱实验台.bat`: detects Python / `.venv` / MCP deps / fastchat / torch / datasets / EasyJailbreak; EasyJailbreak is installed via pip first and falls back to GitHub or mirror clones, then starts the MCP backend on http://127.0.0.1:8765/mcp.
 
 Manual setup (any OS), requires Node.js 22.12+ and pnpm:
 
