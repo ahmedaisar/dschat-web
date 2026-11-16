@@ -4,6 +4,7 @@ import { ApiError } from '../api/client.js'
 import { classifyApiError } from '../api/errors.js'
 import { synthesize, TTS_SAMPLE_RATE } from '../api/speech.js'
 import { useSettings } from '../settings.js'
+import { noteTtsChars } from '../chat/sessionStats.js'
 
 /**
  * 朗读：同一时间只读一条回复。
@@ -78,6 +79,7 @@ export const describeReadAloudError = (error: unknown): TranslationMessage | str
  * 必须在点击事件中同步调用：AudioContext 需要用户手势才能出声。
  */
 export const toggleReadAloud = (
+  sessionId: string | null,
   messageId: string,
   text: string,
   onError: (error: unknown) => void
@@ -87,6 +89,8 @@ export const toggleReadAloud = (
   if (reading === messageId) {
     return
   }
+  // 语音合成按字符计费，开始朗读时记账
+  noteTtsChars(sessionId, text.length)
   const controller = new AbortController()
   const context = new AudioContext({ sampleRate: TTS_SAMPLE_RATE })
   current = { controller, context }

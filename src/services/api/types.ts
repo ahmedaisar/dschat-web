@@ -6,6 +6,9 @@
 
 export type ChatModel = 'deepseek-flash' | 'deepseek-v4-pro'
 
+/** 思考强度；Anthropic 协议用 budget_tokens，OpenAI 兼容协议用 reasoning_effort，这里同时下发 */
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'max'
+
 // ---------- 响应：内容块 ----------
 
 /** 正文引用：服务端把模型的引用标记还原为来源，挂在对应文本块上 */
@@ -176,7 +179,9 @@ export type CreateMessageRequest = {
   model: ChatModel
   system: string
   messages: MessageParam[]
-  thinking: { type: 'enabled' | 'disabled' }
+  thinking: { type: 'enabled' | 'disabled'; budget_tokens?: number }
+  /** 思考强度；关闭思考或服务端不支持时不下发 */
+  reasoning_effort?: ReasoningEffort
   /** 采样温度 0–2；思考模式下服务端固定按 1 处理 */
   temperature?: number
   /** 核采样阈值 0–1 */

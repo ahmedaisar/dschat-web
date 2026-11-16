@@ -15,9 +15,9 @@
 > There is no proxy and no relay service. Your API key and conversations stay in your own browser.
 >
 > 🔗Live demo: <https://chat-unrestricted.fur0.com/>
-> 
+>
 > 📦Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
-> 
+>
 > 🎥Intro video: <https://www.bilibili.com/video/BV1p5sL6LEfd/>
 >
 > 📚Reference paper: <https://arxiv.org/pdf/2403.12171>
@@ -67,25 +67,25 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 2.1 Request side
 
-| # | Restriction | Where in the original | Behaviour |
-| --- | --- | --- | --- |
-| 1 | Hard-coded system prompt | `SYSTEM_PROMPT` in `src/services/chat/store.ts` | Every request's `system` field is one identity sentence: `该助手为DeepSeek，由深度求索公司创造。`. No behavioural instructions at all |
-| 2 | Base safety filtering always on | `SAFETY_CHECK` in `src/services/chat/store.ts` | Every request carries `safety_check: { level: 'high' }`; the comment states it is "always on" |
-| 3 | Model and sampling parameters hard-coded | `src/services/chat/store.ts` | Model pinned to `deepseek-flash`; `temperature`, `top_p`, and `max_tokens` are never sent and the server defaults apply |
-| 4 | Fixed tool declarations | `serverTools` in `src/services/chat/store.ts` | `deepseek_read_url` is always declared; `deepseek_web_search` follows the smart-search toggle |
-| 5 | Streamed content discarded on refusal | `settleReply` in `src/services/chat/reply.ts` | When a stream ends with `stop_reason: 'refusal'`, all received `thinking` / `text` blocks are **deleted**; only tool blocks survive |
-| 6 | Refused turns excluded from context | `isUsableReply` in `src/services/chat/reply.ts` | Rounds with `stopReason === 'refusal'` are never sent back to the model |
-| 7 | Refused replies cannot be continued | `canContinueReply` in `src/services/chat/reply.ts` | Returns `false` for refusal, so the "Continue" button never appears |
-| 8 | Refused replies show a canned answer | `src/services/chat/describe.ts` | Refusals render a fixed sentence: `你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。` |
-| 9 | Refused replies cannot be edited | The original has no reply editing | Only the user prompt can be edited (which creates a new branch and regenerates) |
+| #   | Restriction                              | Where in the original                              | Behaviour                                                                                                                             |
+| --- | ---------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Hard-coded system prompt                 | `SYSTEM_PROMPT` in `src/services/chat/store.ts`    | Every request's `system` field is one identity sentence: `该助手为DeepSeek，由深度求索公司创造。`. No behavioural instructions at all |
+| 2   | Base safety filtering always on          | `SAFETY_CHECK` in `src/services/chat/store.ts`     | Every request carries `safety_check: { level: 'high' }`; the comment states it is "always on"                                         |
+| 3   | Model and sampling parameters hard-coded | `src/services/chat/store.ts`                       | Model pinned to `deepseek-flash`; `temperature`, `top_p`, and `max_tokens` are never sent and the server defaults apply               |
+| 4   | Fixed tool declarations                  | `serverTools` in `src/services/chat/store.ts`      | `deepseek_read_url` is always declared; `deepseek_web_search` follows the smart-search toggle                                         |
+| 5   | Streamed content discarded on refusal    | `settleReply` in `src/services/chat/reply.ts`      | When a stream ends with `stop_reason: 'refusal'`, all received `thinking` / `text` blocks are **deleted**; only tool blocks survive   |
+| 6   | Refused turns excluded from context      | `isUsableReply` in `src/services/chat/reply.ts`    | Rounds with `stopReason === 'refusal'` are never sent back to the model                                                               |
+| 7   | Refused replies cannot be continued      | `canContinueReply` in `src/services/chat/reply.ts` | Returns `false` for refusal, so the "Continue" button never appears                                                                   |
+| 8   | Refused replies show a canned answer     | `src/services/chat/describe.ts`                    | Refusals render a fixed sentence: `你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。`                                            |
+| 9   | Refused replies cannot be edited         | The original has no reply editing                  | Only the user prompt can be edited (which creates a new branch and regenerates)                                                       |
 
 ### 2.2 UI and technical boundaries (not safety policy, listed for completeness)
 
-| # | Item | Where | Notes |
-| --- | --- | --- | --- |
-| 10 | AI content notice | Under the composer | A fixed line, "AI-generated, for reference only". Display only, it blocks nothing (kept unchanged in this fork) |
-| 11 | Attachment limits | `src/services/attachments.ts`, `uploadExts.ts` | 64 MB per file, 50 files per conversation, extension allow-list (no heic/heif) |
-| 12 | No backend | By design | The browser talks straight to the configured API origin (default `https://api.deepseek.com`); no server-side relay |
+| #   | Item              | Where                                          | Notes                                                                                                              |
+| --- | ----------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 10  | AI content notice | Under the composer                             | A fixed line, "AI-generated, for reference only". Display only, it blocks nothing (kept unchanged in this fork)    |
+| 11  | Attachment limits | `src/services/attachments.ts`, `uploadExts.ts` | 64 MB per file, 50 files per conversation, extension allow-list (no heic/heif)                                     |
+| 12  | No backend        | By design                                      | The browser talks straight to the configured API origin (default `https://api.deepseek.com`); no server-side relay |
 
 > To be clear: **the hard limits live on the server**. The lowest `safety_check` value is `low` (the docs state that omitting the field equals `low`) and there is no "off"; the model's own alignment is also not something a front end can change. This fork simply opens up everything the **client** can control.
 
@@ -95,17 +95,18 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to seven:
+The settings dialog grows from two groups to eight:
 
-| Group | Contents |
-| --- | --- |
-| General | Theme, language, read-aloud voice, location (original, untouched) |
-| **Model** | Temperature, Top P, max output tokens, anti-retraction, skip safety check, continue refused replies |
-| **Prompt** | Unrestricted mode, custom system prompt, prompt-assembly explanation, full preview of what will be sent |
-| **Advanced** | System prompt preset, input perturbation, AutoTune, output shaping |
-| Data | API key, import, export, delete all (original, untouched) |
-| About | Repository, demo and upstream links |
-| Changelog | Version history and upstream credits |
+| Group           | Contents                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| General         | Theme, language, read-aloud voice, location (original, untouched)                                       |
+| **Model**       | Temperature, Top P, max output tokens, anti-retraction, skip safety check, continue refused replies     |
+| **Prompt**      | Unrestricted mode, custom system prompt, prompt-assembly explanation, full preview of what will be sent |
+| **Advanced**    | System prompt preset, input perturbation, AutoTune, output shaping                                      |
+| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                             |
+| Data            | API key, import, export, delete all (original, untouched)                                               |
+| About           | Repository, demo and upstream links                                                                     |
+| Changelog       | Version history and upstream credits                                                                    |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -136,11 +137,11 @@ request body `system` field
 
 **Where:** Settings → Model.
 
-| Parameter | Control | Range / step | Default | Sent as |
-| --- | --- | --- | --- | --- |
-| Temperature | Slider + number input | 0–2, step 0.05 | 1 | `temperature` |
-| Top P | Slider + number input | 0.01–1, step 0.01 | 1 | `top_p` |
-| Max output tokens | Number input | ≥ 1, may be empty | empty | Empty means `max_tokens` is **not sent** |
+| Parameter         | Control               | Range / step      | Default | Sent as                                  |
+| ----------------- | --------------------- | ----------------- | ------- | ---------------------------------------- |
+| Temperature       | Slider + number input | 0–2, step 0.05    | 1       | `temperature`                            |
+| Top P             | Slider + number input | 0.01–1, step 0.01 | 1       | `top_p`                                  |
+| Max output tokens | Number input          | ≥ 1, may be empty | empty   | Empty means `max_tokens` is **not sent** |
 
 - Slider and number input stay in sync; the input commits on blur or Enter, clamps out-of-range values, and rounds to the step.
 - Everything is persisted in localStorage and restored on reload.
@@ -152,13 +153,13 @@ request body `system` field
 
 The original deletes streamed text and thinking when a reply ends with `stop_reason: 'refusal'`. With anti-retraction on, that content is kept instead:
 
-| Behaviour | Off (original behaviour) | On |
-| --- | --- | --- |
-| Streamed body / thinking | Deleted | Kept and rendered normally |
-| UI notice | Canned refusal answer | One notice line: "This reply was flagged by safety review; anti-retraction kept the streamed content." |
-| Following context | Turn excluded | **Included** once the body was kept |
-| Edit button | Unavailable | Available (the reply is treated as a normal one) |
-| History export | Marked `CONTENT_FILTER` plus template | Exported as a normal finish, so re-importing does not wipe it again |
+| Behaviour                | Off (original behaviour)              | On                                                                                                     |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Streamed body / thinking | Deleted                               | Kept and rendered normally                                                                             |
+| UI notice                | Canned refusal answer                 | One notice line: "This reply was flagged by safety review; anti-retraction kept the streamed content." |
+| Following context        | Turn excluded                         | **Included** once the body was kept                                                                    |
+| Edit button              | Unavailable                           | Available (the reply is treated as a normal one)                                                       |
+| History export           | Marked `CONTENT_FILTER` plus template | Exported as a normal finish, so re-importing does not wipe it again                                    |
 
 Anti-retraction is independent of unrestricted mode; turning on unrestricted does not enable it.
 
@@ -191,20 +192,20 @@ All other continuation rules are unchanged: template notices, server tool blocks
 - Write-back rules: thinking goes into the first thinking block (a new one is prepended if none exists) and the others are cleared; the body only touches the trailing answer run's first text block, the remaining text blocks are cleared, and citations are dropped when the body changes. Tool blocks, template notices, and thinking signatures are left untouched.
 - The first edit stores a snapshot of the original blocks; **Revert to original** in the editor restores it.
 - Continuing a reply changes the block structure, so the snapshot no longer matches and revert disappears after a continuation.
-- Replies that were refused *and* had their content dropped cannot be edited (there is no model text left); with anti-retraction on, the kept content can be edited.
+- Replies that were refused _and_ had their content dropped cannot be edited (there is no model text left); with anti-retraction on, the kept content can be edited.
 
 ### 3.8 Engineering changes
 
-| Change | Where |
-| --- | --- |
-| Inline `.md` as raw source in the bundle | `rspack.config.ts` (`{ test: /\.md$/, type: 'asset/source' }`) |
-| `*.md` module typing | `src/env.d.ts` |
-| Prompt assembly pipeline | `src/services/chat/systemPrompt.ts` (new) |
-| Switch component | `src/components/base/Switch.tsx` + `Switch.module.css` (new) |
-| Slider + number control | `src/components/settings/ParamControls.tsx` + `ParamControls.module.css` (new) |
-| Reply editor | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css` (new) |
-| Translations | `src/i18n/zh.ts`, `src/i18n/en.ts` |
-| Perturbation / AutoTune / shaping / race engines | `src/services/unrestricted/` (ported from G0DM0D3, AGPL-3.0) |
+| Change                                           | Where                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Inline `.md` as raw source in the bundle         | `rspack.config.ts` (`{ test: /\.md$/, type: 'asset/source' }`)                 |
+| `*.md` module typing                             | `src/env.d.ts`                                                                 |
+| Prompt assembly pipeline                         | `src/services/chat/systemPrompt.ts` (new)                                      |
+| Switch component                                 | `src/components/base/Switch.tsx` + `Switch.module.css` (new)                   |
+| Slider + number control                          | `src/components/settings/ParamControls.tsx` + `ParamControls.module.css` (new) |
+| Reply editor                                     | `src/components/messages/ReplyEditor.tsx` + `ReplyEditor.module.css` (new)     |
+| Translations                                     | `src/i18n/zh.ts`, `src/i18n/en.ts`                                             |
+| Perturbation / AutoTune / shaping / race engines | `src/services/unrestricted/` (ported from G0DM0D3, AGPL-3.0)                   |
 
 > `deepseekv4.1 and v4.1-1017.md` is a build dependency. Commit it together with the code, otherwise a fresh clone will fail to build.
 
@@ -225,13 +226,13 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 
 Settings → **Advanced** (everything is off by default, so the out-of-the-box behaviour is unchanged):
 
-| Setting | What it does | Caveat |
-| --- | --- | --- |
-| System prompt preset | Switches between the default v4.1 document and GODMODE | GODMODE replaces the whole `system` field instead of appending the rules chunk; a custom prompt still overrides it |
-| Input perturbation | Rewrites matched trigger words before sending | The input box shows the rewritten text, i.e. exactly what is sent; resends and continuations reuse it |
-| Technique / intensity | 8 techniques, 3 intensities | Leetspeak, homoglyphs, mixed case and phonetic only affect Latin letters; full-width, thin spacing and zero-width work for Chinese too |
-| AutoTune | Picks sampling parameters from the prompt context | DeepSeek's Anthropic-compatible API only accepts `temperature` and `top_p`; `top_k` and friends are never sent |
-| Output shaping | Hedge reduction / direct / casual | Affects rendered chat and copied race results only; the stored reply is untouched |
+| Setting               | What it does                                           | Caveat                                                                                                                                 |
+| --------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| System prompt preset  | Switches between the default v4.1 document and GODMODE | GODMODE replaces the whole `system` field instead of appending the rules chunk; a custom prompt still overrides it                     |
+| Input perturbation    | Rewrites matched trigger words before sending          | The input box shows the rewritten text, i.e. exactly what is sent; resends and continuations reuse it                                  |
+| Technique / intensity | 8 techniques, 3 intensities                            | Leetspeak, homoglyphs, mixed case and phonetic only affect Latin letters; full-width, thin spacing and zero-width work for Chinese too |
+| AutoTune              | Picks sampling parameters from the prompt context      | DeepSeek's Anthropic-compatible API only accepts `temperature` and `top_p`; `top_k` and friends are never sent                         |
+| Output shaping        | Hedge reduction / direct / casual                      | Affects rendered chat and copied race results only; the stored reply is untouched                                                      |
 
 - The trigger table is bilingual (60+ English, 90+ Chinese); Chinese triggers match by substring and English ones by word boundary — see `src/services/unrestricted/parseltongue.ts`;
 - The input toolbar gains a **Perturb** button that opens a panel with the on/off switch, technique, matched-trigger count and a live preview;
@@ -239,44 +240,67 @@ Settings → **Advanced** (everything is off by default, so the out-of-the-box b
 - The lab gains a **Model race** tab: 5 L1B3RT4S prompt combos run in parallel (optionally alternating `deepseek-v4-pro` / `deepseek-flash`), stream into cards, get a 0–100 composite score (length, structure, anti-refusal, directness, relevance) and a winner badge, and each card can **start a chat with this combo** (its system prompt becomes the custom prompt, the question goes into the input box);
 - Engine code lives in `src/services/unrestricted/`, ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3), with AGPL-3.0 headers and a license copy (`COPYING-AGPL-3.0`).
 
+### 3.11 Thinking effort, context usage, session statistics and cost estimate
+
+- **Thinking effort**: the old on/off switch in the input bar becomes a 0–4 slider (Off / Light / Standard / Deep / Max). The level is sent as `thinking: { type: "enabled", budget_tokens }` plus `reasoning_effort` (low / medium / high / max). If the server answers 400 mentioning reasoning / thinking / budget / effort, the client drops the effort fields, retries once with plain `thinking: { type: "enabled" }` and tells you it fell back.
+- **Context usage**: the ring in the input corner converts the last request's context (`input + cache_read + cache_creation`) into a share of the model window (1M); amber past 60%, red past 85%, with the exact numbers in a tooltip.
+- **Session statistics** (the stats button next to the ring): rounds, steps (replies + tool calls), output speed, average first token, model time, cache hit rate, plus uncached input / cache read / cache write / output tokens; a live section shows the current run while it streams.
+- **Cost estimate**: priced from the official price page (yuan per million tokens) with separate rates for `deepseek-flash` and `deepseek-v4-pro`, split into peak and off-peak (Beijing time weekdays 09:00–12:00 and 14:00–18:00 are peak; off-peak costs half), with a "treat today as a holiday" override. Search and fetch are billed at 5 yuan / 1000 calls, document parsing at 1.5 yuan / 1000 pages (pages estimated from file size), TTS at 3 yuan / 10k characters (optional limited-time 50% off) and ASR at 0.78 yuan / hour.
+
+### 3.12 Attachment limits
+
+Settings → **Attachments**:
+
+| Item                      | Default                        | Notes                                                                           |
+| ------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
+| Enforce attachment limits | on                             | Turn off to skip size, count and extension checks; the server still decides     |
+| Max size per file         | 64 MB                          | Plain text, code and spreadsheet files still use the smaller 32 MB server limit |
+| Max files per session     | 50                             | Exceeding it rejects the whole batch                                            |
+| Extension whitelist       | built-in list (no heic / heif) | Comma or newline separated; empty restores the default                          |
+
 ---
 
 ## 4. Behaviour matrix
 
-| Scenario | Original | This fork, defaults (all switches off) | Unrestricted mode on |
-| --- | --- | --- | --- |
-| `system` field | Official identity sentence | Same | Persona + unrestricted rules block |
-| `safety_check` | Always `high` | `high` | Not sent |
-| Custom system prompt | None | Empty = assembled; filled = sent verbatim | Filled text wins; unrestricted no longer swaps the prompt |
-| Streamed content on refusal | Discarded | Discarded (kept when anti-retraction is on) | Same as default |
-| Refused turn in context | No | No (yes when anti-retraction kept the body) | Same as default |
-| Continue on refused reply | Blocked | Blocked (switch can enable) | Allowed |
-| Edit refused reply | No editing at all | Editable when content was kept | Same |
-| Sampling parameters | Not sent | Adjustable | Adjustable |
-| Export of refused reply | `CONTENT_FILTER` + template | Same (normal finish when content was kept) | Same as default |
-| Other original features | — | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same |
+| Scenario                    | Original                    | This fork, defaults (all switches off)                                               | Unrestricted mode on                                      |
+| --------------------------- | --------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `system` field              | Official identity sentence  | Same                                                                                 | Persona + unrestricted rules block                        |
+| `safety_check`              | Always `high`               | `high`                                                                               | Not sent                                                  |
+| Custom system prompt        | None                        | Empty = assembled; filled = sent verbatim                                            | Filled text wins; unrestricted no longer swaps the prompt |
+| Streamed content on refusal | Discarded                   | Discarded (kept when anti-retraction is on)                                          | Same as default                                           |
+| Refused turn in context     | No                          | No (yes when anti-retraction kept the body)                                          | Same as default                                           |
+| Continue on refused reply   | Blocked                     | Blocked (switch can enable)                                                          | Allowed                                                   |
+| Edit refused reply          | No editing at all           | Editable when content was kept                                                       | Same                                                      |
+| Sampling parameters         | Not sent                    | Adjustable                                                                           | Adjustable                                                |
+| Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                           | Same as default                                           |
+| Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
 
 ---
 
 ## 5. Settings reference
 
-| Group | Setting | Default | localStorage key | Unrestricted mode |
-| --- | --- | --- | --- | --- |
-| Model | Temperature | `1` | `chat-demo:temperature` | Unaffected |
-| Model | Top P | `1` | `chat-demo:top-p` | Unaffected |
-| Model | Max output tokens | empty (not sent) | `chat-demo:max-tokens` | Unaffected |
-| Model | Anti-retraction | off | `chat-demo:keep-reply-content` | Unaffected (independent switch) |
-| Model | Skip safety check | off | `chat-demo:skip-safety-check` | Forced on, disabled |
-| Model | Continue refused replies | off | `chat-demo:continue-refused` | Forced on, disabled |
-| Prompt | Unrestricted mode | off | `chat-demo:unrestricted` | — |
-| Prompt | Custom system prompt | empty (assembled) | `chat-demo:system-prompt` | Overrides the assembled result |
-| Advanced | System prompt preset | `deepseek` | `chat-demo:prompt-preset` | Unaffected |
-| Advanced | Input perturbation | off | `chat-demo:parseltongue` | Unaffected |
-| Advanced | Perturbation technique | `leetspeak` | `chat-demo:parseltongue-technique` | Unaffected |
-| Advanced | Perturbation intensity | `medium` | `chat-demo:parseltongue-intensity` | Unaffected |
-| Advanced | AutoTune | off | `chat-demo:autotune` | Unaffected |
-| Advanced | AutoTune strategy | `adaptive` | `chat-demo:autotune-strategy` | Unaffected |
-| Advanced | Output shaping | empty (off) | `chat-demo:stm-modules` | Unaffected |
+| Group       | Setting                   | Default           | localStorage key                   | Unrestricted mode               |
+| ----------- | ------------------------- | ----------------- | ---------------------------------- | ------------------------------- |
+| Model       | Temperature               | `1`               | `chat-demo:temperature`            | Unaffected                      |
+| Model       | Top P                     | `1`               | `chat-demo:top-p`                  | Unaffected                      |
+| Model       | Max output tokens         | empty (not sent)  | `chat-demo:max-tokens`             | Unaffected                      |
+| Model       | Anti-retraction           | off               | `chat-demo:keep-reply-content`     | Unaffected (independent switch) |
+| Model       | Skip safety check         | off               | `chat-demo:skip-safety-check`      | Forced on, disabled             |
+| Model       | Continue refused replies  | off               | `chat-demo:continue-refused`       | Forced on, disabled             |
+| Prompt      | Unrestricted mode         | off               | `chat-demo:unrestricted`           | —                               |
+| Prompt      | Custom system prompt      | empty (assembled) | `chat-demo:system-prompt`          | Overrides the assembled result  |
+| Advanced    | System prompt preset      | `deepseek`        | `chat-demo:prompt-preset`          | Unaffected                      |
+| Advanced    | Input perturbation        | off               | `chat-demo:parseltongue`           | Unaffected                      |
+| Advanced    | Perturbation technique    | `leetspeak`       | `chat-demo:parseltongue-technique` | Unaffected                      |
+| Advanced    | Perturbation intensity    | `medium`          | `chat-demo:parseltongue-intensity` | Unaffected                      |
+| Advanced    | AutoTune                  | off               | `chat-demo:autotune`               | Unaffected                      |
+| Advanced    | AutoTune strategy         | `adaptive`        | `chat-demo:autotune-strategy`      | Unaffected                      |
+| Advanced    | Output shaping            | empty (off)       | `chat-demo:stm-modules`            | Unaffected                      |
+| Attachments | Enforce attachment limits | on                | `chat-demo:attachment-limits`      | Unaffected                      |
+| Attachments | Max size per file         | 64 MB             | `chat-demo:attachment-max-mb`      | Unaffected                      |
+| Attachments | Max files per session     | 50                | `chat-demo:attachment-max-count`   | Unaffected                      |
+| Attachments | Extension whitelist       | built-in          | `chat-demo:attachment-exts`        | Unaffected                      |
+| Input bar   | Thinking effort           | 0 (off)           | `chat-demo:reasoning-effort`       | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -326,24 +350,28 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 
 ## 7. Implementation index
 
-| File | Purpose |
-| --- | --- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts) | System prompt pipeline: Persona + unrestricted rules block, with custom override |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts) | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard |
-| [`src/services/chat/reply.ts`](src/services/chat/reply.ts) | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
-| [`src/services/chat/describe.ts`](src/services/chat/describe.ts) | Refusal notices: a hint line when content was kept, the template otherwise |
-| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts) | Export status and template handling for refused replies |
-| [`src/services/settings.ts`](src/services/settings.ts) | New settings, defaults, and persistence |
-| [`src/services/api/types.ts`](src/services/api/types.ts) | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check` |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx) | Settings page: Model group, Prompt group, switches and preview |
-| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx) | Slider + number input control |
-| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx) | Switch component |
-| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx) | Reply editor (thinking / body) |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch |
-| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>) | Unrestricted rules text, inlined at build time |
-| [`mcp-server/`](mcp-server/README.md) | Local EasyJailbreak MCP backend |
-| [`src/components/lab/`](src/components/lab/LabView.tsx) | Jailbreak lab page |
-| [`src/services/lab/`](src/services/lab/mcpClient.ts) | MCP client and lab state |
+| File                                                                                           | Purpose                                                                                                              |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                       | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                     | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard                  |
+| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                     | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
+| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                               | Refusal notices: a hint line when content was kept, the template otherwise                                           |
+| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)             | Export status and template handling for refused replies                                                              |
+| [`src/services/settings.ts`](src/services/settings.ts)                                         | New settings, defaults, and persistence                                                                              |
+| [`src/services/api/types.ts`](src/services/api/types.ts)                                       | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)     | Settings page: Model group, Prompt group, switches and preview                                                       |
+| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)       | Slider + number input control                                                                                        |
+| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                       | Session aggregates, timings and cost estimate                                                                        |
+| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                       | Context usage cached per session                                                                                     |
+| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)   | Thinking effort 0–4 track                                                                                            |
+| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)             | Statistics and billing dialog                                                                                        |
+| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                             | Switch component                                                                                                     |
+| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)           | Reply editor (thinking / body)                                                                                       |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch                                                          |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                           | Unrestricted rules text, inlined at build time                                                                       |
+| [`mcp-server/`](mcp-server/README.md)                                                          | Local EasyJailbreak MCP backend                                                                                      |
+| [`src/components/lab/`](src/components/lab/LabView.tsx)                                        | Jailbreak lab page                                                                                                   |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                           | MCP client and lab state                                                                                             |
 
 ---
 
@@ -381,13 +409,13 @@ pnpm build      # output in dist/
 
 `dist/` can be deployed to any static host, or opened locally by double-clicking `dist/index.html` (the browser must allow storage on `file://` pages and cross-origin requests to your API origin). Enter your API key under Settings → Data before the first chat.
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start the dev server on 8090 |
-| `pnpm build` | Build into `dist/` |
-| `pnpm type` | TypeScript type check |
-| `pnpm lint` | Lint with oxlint |
-| `pnpm format` | Format with oxfmt |
+| Command       | Purpose                      |
+| ------------- | ---------------------------- |
+| `pnpm dev`    | Start the dev server on 8090 |
+| `pnpm build`  | Build into `dist/`           |
+| `pnpm type`   | TypeScript type check        |
+| `pnpm lint`   | Lint with oxlint             |
+| `pnpm format` | Format with oxfmt            |
 
 The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfig({ apiOrigin })`; it defaults to `https://api.deepseek.com`.
 

@@ -9,6 +9,7 @@ import {
   IconFollowsystemOutline16,
   IconLightOutline16,
   IconLinkOutline16,
+  IconPaperclipOutline16,
   IconRefreshOutline16,
   IconSettingsOutline16,
   IconThinkOutline16,
@@ -25,6 +26,10 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  setAttachmentExts,
+  setAttachmentLimits,
+  setAttachmentMaxCount,
+  setAttachmentMaxMB,
   setAutoTune,
   setAutoTuneStrategy,
   setContinueRefused,
@@ -84,6 +89,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'advanced',
     label: 'settingDialogAsideAdvancedOptionLabel',
     icon: <IconBrowseOutline16 />,
+  },
+  {
+    value: 'attachments',
+    label: 'settingDialogAsideAttachmentsOptionLabel',
+    icon: <IconPaperclipOutline16 />,
   },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
   { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconLinkOutline16 /> },
@@ -147,6 +157,8 @@ const SettingsContent = () => {
             <UnrestrictedSetting />
           ) : section === 'advanced' ? (
             <AdvancedSettings />
+          ) : section === 'attachments' ? (
+            <AttachmentsSetting />
           ) : section === 'about' ? (
             <AboutSetting />
           ) : section === 'changelog' ? (
@@ -404,6 +416,17 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV23Title',
+      items: [
+        'changelogV23Thinking',
+        'changelogV23Context',
+        'changelogV23Stats',
+        'changelogV23Billing',
+        'changelogV23Attachments',
+        'changelogV23RaceIO',
+      ],
+    },
     {
       title: 'changelogV22Title',
       items: [
@@ -830,6 +853,113 @@ const AdvancedSettings = () => {
         />
       ))}
       <div className={styles.pipeline}>{t('settingsStmHint')}</div>
+    </>
+  )
+}
+
+/**
+ * 附件限制：默认按内置规则校验（单文件 64 MB、单会话 50 个、扩展名白名单），
+ * 也可以关掉校验或改成自己的数值与白名单；改动立即对下一次选择和上传生效。
+ */
+const AttachmentsSetting = () => {
+  const t = useTranslate()
+  const limitEnabled = useSettings((state) => state.attachmentLimits)
+  const maxMB = useSettings((state) => state.attachmentMaxMB)
+  const maxCount = useSettings((state) => state.attachmentMaxCount)
+  const exts = useSettings((state) => state.attachmentExts)
+  const [draft, setDraft] = useState(exts ? exts.join(', ') : '')
+
+  useEffect(() => {
+    setDraft(exts ? exts.join(', ') : '')
+  }, [exts])
+
+  const commitExts = (value: string) => {
+    setDraft(value)
+    setAttachmentExts(
+      value
+        .split(/[,\n\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  }
+
+  return (
+    <>
+      <SettingCell
+        label={t('attachmentsLimit')}
+        description={t('attachmentsLimitDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={limitEnabled}
+            onChange={setAttachmentLimits}
+            label={t('attachmentsLimit')}
+          />
+        }
+      />
+      {limitEnabled ? null : <div className={styles.pipeline}>{t('attachmentsLimitsOff')}</div>}
+      <SettingCell
+        label={t('attachmentsMaxMB')}
+        description={t('attachmentsMaxMBDescription')}
+        status={null}
+        action={
+          <ParamControl
+            label={t('attachmentsMaxMB')}
+            value={maxMB}
+            min={1}
+            max={1024}
+            step={1}
+            optional
+            onChange={setAttachmentMaxMB}
+          />
+        }
+      />
+      <SettingCell
+        label={t('attachmentsMaxCount')}
+        description={t('attachmentsMaxCountDescription')}
+        status={null}
+        action={
+          <ParamControl
+            label={t('attachmentsMaxCount')}
+            value={maxCount}
+            min={1}
+            max={500}
+            step={1}
+            optional
+            onChange={setAttachmentMaxCount}
+          />
+        }
+      />
+      <div className={styles.systemPrompt}>
+        <div className={styles.systemPromptHead}>
+          <div className={styles.systemPromptLabel}>{t('attachmentsExts')}</div>
+          <div className={styles.systemPromptDescription}>{t('attachmentsExtsDescription')}</div>
+        </div>
+        <textarea
+          className={styles.systemPromptTextarea}
+          aria-label={t('attachmentsExts')}
+          rows={4}
+          spellCheck={false}
+          placeholder={t('attachmentsExtsPlaceholder')}
+          value={draft}
+          onChange={(event) => commitExts(event.target.value)}
+        />
+        <div className={styles.systemPromptActions}>
+          <span className={styles.systemPromptHint}>
+            {exts === null
+              ? t('attachmentsExtsPlaceholder')
+              : t('attachmentsExtsCount', { count: exts.length })}
+          </span>
+          <Button
+            variant="outlined"
+            size="s"
+            disabled={exts === null}
+            onClick={() => setAttachmentExts(null)}
+          >
+            {t('attachmentsExtsReset')}
+          </Button>
+        </div>
+      </div>
     </>
   )
 }

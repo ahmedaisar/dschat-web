@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslate } from '../../i18n/index.js'
-import { MAX_COUNT, MAX_SIZE_MB } from '../../services/attachments.js'
+import { getMaxCount, getTotalMaxSizeMB } from '../../services/attachments.js'
+import { useSettings } from '../../services/settings.js'
 import styles from './DragMask.module.css'
 
 const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false
@@ -61,13 +62,16 @@ export const DragMask = () => createPortal(<DragMaskContent />, document.body)
 
 const DragMaskContent = () => {
   const t = useTranslate()
+  const limitEnabled = useSettings((state) => state.attachmentLimits)
   return (
     <div className={styles.mask}>
       <div className={styles.wrap}>
         <UploadIcon />
         <div className={styles.title}>{t('dragFileToUpload')}</div>
         <div className={styles.desc}>
-          {t('dragFileDesc', { count: MAX_COUNT, size: MAX_SIZE_MB })}
+          {limitEnabled
+            ? t('dragFileDesc', { count: getMaxCount(), size: getTotalMaxSizeMB() })
+            : t('attachmentsLimitsOff')}
         </div>
       </div>
     </div>

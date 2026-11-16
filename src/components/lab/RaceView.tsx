@@ -69,6 +69,7 @@ export const RaceView = () => {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // 视图卸载（切换标签、关闭实验台）时结束在跑的请求
   useEffect(
@@ -86,6 +87,69 @@ export const RaceView = () => {
 
   const stop = () => {
     controllerRef.current?.abort()
+  }
+
+  /** 把当前赛跑结果导出成 JSON，之后可以导入回放 */
+  const exportResults = () => {
+    if (results.length === 0) {
+      return
+    }
+    const payload = {
+      version: 1,
+      type: 'race',
+      exportedAt: new Date().toISOString(),
+      query: startedQuery,
+      results,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `jailbreak-race-${Date.now()}.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
+  /** 导入一份之前导出的赛跑结果（只展示，不重新请求） */
+  const importResults = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text()) as Record<string, unknown>
+      const raw = Array.isArray(parsed.results) ? parsed.results : null
+      if (!raw) {
+        throw new Error('missing results')
+      }
+      const imported: RaceResult[] = raw.map((item, index) => {
+        const record = (item ?? {}) as Record<string, unknown>
+        const status = record.status
+        return {
+          id: typeof record.id === 'string' ? record.id : `imported-${index}`,
+          codename: typeof record.codename === 'string' ? record.codename : `#${index + 1}`,
+          color: typeof record.color === 'string' ? record.color : '#6d5cff',
+          model:
+            record.model === 'deepseek-v4-pro' || record.model === 'deepseek-flash'
+              ? record.model
+              : 'deepseek-flash',
+          status:
+            status === 'done' ||
+            status === 'error' ||
+            status === 'aborted' ||
+            status === 'streaming'
+              ? status
+              : 'done',
+          text: typeof record.text === 'string' ? record.text : '',
+          score: typeof record.score === 'number' ? record.score : 0,
+          durationMs: typeof record.durationMs === 'number' ? record.durationMs : 0,
+          error: typeof record.error === 'string' ? record.error : undefined,
+          system: typeof record.system === 'string' ? record.system : undefined,
+        }
+      })
+      setResults(imported)
+      setStartedQuery(typeof parsed.query === 'string' ? parsed.query : '')
+      setError(null)
+      showToast({ key: 'labRaceImportedResults' })
+    } catch {
+      showToast({ key: 'labRaceImportFailed' })
+    }
   }
 
   // 输出整形与聊天里的渲染一致：只影响展示与复制，不影响打分
@@ -165,9 +229,37 @@ export const RaceView = () => {
     <div className={styles.race}>
       <div className={styles.grid}>
         <section className={styles.panel}>
-          <div className={styles.heading}>
-            <div className={styles.title}>{t('labRaceTitle')}</div>
-            <div className={styles.subtitle}>{t('labRaceSubtitle')}</div>
+          <div className={styles.headRow}>
+            <div className={styles.heading}>
+              <div className={styles.title}>{t('labRaceTitle')}</div>
+              <div className={styles.subtitle}>{t('labRaceSubtitle')}</div>
+            </div>
+            <div className={styles.toolbar}>
+              <Button
+                variant="outlined"
+                size="s"
+                disabled={results.length === 0}
+                onClick={exportResults}
+              >
+                {t('labExport')}
+              </Button>
+              <Button variant="outlined" size="s" onClick={() => fileRef.current?.click()}>
+                {t('labImport')}
+              </Button>
+              <input
+                ref={fileRef}
+                className={styles.hiddenInput}
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) {
+                    void importResults(file)
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <div className={styles.field}>

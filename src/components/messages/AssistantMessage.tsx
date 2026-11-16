@@ -203,7 +203,11 @@ export const AssistantMessage = memo(function AssistantMessage({
           <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
             {copyText ? <CopyButton text={copyText} /> : null}
             {responseText && !refused ? (
-              <ReadAloudButton messageId={message.id} text={shapedText ?? responseText} />
+              <ReadAloudButton
+                sessionId={sessionId}
+                messageId={message.id}
+                text={shapedText ?? responseText}
+              />
             ) : null}
             {editable ? (
               <IconButton

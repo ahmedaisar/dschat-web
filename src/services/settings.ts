@@ -19,6 +19,8 @@ type Settings = {
   location: UserLocation | null
   ttsVoice: TtsVoice
   thinking: boolean
+  /** 思考强度 0-4；0 为关闭，与 thinking 保持同步 */
+  reasoningEffort: number
   search: boolean
   /** 采样温度 0–2，默认 1 */
   temperature: number
@@ -50,6 +52,14 @@ type Settings = {
   autoTuneStrategy: AutoTuneStrategy
   /** 输出整形（STM）模块 id；空数组表示不整形 */
   stmModules: string[]
+  /** 是否在本地校验附件限制 */
+  attachmentLimits: boolean
+  /** 单文件大小上限（MB）；null 表示用内置默认值 */
+  attachmentMaxMB: number | null
+  /** 单会话附件数量上限；null 表示用内置默认值 */
+  attachmentMaxCount: number | null
+  /** 自定义扩展名白名单；null 表示用内置清单 */
+  attachmentExts: string[] | null
   siderCollapsed: boolean
 }
 
@@ -60,6 +70,7 @@ const KEYS = {
   themePreference: 'chat-demo:theme-preference',
   ttsVoice: 'chat-demo:tts-voice',
   thinking: 'chat-demo:thinking',
+  reasoningEffort: 'chat-demo:reasoning-effort',
   search: 'chat-demo:search',
   temperature: 'chat-demo:temperature',
   topP: 'chat-demo:top-p',
@@ -76,6 +87,10 @@ const KEYS = {
   autoTune: 'chat-demo:autotune',
   autoTuneStrategy: 'chat-demo:autotune-strategy',
   stmModules: 'chat-demo:stm-modules',
+  attachmentLimits: 'chat-demo:attachment-limits',
+  attachmentMaxMB: 'chat-demo:attachment-max-mb',
+  attachmentMaxCount: 'chat-demo:attachment-max-count',
+  attachmentExts: 'chat-demo:attachment-exts',
   siderCollapsed: 'chat-demo:sider-collapsed',
 } as const
 
@@ -136,6 +151,22 @@ const initialThemePreference = (): ThemePreference => {
 /** 未保存过时使用服务端默认音色 stella（海星） */
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
 
+/** 思考强度档位：0 关闭，1-4 由弱到强 */
+export const EFFORT_LEVELS = 4
+
+/** 1-4 档对应的协议字段值，0 档不下发 */
+const REASONING_EFFORT = ['low', 'medium', 'high', 'max'] as const
+
+export const reasoningEffortValue = (effort: number) =>
+  REASONING_EFFORT[Math.min(REASONING_EFFORT.length, Math.max(1, effort)) - 1]
+
+/** Anthropic 兼容接口的思考预算，按档位递增 */
+const THINKING_BUDGET = [0, 1024, 4096, 12000, 32000] as const
+
+/** 服务端要求思考预算至少 1024，0 档也按下限兜底（正常路径不会用到） */
+export const thinkingBudget = (effort: number) =>
+  THINKING_BUDGET[Math.min(THINKING_BUDGET.length - 1, Math.max(1, effort))]
+
 /** 读取数值设置；未保存、超出范围或格式不对时回落到默认值 */
 const initialNumber = (key: string, fallback: number, min: number, max: number): number => {
   const raw = read(key)
@@ -144,6 +175,38 @@ const initialNumber = (key: string, fallback: number, min: number, max: number):
   }
   const value = Number(raw)
   return Number.isFinite(value) && value >= min && value <= max ? value : fallback
+}
+
+/** 思考强度：优先读新键，旧数据只有 thinking 开关时按标准档恢复 */
+const initialReasoningEffort = (): number => {
+  const raw = Number(read(KEYS.reasoningEffort))
+  if (read(KEYS.reasoningEffort) !== null && Number.isFinite(raw)) {
+    return Math.min(EFFORT_LEVELS, Math.max(0, Math.round(raw)))
+  }
+  return read(KEYS.thinking) === 'true' ? 2 : 0
+}
+
+/** 附件大小：未设置或不是正整数时为 null（使用内置默认值） */
+const initialAttachmentNumber = (key: string): number | null => {
+  const raw = read(key)
+  if (raw === null) {
+    return null
+  }
+  const value = Math.floor(Number(raw))
+  return Number.isFinite(value) && value >= 1 ? value : null
+}
+
+/** 自定义扩展名白名单：逗号分隔存储；为空时为 null（使用内置清单） */
+const initialAttachmentExts = (): string[] | null => {
+  const raw = read(KEYS.attachmentExts)
+  if (raw === null) {
+    return null
+  }
+  const exts = raw
+    .split(',')
+    .map((ext) => ext.trim().toLowerCase().replace(/^\./, ''))
+    .filter((ext) => ext !== '')
+  return exts.length > 0 ? exts : null
 }
 
 /** 自定义系统提示词：未填写或只有空白时为 null，表示使用自动组装结果 */
@@ -210,7 +273,8 @@ export const useSettings = create<Settings>(() => ({
   location: initialLocation(),
   themePreference: initialThemePreference(),
   ttsVoice: initialTtsVoice(),
-  thinking: read(KEYS.thinking) === 'true',
+  thinking: initialReasoningEffort() > 0,
+  reasoningEffort: initialReasoningEffort(),
   search: read(KEYS.search) === 'true',
   temperature: initialNumber(KEYS.temperature, 1, 0, 2),
   topP: initialNumber(KEYS.topP, 1, 0.01, 1),
@@ -227,6 +291,10 @@ export const useSettings = create<Settings>(() => ({
   autoTune: read(KEYS.autoTune) === 'true',
   autoTuneStrategy: initialEnum(KEYS.autoTuneStrategy, STRATEGIES, 'adaptive'),
   stmModules: initialStmModules(),
+  attachmentLimits: read(KEYS.attachmentLimits) !== 'false',
+  attachmentMaxMB: initialAttachmentNumber(KEYS.attachmentMaxMB),
+  attachmentMaxCount: initialAttachmentNumber(KEYS.attachmentMaxCount),
+  attachmentExts: initialAttachmentExts(),
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -257,8 +325,19 @@ export const setApiKey = (apiKey: string | null) => {
 }
 
 export const setThinking = (thinking: boolean) => {
+  // 打开时恢复到上次的档位（没有则用标准档），关闭时档位归零
+  const effort = thinking ? useSettings.getState().reasoningEffort || 2 : 0
   write(KEYS.thinking, String(thinking))
-  useSettings.setState({ thinking })
+  write(KEYS.reasoningEffort, String(effort))
+  useSettings.setState({ thinking, reasoningEffort: effort })
+}
+
+/** 拖动思考强度轨道：0 档同时关闭深度思考 */
+export const setReasoningEffort = (value: number) => {
+  const effort = Math.min(EFFORT_LEVELS, Math.max(0, Math.round(value)))
+  write(KEYS.reasoningEffort, String(effort))
+  write(KEYS.thinking, String(effort > 0))
+  useSettings.setState({ reasoningEffort: effort, thinking: effort > 0 })
 }
 
 export const setSearch = (search: boolean) => {
@@ -352,4 +431,33 @@ export const setStmModules = (stmModules: string[]) => {
   const value = stmModules.filter((id) => STM_MODULE_IDS.includes(id))
   write(KEYS.stmModules, JSON.stringify(value))
   useSettings.setState({ stmModules: value })
+}
+
+export const setAttachmentLimits = (attachmentLimits: boolean) => {
+  write(KEYS.attachmentLimits, String(attachmentLimits))
+  useSettings.setState({ attachmentLimits })
+}
+
+/** 传 null 表示恢复内置默认值 */
+export const setAttachmentMaxMB = (attachmentMaxMB: number | null) => {
+  const value = attachmentMaxMB === null ? null : Math.max(1, Math.round(attachmentMaxMB))
+  write(KEYS.attachmentMaxMB, value === null ? null : String(value))
+  useSettings.setState({ attachmentMaxMB: value })
+}
+
+/** 传 null 表示恢复内置默认值 */
+export const setAttachmentMaxCount = (attachmentMaxCount: number | null) => {
+  const value = attachmentMaxCount === null ? null : Math.max(1, Math.round(attachmentMaxCount))
+  write(KEYS.attachmentMaxCount, value === null ? null : String(value))
+  useSettings.setState({ attachmentMaxCount: value })
+}
+
+/** 传 null 或空数组表示恢复内置白名单 */
+export const setAttachmentExts = (attachmentExts: string[] | null) => {
+  const value =
+    attachmentExts === null || attachmentExts.length === 0
+      ? null
+      : attachmentExts.map((ext) => ext.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
+  write(KEYS.attachmentExts, value === null ? null : value.join(','))
+  useSettings.setState({ attachmentExts: value })
 }

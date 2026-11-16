@@ -16,6 +16,7 @@ import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
 import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
+import { StatsDialog } from '../components/session/StatsDialog.js'
 import { LabView } from '../components/lab/LabView.js'
 import { ErrorBoundary } from '../components/base/ErrorBoundary.js'
 import { closeLab, useLab } from '../services/lab/labStore.js'
@@ -151,6 +152,7 @@ export const App = () => {
         <SearchPanel />
       </div>
       <SettingsDialog />
+      <StatsDialog />
       <Toast />
     </>
   )

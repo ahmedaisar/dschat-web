@@ -1,13 +1,13 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import {
+  IconDataOutline16,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
   IconSendOutline16,
   IconStopFill16,
-  IconThinkOutline14,
 } from '../base/icons.js'
-import { setSearch, setThinking, useSettings } from '../../services/settings.js'
+import { setSearch, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -24,13 +24,16 @@ import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
-import { ACCEPT, useUploads } from '../../services/attachments.js'
+import { acceptFilesAttr, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { ParseltongueButton } from './ParseltonguePanel.js'
+import { ThinkingSlider } from './ThinkingSlider.js'
+import { ContextRing } from './ContextRing.js'
 import { Spectrum } from './Spectrum.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ChatInput.module.css'
@@ -50,7 +53,6 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const streaming = useChatStore(
     (state) => sessionId !== null && Object.hasOwn(state.streaming, sessionId)
   )
-  const thinking = useSettings((state) => state.thinking)
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
@@ -113,7 +115,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       textarea?.focus({ preventScroll: true })
       textarea?.setSelectionRange(start + transcript.length, start + transcript.length)
     })
-  })
+  }, sessionId)
 
   // 欢迎页导入后会话 ID 不变，不能依赖卸载取消语音；订阅开始事件也覆盖快速完成的导入。
   const cancelVoice = voice.cancel
@@ -201,20 +203,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         </div>
       </div>
       <div className={styles.functionRow}>
-        {/* 深度思考 / 智能搜索开关，tooltip 在按钮上方 */}
+        {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
-          <Tooltip content={t('deactivatedThinkTooltip')}>
-            <button
-              type="button"
-              className={clsx(styles.toggle, thinking && styles.selected)}
-              aria-label={t('thinkingSwitch')}
-              aria-pressed={thinking}
-              onClick={() => setThinking(!thinking)}
-            >
-              <IconThinkOutline14 />
-              <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
-            </button>
-          </Tooltip>
+          <ThinkingSlider />
           <Tooltip content={t('deactivatedSearchTooltip')}>
             <button
               type="button"
@@ -237,6 +228,14 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           </Tooltip>
         </div>
         <div className={styles.right}>
+          <ContextRing sessionId={sessionId} streaming={streaming} />
+          <IconButton
+            size="m"
+            tone="tertiary"
+            icon={<IconDataOutline16 />}
+            tooltip={t('statsOpen')}
+            onClick={openStats}
+          />
           <VoiceButton
             status={voice.status}
             disabled={!voice.available}
@@ -263,7 +262,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             type="file"
             multiple
             hidden
-            accept={ACCEPT}
+            accept={acceptFilesAttr()}
             onChange={(event) => {
               acceptFiles(Array.from(event.target.files ?? []))
               event.target.value = ''

@@ -3,6 +3,7 @@ import type { TranslationMessage } from '../../i18n/index.js'
 import { transcribe } from '../../services/api/speech.js'
 import { startRecording, type Recording } from '../../services/speech/recorder.js'
 import { useSettings } from '../../services/settings.js'
+import { noteAsrSeconds } from '../../services/chat/sessionStats.js'
 import { showToast } from '../base/toastState.js'
 
 export type VoiceInputStatus = 'idle' | 'recording' | 'transcribing'
@@ -29,7 +30,7 @@ const describeRecordingError = (error: unknown): TranslationMessage => {
  * 语音输入（oneshot）：点击开始录音，再次点击结束并转写，结果交给 onText 填入输入框。
  * 转写中再次点击取消。录满 120 秒自动结束。
  */
-export const useVoiceInput = (onText: (text: string) => void) => {
+export const useVoiceInput = (onText: (text: string) => void, sessionId: string | null = null) => {
   const [status, setStatus] = useState<VoiceInputStatus>('idle')
   /** 本次录音已录秒数，只在录音中递增 */
   const [seconds, setSeconds] = useState(0)
@@ -38,6 +39,8 @@ export const useVoiceInput = (onText: (text: string) => void) => {
   const operationRef = useRef(0)
   const onTextRef = useRef(onText)
   onTextRef.current = onText
+  /** 本次录音开始时间，用于语音识别按小时计费 */
+  const startedAtRef = useRef(0)
 
   const cancelOperation = useCallback(() => {
     operationRef.current++
@@ -64,6 +67,9 @@ export const useVoiceInput = (onText: (text: string) => void) => {
     let controller: AbortController | null = null
     try {
       let audio: Blob | null
+      // 识别按音频时长计费：停止录音时就把时长定下来，后面的上传与转写不算钱
+      const recordedSeconds =
+        startedAtRef.current > 0 ? (Date.now() - startedAtRef.current) / 1000 : 0
       try {
         audio = await recording.stop()
       } finally {
@@ -78,6 +84,10 @@ export const useVoiceInput = (onText: (text: string) => void) => {
       const text = await transcribe(useSettings.getState().apiKey ?? '', audio, controller.signal)
       if (controller.signal.aborted || operationRef.current !== operation) {
         return
+      }
+      if (recordedSeconds > 0) {
+        noteAsrSeconds(sessionId, recordedSeconds)
+        startedAtRef.current = 0
       }
       if (text.trim()) {
         onTextRef.current(text.trim())
@@ -94,7 +104,7 @@ export const useVoiceInput = (onText: (text: string) => void) => {
         setStatus('idle')
       }
     }
-  }, [cancel])
+  }, [cancel, sessionId])
 
   const toggle = useCallback(async () => {
     if (!AVAILABLE) {
@@ -135,6 +145,7 @@ export const useVoiceInput = (onText: (text: string) => void) => {
       return
     }
     const startedAt = Date.now()
+    startedAtRef.current = startedAt
     setSeconds(0)
     // 半秒刷新一次，让显示的秒数与实际录音时长保持一致
     const timer = setInterval(() => {

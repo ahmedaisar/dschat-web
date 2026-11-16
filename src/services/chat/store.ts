@@ -4,8 +4,12 @@ import { ApiError, streamMessage } from '../api/client.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
-import { useSettings } from '../settings.js'
+import { reasoningEffortValue, thinkingBudget, useSettings } from '../settings.js'
 import { composeSystemPrompt } from './systemPrompt.js'
+import { noteContextUsage } from './contextUsage.js'
+import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
+import { noteRunTiming } from './sessionStats.js'
+import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
@@ -1067,6 +1071,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
   let reply = initial
   let frame = 0
+  // 首 token 时间与整轮耗时用于会话统计；服务端拒绝思考强度时退回普通思考请求
+  const runStartedAt = Date.now()
+  let firstTokenAt: number | null = null
+  let fallbackNoReasoning = false
+  beginLiveRun(sessionId, initial.model ?? MODEL)
   const flush = () => {
     cancelAnimationFrame(frame)
     frame = 0
@@ -1107,7 +1116,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           unrestricted,
           autoTune,
           autoTuneStrategy,
+          reasoningEffort,
         } = useSettings.getState()
+        const effort = initial.thinking ? reasoningEffort : 0
         // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
         const autoTuned = autoTune
           ? computeAutoTuneParams({
@@ -1126,7 +1137,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             // 组装流水线：默认预设按 Persona + 破限规则分块，godmode 预设整段替换
             system: composeSystemPrompt(unrestricted, systemPrompt, promptPreset),
             messages,
-            thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
+            thinking: initial.thinking
+              ? fallbackNoReasoning
+                ? { type: 'enabled' }
+                : { type: 'enabled', budget_tokens: thinkingBudget(effort) }
+              : { type: 'disabled' },
+            // 思考强度：0 档与降级后都不下发
+            ...(initial.thinking && effort > 0 && !fallbackNoReasoning
+              ? { reasoning_effort: reasoningEffortValue(effort) }
+              : {}),
             temperature: autoTuned?.params.temperature ?? temperature,
             top_p: autoTuned?.params.top_p ?? topP,
             ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
@@ -1139,6 +1158,20 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         const blockIndexes = new Map<number, number>()
         for await (const event of events) {
           receivedContent ||= event.type === 'content_block_start'
+          if (event.type === 'message_start') {
+            noteContextUsage(sessionId, event.message.usage)
+            noteUsage(event.message.usage, 'start')
+          } else if (event.type === 'content_block_delta') {
+            if (event.delta.type === 'text_delta') {
+              firstTokenAt ??= Date.now()
+              noteDelta('text', event.delta.text)
+            } else if (event.delta.type === 'thinking_delta') {
+              firstTokenAt ??= Date.now()
+              noteDelta('thinking', event.delta.thinking)
+            }
+          } else if (event.type === 'message_delta') {
+            noteUsage(event.usage, 'delta')
+          }
           if (
             event.type === 'message_delta' &&
             (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
@@ -1174,6 +1207,19 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           })
           break
         }
+        // 服务端不认识 reasoning_effort / budget_tokens 时，去掉强度参数退回普通思考重试一次
+        if (
+          initial.thinking &&
+          !fallbackNoReasoning &&
+          !receivedContent &&
+          error instanceof ApiError &&
+          error.status === 400 &&
+          /reasoning|thinking|budget|effort/i.test(error.message)
+        ) {
+          fallbackNoReasoning = true
+          showToast({ key: 'thinkingFallbackToast' })
+          continue
+        }
         // 附件失效：重新补传后重发。收到过内容块（含丢弃的客户端工具）后不自动重发。
         if (
           attempt < FILE_RETRY_LIMIT &&
@@ -1207,6 +1253,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       }
     }
   } finally {
+    if (reply.status === 'done' || reply.status === 'stopped') {
+      noteRunTiming(reply.id, {
+        modelMs: Date.now() - runStartedAt,
+        firstTokenMs: firstTokenAt === null ? null : firstTokenAt - runStartedAt,
+      })
+    }
+    finishLiveRun(sessionId)
     titleRequests.delete(controller)
     streamFlushes.delete(sessionId)
     cancelAnimationFrame(frame)
