@@ -375,6 +375,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 ## Star 历史
 
 <!-- star-history:start -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/star-history/star-history-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/star-history/star-history-light.svg" />
+  <img alt="Star History Chart" src="assets/star-history/star-history-light.svg" />
+</picture>
 <!-- star-history:end -->
 
 ---
