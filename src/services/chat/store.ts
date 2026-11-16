@@ -14,6 +14,7 @@ import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
 import { DEPTH_DIRECTIVE, GODMODE_SYSTEM_PROMPT } from '../unrestricted/prompts.js'
+import { looksLikeRefusal } from '../unrestricted/refusal.js'
 import { applyHallOfFameCombo, HALL_OF_FAME } from '../unrestricted/libertas.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
@@ -1124,7 +1125,11 @@ const maybeAutoRetry = (
   if (aborted || !useSettings.getState().autoJailbreak) {
     return
   }
-  if (reply.stopReason !== 'refusal' || getReplyAnswerText(reply).trim() !== '') {
+  const answer = getReplyAnswerText(reply)
+  // 协议层拒绝（且没保留正文）或正文本身是拒绝话术时都算被拒绝
+  const refused =
+    reply.stopReason === 'refusal' && answer.trim() === '' ? true : looksLikeRefusal(answer, 600)
+  if (!refused) {
     return
   }
   const count = autoRetryCounts.get(questionId) ?? 0

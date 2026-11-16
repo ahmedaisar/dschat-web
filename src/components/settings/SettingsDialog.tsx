@@ -419,6 +419,16 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV24Title',
+      items: [
+        'changelogV24Techniques',
+        'changelogV24Variants',
+        'changelogV24Budget',
+        'changelogV24Refusal',
+        'changelogV24Mobile',
+      ],
+    },
+    {
       title: 'changelogV231Title',
       items: [
         'changelogV231Hover',

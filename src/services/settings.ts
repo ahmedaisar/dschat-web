@@ -23,6 +23,10 @@ type Settings = {
   reasoningEffort: number
   /** 自动越狱：GODMODE 提示词 + 自动扰动 + 被拒绝后自动换组合重试 */
   autoJailbreak: boolean
+  /** 变体赛跑的预算上限（元） */
+  variantRaceBudget: number
+  /** 变体赛跑的开跑确认已永久关闭 */
+  variantRaceConfirmDismissed: boolean
   search: boolean
   /** 采样温度 0–2，默认 1 */
   temperature: number
@@ -74,6 +78,8 @@ const KEYS = {
   thinking: 'chat-demo:thinking',
   reasoningEffort: 'chat-demo:reasoning-effort',
   autoJailbreak: 'chat-demo:auto-jailbreak',
+  variantRaceBudget: 'chat-demo:variant-race-budget',
+  variantRaceConfirmDismissed: 'chat-demo:variant-race-confirm-dismissed',
   search: 'chat-demo:search',
   temperature: 'chat-demo:temperature',
   topP: 'chat-demo:top-p',
@@ -279,6 +285,8 @@ export const useSettings = create<Settings>(() => ({
   thinking: initialReasoningEffort() > 0,
   reasoningEffort: initialReasoningEffort(),
   autoJailbreak: read(KEYS.autoJailbreak) === 'true',
+  variantRaceBudget: initialNumber(KEYS.variantRaceBudget, 1, 0.01, 1000),
+  variantRaceConfirmDismissed: read(KEYS.variantRaceConfirmDismissed) === 'true',
   search: read(KEYS.search) === 'true',
   temperature: initialNumber(KEYS.temperature, 1, 0, 2),
   topP: initialNumber(KEYS.topP, 1, 0.01, 1),
@@ -469,4 +477,15 @@ export const setAttachmentExts = (attachmentExts: string[] | null) => {
 export const setAutoJailbreak = (autoJailbreak: boolean) => {
   write(KEYS.autoJailbreak, String(autoJailbreak))
   useSettings.setState({ autoJailbreak })
+}
+
+export const setVariantRaceBudget = (variantRaceBudget: number) => {
+  const value = Math.min(1000, Math.max(0.01, Number(variantRaceBudget.toFixed(2))))
+  write(KEYS.variantRaceBudget, String(value))
+  useSettings.setState({ variantRaceBudget: value })
+}
+
+export const setVariantRaceConfirmDismissed = (variantRaceConfirmDismissed: boolean) => {
+  write(KEYS.variantRaceConfirmDismissed, String(variantRaceConfirmDismissed))
+  useSettings.setState({ variantRaceConfirmDismissed })
 }

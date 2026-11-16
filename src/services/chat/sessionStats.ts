@@ -1,4 +1,5 @@
 import type { TranslationKey, TranslationParams } from '../../i18n/index.js'
+import type { MessageUsage } from '../api/types.js'
 import type { AssistantMessage, Session } from './types.js'
 
 /**
@@ -250,6 +251,48 @@ export const isPeakHour = (date: Date, holiday = false): boolean => {
     return false
   }
   return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
+}
+
+/** 粗估 token：中文按 1 字 1 token，其余按 4 字符 1 token */
+export const estimateTokens = (text: string): number => {
+  let tokens = 0
+  for (const char of text) {
+    tokens += /[\u4e00-\u9fff]/.test(char) ? 1 : 0.25
+  }
+  return Math.ceil(tokens)
+}
+
+/** 按模型与时间取单价；未知模型按 flash 计 */
+const priceFor = (model: string) => MODEL_PRICE[model] ?? MODEL_PRICE['deepseek-flash']
+
+/** 用服务端上报的用量算一次请求的费用（元） */
+export const usageCost = (
+  model: string,
+  usage: MessageUsage,
+  at: Date = new Date(),
+  holiday = false
+): number => {
+  const price = priceFor(model)
+  const multiplier = isPeakHour(at, holiday) ? 2 : 1
+  const tokens =
+    (usage.cache_read_input_tokens ?? 0) * price.cacheHit +
+    (usage.input_tokens ?? 0) * price.cacheMiss +
+    (usage.output_tokens ?? 0) * price.output
+  return (tokens * multiplier) / 1e6
+}
+
+/** 预估算一次请求的最坏费用：输入按未命中缓存、输出按上限 */
+export const estimateRequestCost = (
+  model: string,
+  inputText: string,
+  maxOutputTokens: number,
+  at: Date = new Date(),
+  holiday = false
+): number => {
+  const price = priceFor(model)
+  const multiplier = isPeakHour(at, holiday) ? 2 : 1
+  const tokens = estimateTokens(inputText) * price.cacheMiss + maxOutputTokens * price.output
+  return (tokens * multiplier) / 1e6
 }
 
 export type CostLine = {

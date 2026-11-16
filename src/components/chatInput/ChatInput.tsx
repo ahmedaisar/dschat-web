@@ -242,8 +242,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           </Tooltip>
         </div>
         <div className={styles.right}>
-          <ContextRing sessionId={sessionId} streaming={streaming} />
+          <ContextRing sessionId={sessionId} streaming={streaming} onOpen={openStats} />
           <IconButton
+            className={styles.statsButton}
             size="m"
             tone="tertiary"
             icon={<IconDataOutline16 />}

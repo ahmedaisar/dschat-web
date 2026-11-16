@@ -30,9 +30,12 @@ const formatTokens = (value: number): string => {
 export const ContextRing = ({
   sessionId,
   streaming = false,
+  onOpen,
 }: {
   sessionId: string | null
   streaming?: boolean
+  /** 点击圆环打开会话统计（移动端没有独立的统计按钮） */
+  onOpen?: () => void
 }) => {
   const t = useTranslate()
   // 应用固定使用 deepseek-flash；窗口长度见 services/chat/contextUsage.ts
@@ -55,12 +58,13 @@ export const ContextRing = ({
           : t('contextUsageEmpty')
       }
     >
-      <span
+      <button
+        type="button"
         className={clsx(styles.ring, streaming && styles.active)}
         data-level={level}
         data-empty={tokens === 0 || undefined}
-        role="img"
         aria-label={t('contextUsageLabel', { percent })}
+        onClick={onOpen}
       >
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden>
           <circle
@@ -86,7 +90,7 @@ export const ContextRing = ({
         </svg>
         {/* 没有用量时给一个破折号，比 0 更像「还没开始」 */}
         <span className={styles.percent}>{tokens > 0 ? percent : '–'}</span>
-      </span>
+      </button>
     </Tooltip>
   )
 }

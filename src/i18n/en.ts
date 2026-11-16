@@ -118,6 +118,17 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV24Title: 'v2.4.0 · 2026-11',
+  changelogV24Techniques:
+    'The perturbation engine now carries all 33 techniques from the standalone build, in light / standard / heavy tiers',
+  changelogV24Variants:
+    'New lab tab: variant race obfuscates the question, fires variants in parallel and keeps the best score',
+  changelogV24Budget:
+    'Variant race has a budget cap and a start confirmation dialog that can be dismissed permanently',
+  changelogV24Refusal:
+    'Auto jailbreak also detects refusal text, so a 200 response containing a refusal still retries',
+  changelogV24Mobile:
+    'Mobile polish: stats entry folded into the context ring, scrollable lab tabs, narrower panels',
   changelogV231Title: 'v2.3.1 · 2026-11',
   changelogV231Hover:
     'Fixed the session row shifting when the rename / delete button appears on hover',
@@ -513,6 +524,46 @@ export const en = {
   labRaceImportedResults: 'Imported race results',
   labRaceImportFailed: 'Import failed: not a valid race result file',
 
+  labTabVariants: 'Variant race',
+  variantTitle: 'Variant race',
+  variantSubtitle:
+    'Generate 11 / 22 / 33 obfuscated variants and race them, keeping the best score',
+  variantQuery: 'Test question',
+  variantQueryPlaceholder: 'Ask something that might be refused',
+  variantTier: 'Perturbation tier',
+  variantTierLight: 'Light · 11 techniques',
+  variantTierStandard: 'Standard · 22 techniques',
+  variantTierHeavy: 'Heavy · 33 techniques',
+  variantModel: 'Model',
+  variantBudget: 'Budget cap (yuan)',
+  variantBudgetDescription:
+    'No new requests once the budget is reached; billing uses server-reported usage',
+  variantEstimate:
+    'About {variants} variants, {perRequest} each worst case, {worst} total worst case',
+  variantAffordable: 'The current budget allows at most {count} requests',
+  variantNoTriggers: 'No trigger words matched: variants are identical and only sampling differs',
+  variantRun: 'Start race',
+  variantRunning: 'Racing…',
+  variantStop: 'Stop',
+  variantEmpty: 'Pick a tier and enter a question to start',
+  variantNeedQuery: 'Enter a test question first',
+  variantNeedApiKey: 'Add your API key under Settings → Data first',
+  variantBudgetTooLow: 'Budget is too low for a single request (about {cost} worst case)',
+  variantScore: 'Score',
+  variantCost: 'Cost',
+  variantSpent: 'Spent {cost} / budget {budget}',
+  variantWinner: 'Winner',
+  variantCopy: 'Copy reply',
+  variantSkipped: 'Skipped',
+  variantRefused: 'Refused',
+  variantError: 'Failed',
+  variantAborted: 'Aborted',
+  variantConfirmTitle: 'Start variant race?',
+  variantConfirmBody:
+    'It will fire {variants} requests; about {perRequest} each worst case, {worst} in total worst case. It stops at the {budget} budget.',
+  variantConfirmDismiss: 'Do not ask again',
+  variantConfirmStart: 'Start race',
+  variantConfirmCancel: 'Cancel',
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',

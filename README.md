@@ -245,7 +245,7 @@ Settings → **Advanced** (everything is off by default, so the out-of-the-box b
 - **Thinking effort**: the old on/off switch in the input bar becomes a 0–4 slider (Off / Light / Standard / Deep / Max). The level is sent as `thinking: { type: "enabled", budget_tokens }` plus `reasoning_effort` (low / medium / high / max). If the server answers 400 mentioning reasoning / thinking / budget / effort, the client drops the effort fields, retries once with plain `thinking: { type: "enabled" }` and tells you it fell back.
 - **Context usage**: the ring in the input corner converts the last request's context (`input + cache_read + cache_creation`) into a share of the model window (1M); amber past 60%, red past 85%, with the exact numbers in a tooltip.
 - **Session statistics** (the stats button next to the ring): rounds, steps (replies + tool calls), output speed, average first token, model time, cache hit rate, plus uncached input / cache read / cache write / output tokens; a live section shows the current run while it streams.
-- **Auto jailbreak** (toggle in the input bar): swaps `system` to GODMODE plus the depth directive, forces perturbation (full-width when no technique is chosen), forces AutoTune and skips the safety check. When a reply is refused with no retained text, it retries with L1B3RT4S combos twice, then stops and tells you (each retry is a real request and costs tokens).
+- **Auto jailbreak** (toggle in the input bar): swaps `system` to GODMODE plus the depth directive, forces perturbation (full-width when no technique is chosen), forces AutoTune and skips the safety check. When a reply is refused (`stop_reason: refusal` or refusal text) with no retained text, it retries with L1B3RT4S combos twice, then stops and tells you (each retry is a real request and costs tokens).
 - **Reply ratings**: thumbs up / down on any reply feed the AutoTune EMA profile together with that run's context type and sampling parameters, so later AutoTune runs learn from your feedback (stored locally only).
 - **Per-chat system prompt**: `Start a chat with this combo` now affects only the new chat, with a notice bar to restore the default; global prompt settings are untouched. It is stored with the chat in IndexedDB; history exports do not include it.
 - **Cost estimate**: priced from the official price page (yuan per million tokens) with separate rates for `deepseek-flash` and `deepseek-v4-pro`, split into peak and off-peak (Beijing time weekdays 09:00–12:00 and 14:00–18:00 are peak; off-peak costs half), with a "treat today as a holiday" override. Search and fetch are billed at 5 yuan / 1000 calls, document parsing at 1.5 yuan / 1000 pages (pages estimated from file size), TTS at 3 yuan / 10k characters (optional limited-time 50% off) and ASR at 0.78 yuan / hour.
@@ -260,6 +260,23 @@ Settings → **Attachments**:
 | Max size per file         | 64 MB                          | Plain text, code and spreadsheet files still use the smaller 32 MB server limit |
 | Max files per session     | 50                             | Exceeding it rejects the whole batch                                            |
 | Extension whitelist       | built-in list (no heic / heif) | Comma or newline separated; empty restores the default                          |
+
+---
+
+### 3.13 Variant race (third lab tab)
+
+The standalone app's Parseltongue v4 now lives in the lab: **33 perturbation techniques**, selected by tier (light 11 / standard 22 / heavy 33), rewrite each trigger word in the question, fire requests in parallel batches and keep the best composite score.
+
+| Item              | Notes                                                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tiers             | 11 / 22 / 33 techniques, in the same order as upstream                                                                                                |
+| Sampling          | Each variant cycles through one of 11 temperature / top_p pairs, matching `getParseltongueSamplingParams`                                             |
+| Concurrency       | Batches of 6 with 100 ms stagger; stops early once the leader scores ≥ 65                                                                             |
+| Budget cap        | The per-request worst case estimates how many requests fit; no new request is fired after reaching the budget, and billing uses server-reported usage |
+| Confirmation      | The first start asks for confirmation with request count and worst-case cost; "Do not ask again" hides it permanently                                 |
+| Refusal detection | Either `stop_reason: refusal` or refusal text marks a variant as refused; refused variants never win                                                  |
+
+Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / strikethrough / hyphenated` work on Chinese triggers; `bubble / unicode / morse / pigLatin / mathBold` only touch Latin letters, and `fullwidth` only shifts ASCII. Chinese triggers match by substring rather than `\b`.
 
 ---
 
@@ -282,28 +299,31 @@ Settings → **Attachments**:
 
 ## 5. Settings reference
 
-| Group       | Setting                   | Default           | localStorage key                   | Unrestricted mode               |
-| ----------- | ------------------------- | ----------------- | ---------------------------------- | ------------------------------- |
-| Model       | Temperature               | `1`               | `chat-demo:temperature`            | Unaffected                      |
-| Model       | Top P                     | `1`               | `chat-demo:top-p`                  | Unaffected                      |
-| Model       | Max output tokens         | empty (not sent)  | `chat-demo:max-tokens`             | Unaffected                      |
-| Model       | Anti-retraction           | off               | `chat-demo:keep-reply-content`     | Unaffected (independent switch) |
-| Model       | Skip safety check         | off               | `chat-demo:skip-safety-check`      | Forced on, disabled             |
-| Model       | Continue refused replies  | off               | `chat-demo:continue-refused`       | Forced on, disabled             |
-| Prompt      | Unrestricted mode         | off               | `chat-demo:unrestricted`           | —                               |
-| Prompt      | Custom system prompt      | empty (assembled) | `chat-demo:system-prompt`          | Overrides the assembled result  |
-| Advanced    | System prompt preset      | `deepseek`        | `chat-demo:prompt-preset`          | Unaffected                      |
-| Advanced    | Input perturbation        | off               | `chat-demo:parseltongue`           | Unaffected                      |
-| Advanced    | Perturbation technique    | `leetspeak`       | `chat-demo:parseltongue-technique` | Unaffected                      |
-| Advanced    | Perturbation intensity    | `medium`          | `chat-demo:parseltongue-intensity` | Unaffected                      |
-| Advanced    | AutoTune                  | off               | `chat-demo:autotune`               | Unaffected                      |
-| Advanced    | AutoTune strategy         | `adaptive`        | `chat-demo:autotune-strategy`      | Unaffected                      |
-| Advanced    | Output shaping            | empty (off)       | `chat-demo:stm-modules`            | Unaffected                      |
-| Attachments | Enforce attachment limits | on                | `chat-demo:attachment-limits`      | Unaffected                      |
-| Attachments | Max size per file         | 64 MB             | `chat-demo:attachment-max-mb`      | Unaffected                      |
-| Attachments | Max files per session     | 50                | `chat-demo:attachment-max-count`   | Unaffected                      |
-| Attachments | Extension whitelist       | built-in          | `chat-demo:attachment-exts`        | Unaffected                      |
-| Input bar   | Thinking effort           | 0 (off)           | `chat-demo:reasoning-effort`       | Unaffected                      |
+| Group       | Setting                        | Default           | localStorage key                           | Unrestricted mode               |
+| ----------- | ------------------------------ | ----------------- | ------------------------------------------ | ------------------------------- |
+| Model       | Temperature                    | `1`               | `chat-demo:temperature`                    | Unaffected                      |
+| Model       | Top P                          | `1`               | `chat-demo:top-p`                          | Unaffected                      |
+| Model       | Max output tokens              | empty (not sent)  | `chat-demo:max-tokens`                     | Unaffected                      |
+| Model       | Anti-retraction                | off               | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
+| Model       | Skip safety check              | off               | `chat-demo:skip-safety-check`              | Forced on, disabled             |
+| Model       | Continue refused replies       | off               | `chat-demo:continue-refused`               | Forced on, disabled             |
+| Prompt      | Unrestricted mode              | off               | `chat-demo:unrestricted`                   | —                               |
+| Prompt      | Custom system prompt           | empty (assembled) | `chat-demo:system-prompt`                  | Overrides the assembled result  |
+| Advanced    | System prompt preset           | `deepseek`        | `chat-demo:prompt-preset`                  | Unaffected                      |
+| Advanced    | Input perturbation             | off               | `chat-demo:parseltongue`                   | Unaffected                      |
+| Advanced    | Perturbation technique         | `leetspeak`       | `chat-demo:parseltongue-technique`         | Unaffected                      |
+| Advanced    | Perturbation intensity         | `medium`          | `chat-demo:parseltongue-intensity`         | Unaffected                      |
+| Advanced    | AutoTune                       | off               | `chat-demo:autotune`                       | Unaffected                      |
+| Advanced    | AutoTune strategy              | `adaptive`        | `chat-demo:autotune-strategy`              | Unaffected                      |
+| Advanced    | Output shaping                 | empty (off)       | `chat-demo:stm-modules`                    | Unaffected                      |
+| Attachments | Enforce attachment limits      | on                | `chat-demo:attachment-limits`              | Unaffected                      |
+| Attachments | Max size per file              | 64 MB             | `chat-demo:attachment-max-mb`              | Unaffected                      |
+| Attachments | Max files per session          | 50                | `chat-demo:attachment-max-count`           | Unaffected                      |
+| Attachments | Extension whitelist            | built-in          | `chat-demo:attachment-exts`                | Unaffected                      |
+| Input bar   | Thinking effort                | 0 (off)           | `chat-demo:reasoning-effort`               | Unaffected                      |
+| Input bar   | Auto jailbreak                 | off               | `chat-demo:auto-jailbreak`                 | Unaffected                      |
+| Lab         | Variant race budget            | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
+| Lab         | Variant race confirm dismissed | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -368,6 +388,10 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                       | Context usage cached per session                                                                                     |
 | [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)   | Thinking effort 0–4 track                                                                                            |
 | [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)             | Statistics and billing dialog                                                                                        |
+| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)           | 33 perturbation techniques (ported from the standalone build)                                                        |
+| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                 | 44 refusal patterns                                                                                                  |
+| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                           | Variant race: budget, batches, scoring                                                                               |
+| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                     | Variant race UI and start confirmation                                                                               |
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                             | Switch component                                                                                                     |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)           | Reply editor (thinking / body)                                                                                       |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | Edit entry point, Continue button, refusal rendering branch                                                          |

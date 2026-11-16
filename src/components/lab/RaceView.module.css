@@ -303,6 +303,10 @@
     overflow-y: auto;
   }
 
+  .headRow {
+    flex-wrap: wrap;
+  }
+
   .grid {
     flex: none;
     grid-template-columns: 1fr;

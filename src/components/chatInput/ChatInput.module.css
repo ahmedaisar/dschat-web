@@ -305,6 +305,29 @@
   margin-left: auto;
 }
 
+/* 窄屏空间不够：圆环本身就作为统计入口，隐藏独立按钮 */
+@media not all and (min-width: 560px) {
+  .statsButton {
+    display: none;
+  }
+}
+
+/* 更窄的屏幕上收紧工具行，避免四个开关把发送区挤出容器 */
+@media not all and (min-width: 400px) {
+  .functionRow {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .toggles {
+    gap: 6px;
+  }
+
+  .toggle {
+    padding: 0 9px;
+  }
+}
+
 .sendButton {
   display: flex;
   align-items: center;

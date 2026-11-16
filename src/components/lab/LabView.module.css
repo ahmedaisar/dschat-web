@@ -293,6 +293,16 @@
   display: flex;
   flex-shrink: 0;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
 }
 
 .tab {

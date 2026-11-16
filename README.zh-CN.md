@@ -217,7 +217,7 @@ Persona（官方身份分块）
 - 前端：`src/services/lab/`（MCP 客户端）+ `src/components/lab/`（实验台页面），只负责调度与展示；
 - 支持自定义测试语句、数据集条数、方法参数 JSON，以及 target / attack / eval 三通道模型配置（默认复用设置里的 API Key）；
 - 逐条展示最终提示词、目标回复、判分结果与 ASR，可取消任务、导出结果；
-- 可用方法：PAIR、TAP、GPTFuzzer、ReNeLLM、ICA、DeepInception、Jailbroken、Cipher、CodeChameleon、Multilingual（已用本地假模型冒烟通过；TAP 与 GPTFuzzer 的实际效果取决于评估模型能否返回可解析判分）；MJP 待适配；GCG / AutoDAN 依赖本地白盒模型，纯 API 环境不支持。详见 [`mcp-server/README.md`](mcp-server/README.md)；
+- 实验台新增「多路赛跑」「变体赛跑」两个标签页（见 3.13）。可用方法：PAIR、TAP、GPTFuzzer、ReNeLLM、ICA、DeepInception、Jailbroken、Cipher、CodeChameleon、Multilingual（已用本地假模型冒烟通过；TAP 与 GPTFuzzer 的实际效果取决于评估模型能否返回可解析判分）；MJP 待适配；GCG / AutoDAN 依赖本地白盒模型，纯 API 环境不支持。详见 [`mcp-server/README.md`](mcp-server/README.md)；
 - 数据集：安装 `datasets` 后可在线加载 AdvBench（520 条）/ HarmBench / StrongREJECT，默认走 `hf-mirror.com` 镜像，可用环境变量 `HF_ENDPOINT` 覆盖；未安装时回退到内置测试语句；
 - 实验结果可「导出结果」保存为 JSON，也能「导入结果」回放之前的实验；判分成功的条目有「导入到聊天」按钮，会新建会话并把最终提示词填进输入框（模板里的 `{query}` 会替换成占位提示，先改再发）。
 - 起步三步：`pip install datasets`（可选）→ `./mcp-server/run.sh` → `pnpm dev`，然后在侧栏「实验台」里连接并运行。连接报 403 时见 [`mcp-server/README.md`](mcp-server/README.md) 的故障排查（浏览器 Origin 白名单：dev、`file://` 的 `null`、线上域名；其他域名可用 `MCP_ALLOWED_ORIGINS` 追加）。
@@ -245,7 +245,7 @@ Persona（官方身份分块）
 - **思考强度**：输入框原来的「深度思考」开关换成 0–4 档滑轨（关闭 / 轻量 / 标准 / 深度 / 极致）。档位写进请求：`thinking: { type: "enabled", budget_tokens }` 与 `reasoning_effort`（low / medium / high / max）；服务端返回 400 且报错里含 reasoning / thinking / budget / effort 时，自动去掉强度参数、退回 `thinking: { type: "enabled" }` 重试一次，并提示已降级。
 - **上下文占用**：输入框右下角的圆环按模型窗口（1M）折算本轮请求的上下文（`input + cache_read + cache_creation`），60% 以上变琥珀色、85% 以上变红色，悬停显示具体数值。
 - **会话统计**（输入框右侧「统计」按钮）：会话回合、步骤（回复 + 工具调用）、输出速度、首 token 平均、模型用时、缓存命中率，以及未缓存输入 / 缓存读取 / 缓存写入 / 输出四个 token 数；生成中还会显示本次生成的实时数据。
-- **自动越狱**（输入框工具行开关）：开启后 `system` 换成 GODMODE + 深度指令，强制输入扰动（未单独选技术时用全角）、强制自动调参、跳过安全审核；被安全拒绝且没有保留正文时，按 L1B3RT4S 组合依次自动重试两次，全部失败会提示停止（每次重试都是一次真实请求，会产生额外费用）。
+- **自动越狱**（输入框工具行开关）：开启后 `system` 换成 GODMODE + 深度指令，强制输入扰动（未单独选技术时用全角）、强制自动调参、跳过安全审核；被安全拒绝（`stop_reason: refusal` 或正文命中拒绝话术）且没有保留正文时，按 L1B3RT4S 组合依次自动重试两次，全部失败会提示停止（每次重试都是一次真实请求，会产生额外费用）。
 - **回复评分**：每条回复可点赞 / 点踩，评分连同该轮的上下文类型与采样参数写入 AutoTune 的 EMA 画像，后续自动调参会参考你的反馈（数据只在本机）。
 - **会话级提示词**：赛跑「用此组合开新会话」只作用于新会话，会话顶部有提示条可一键恢复默认，不再覆盖设置里的提示词预设；该提示词随会话保存在本机（IndexedDB），历史导出包里不含它。
 - **费用估算**：按官方定价页（元 / 百万 tokens）估算，`deepseek-flash` 与 `deepseek-v4-pro` 分别计价，并区分高峰 / 空闲：北京时间工作日 9:00–12:00、14:00–18:00 为高峰（空闲价是高峰价的一半），可按「今天算节假日」整体切到空闲价；另外计入联网搜索 / 网页抓取（5 元 / 1000 次）、文档解析（1.5 元 / 1000 页，按文件大小估算页数）、语音合成（3 元 / 万字符，可关掉限时 5 折）与语音识别（0.78 元 / 小时）。
@@ -260,6 +260,23 @@ Persona（官方身份分块）
 | 单文件大小上限 | 64 MB                        | 纯文本 / 代码 / 表格类文件仍按服务端更小的 32 MB 上限  |
 | 单会话数量上限 | 50 个                        | 超出时整批不添加并提示                                 |
 | 扩展名白名单   | 内置清单（不含 heic / heif） | 逗号或换行分隔；留空恢复默认                           |
+
+---
+
+### 3.13 变体赛跑（实验台第三个标签页）
+
+把单文件版的 Parseltongue v4 搬进实验台：**33 种扰动技术**按档位（轻量 11 / 标准 22 / 重度 33）逐词改写问题，分批并发请求同一个模型，按综合分取最高分。
+
+| 项       | 说明                                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| 档位     | 轻量 11 种、标准 22 种、重度 33 种；技术顺序与上游一致                                         |
+| 采样轮换 | 每个变体轮换一组 temperature / top_p（11 组循环），与上游 `getParseltongueSamplingParams` 一致 |
+| 并发     | 每批 6 个、批内 100ms 错峰；领先分数 ≥65 提前收工                                              |
+| 预算上限 | 按单次最坏花费预估可用请求数，实际花费达到预算后不再发起；费用按服务端上报用量结算             |
+| 确认弹窗 | 首次开跑前确认请求数与最坏花费，可勾选「不再提示」永久关闭                                     |
+| 拒绝识别 | 协议 `stop_reason: refusal` 或正文命中拒绝话术都标记为被拒绝，不参与评分                       |
+
+中文适配：对中文触发词有效的是 `spaced / zwj / dotted / underscored / reversed / brackets / strikethrough / hyphenated` 等；`bubble / unicode / morse / pigLatin / mathBold` 一类只改拉丁字母，`fullwidth` 只平移 ASCII 可见字符。中文触发词按子串匹配，不依赖 `\b`。
 
 ---
 
@@ -282,28 +299,31 @@ Persona（官方身份分块）
 
 ## 5. 设置项速查
 
-| 位置   | 设置项           | 默认值         | localStorage 键                    | 越狱模式下的表现     |
-| ------ | ---------------- | -------------- | ---------------------------------- | -------------------- |
-| 模型   | 温度             | `1`            | `chat-demo:temperature`            | 不受影响             |
-| 模型   | Top P            | `1`            | `chat-demo:top-p`                  | 不受影响             |
-| 模型   | 最大输出 Token   | 空（不下发）   | `chat-demo:max-tokens`             | 不受影响             |
-| 模型   | 防撤回           | 关             | `chat-demo:keep-reply-content`     | 不受影响（独立开关） |
-| 模型   | 跳过安全审核     | 关             | `chat-demo:skip-safety-check`      | 强制开启、置灰       |
-| 模型   | 拒绝后继续生成   | 关             | `chat-demo:continue-refused`       | 强制开启、置灰       |
-| 提示词 | 解除限制模式     | 关             | `chat-demo:unrestricted`           | ——                   |
-| 提示词 | 自定义系统提示词 | 空（自动组装） | `chat-demo:system-prompt`          | 覆盖自动组装结果     |
-| 高级   | 系统提示词预设   | `deepseek`     | `chat-demo:prompt-preset`          | 不受影响             |
-| 高级   | 输入扰动         | 关             | `chat-demo:parseltongue`           | 不受影响             |
-| 高级   | 扰动技术         | `leetspeak`    | `chat-demo:parseltongue-technique` | 不受影响             |
-| 高级   | 扰动强度         | `medium`       | `chat-demo:parseltongue-intensity` | 不受影响             |
-| 高级   | 自动调参         | 关             | `chat-demo:autotune`               | 不受影响             |
-| 高级   | 调参策略         | `adaptive`     | `chat-demo:autotune-strategy`      | 不受影响             |
-| 高级   | 输出整形         | 空（关闭）     | `chat-demo:stm-modules`            | 不受影响             |
-| 附件   | 启用附件限制     | 开             | `chat-demo:attachment-limits`      | 不受影响             |
-| 附件   | 单文件大小上限   | 64 MB          | `chat-demo:attachment-max-mb`      | 不受影响             |
-| 附件   | 单会话数量上限   | 50             | `chat-demo:attachment-max-count`   | 不受影响             |
-| 附件   | 扩展名白名单     | 内置清单       | `chat-demo:attachment-exts`        | 不受影响             |
-| 输入框 | 思考强度         | 0（关闭）      | `chat-demo:reasoning-effort`       | 不受影响             |
+| 位置   | 设置项             | 默认值         | localStorage 键                            | 越狱模式下的表现     |
+| ------ | ------------------ | -------------- | ------------------------------------------ | -------------------- |
+| 模型   | 温度               | `1`            | `chat-demo:temperature`                    | 不受影响             |
+| 模型   | Top P              | `1`            | `chat-demo:top-p`                          | 不受影响             |
+| 模型   | 最大输出 Token     | 空（不下发）   | `chat-demo:max-tokens`                     | 不受影响             |
+| 模型   | 防撤回             | 关             | `chat-demo:keep-reply-content`             | 不受影响（独立开关） |
+| 模型   | 跳过安全审核       | 关             | `chat-demo:skip-safety-check`              | 强制开启、置灰       |
+| 模型   | 拒绝后继续生成     | 关             | `chat-demo:continue-refused`               | 强制开启、置灰       |
+| 提示词 | 解除限制模式       | 关             | `chat-demo:unrestricted`                   | ——                   |
+| 提示词 | 自定义系统提示词   | 空（自动组装） | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
+| 高级   | 系统提示词预设     | `deepseek`     | `chat-demo:prompt-preset`                  | 不受影响             |
+| 高级   | 输入扰动           | 关             | `chat-demo:parseltongue`                   | 不受影响             |
+| 高级   | 扰动技术           | `leetspeak`    | `chat-demo:parseltongue-technique`         | 不受影响             |
+| 高级   | 扰动强度           | `medium`       | `chat-demo:parseltongue-intensity`         | 不受影响             |
+| 高级   | 自动调参           | 关             | `chat-demo:autotune`                       | 不受影响             |
+| 高级   | 调参策略           | `adaptive`     | `chat-demo:autotune-strategy`              | 不受影响             |
+| 高级   | 输出整形           | 空（关闭）     | `chat-demo:stm-modules`                    | 不受影响             |
+| 附件   | 启用附件限制       | 开             | `chat-demo:attachment-limits`              | 不受影响             |
+| 附件   | 单文件大小上限     | 64 MB          | `chat-demo:attachment-max-mb`              | 不受影响             |
+| 附件   | 单会话数量上限     | 50             | `chat-demo:attachment-max-count`           | 不受影响             |
+| 附件   | 扩展名白名单       | 内置清单       | `chat-demo:attachment-exts`                | 不受影响             |
+| 输入框 | 思考强度           | 0（关闭）      | `chat-demo:reasoning-effort`               | 不受影响             |
+| 输入框 | 自动越狱           | 关             | `chat-demo:auto-jailbreak`                 | 不受影响             |
+| 实验台 | 变体赛跑预算       | 1 元           | `chat-demo:variant-race-budget`            | 不受影响             |
+| 实验台 | 变体赛跑确认已关闭 | 关             | `chat-demo:variant-race-confirm-dismissed` | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 
@@ -368,6 +388,10 @@ Persona（官方身份分块）
 | [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                       | 上下文占用（按会话缓存）                                                                                               |
 | [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)   | 思考强度 0–4 轨道                                                                                                      |
 | [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)             | 统计与计费弹窗                                                                                                         |
+| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)           | 33 种扰动技术（移植自单文件版）                                                                                        |
+| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                 | 44 条拒绝文本模式                                                                                                      |
+| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                           | 变体赛跑：预算、批并发、打分选优                                                                                       |
+| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                     | 变体赛跑界面与开跑确认                                                                                                 |
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                             | 方块开关组件                                                                                                           |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)           | 回复编辑器（思维链 / 正文）                                                                                            |
 | [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx) | 编辑入口、「继续生成」按钮、拒绝回复的展示分支                                                                         |

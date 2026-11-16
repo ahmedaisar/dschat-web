@@ -16,15 +16,19 @@
  * - Phonetic substitution: replacing with phonetically similar words
  */
 
-export type ObfuscationTechnique =
-  | 'leetspeak'
-  | 'unicode'
-  | 'zwj' // zero-width joiners
-  | 'mixedcase'
-  | 'phonetic'
-  | 'fullwidth' // 全角替换，中文文本里同样可用
-  | 'spacing' // 细空格插入，对中文触发词同样有效
-  | 'random' // randomly mix techniques
+import {
+  TECHNIQUES,
+  TIER_SIZES,
+  techniquesForTier,
+  type TechniqueName,
+  type VariantTier,
+} from './techniques.js'
+
+/**
+ * 单个技术：`techniques.ts` 里的 33 种（单文件应用能力）+ 本地扩展的 spacing / phonetic / random。
+ * 单技术模式沿用下面的强度实现；变体模式直接用上游的逐词函数。
+ */
+export type ObfuscationTechnique = TechniqueName | 'spacing' | 'phonetic' | 'random'
 
 export interface ParseltongueConfig {
   enabled: boolean
@@ -476,8 +480,11 @@ function obfuscateWord(
       return applySpacing(word, intensity)
     case 'random':
       return applyRandom(word, intensity)
-    default:
-      return word
+    default: {
+      // 33 种上游技术：逐词函数直接来自 techniques.ts
+      const entry = TECHNIQUES[technique]
+      return entry ? entry.apply(word) : word
+    }
   }
 }
 
@@ -490,22 +497,28 @@ const isLatinTrigger = (trigger: string): boolean => /^[\x20-\x7e]+$/.test(trigg
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** 把文本里命中的触发词逐个交给变换函数，返回替换后的文本 */
-const replaceTrigger = (
+const replaceWith = (
   text: string,
   trigger: string,
-  config: ParseltongueConfig,
-  transformations: ParseltongueResult['transformations']
+  transform: (match: string) => string
 ): string => {
-  const transform = (match: string): string => {
-    const transformed = obfuscateWord(match, config.technique, config.intensity)
-    transformations.push({ original: match, transformed, technique: config.technique })
-    return transformed
-  }
   if (isLatinTrigger(trigger)) {
     return text.replace(new RegExp(`\\b${escapeRegExp(trigger)}\\b`, 'gi'), transform)
   }
   return text.replaceAll(trigger, transform)
 }
+
+const replaceTrigger = (
+  text: string,
+  trigger: string,
+  config: ParseltongueConfig,
+  transformations: ParseltongueResult['transformations']
+): string =>
+  replaceWith(text, trigger, (match) => {
+    const transformed = obfuscateWord(match, config.technique, config.intensity)
+    transformations.push({ original: match, transformed, technique: config.technique })
+    return transformed
+  })
 
 export function detectTriggers(text: string, customTriggers: string[] = []): string[] {
   // 中英两套内置触发词都参与检测，自定义触发词追加在后面
@@ -574,6 +587,67 @@ export function applyParseltongue(text: string, config: ParseltongueConfig): Par
 }
 
 /**
+ * 变体赛跑的单条候选：一个技术 + 一套采样参数。
+ * 采样轮换与上游 `getParseltongueSamplingParams` 一致。
+ */
+export type ParseltongueVariant = {
+  technique: TechniqueName
+  label: string
+  text: string
+  index: number
+  temperature: number
+  topP: number
+}
+
+const SAMPLING_CYCLE = [
+  { temperature: 0.7, topP: 1 },
+  { temperature: 0.8, topP: 0.95 },
+  { temperature: 0.75, topP: 1 },
+  { temperature: 0.85, topP: 0.9 },
+  { temperature: 0.9, topP: 0.95 },
+  { temperature: 0.7, topP: 0.9 },
+  { temperature: 0.8, topP: 1 },
+  { temperature: 0.95, topP: 0.85 },
+  { temperature: 0.65, topP: 1 },
+  { temperature: 0.6, topP: 0.95 },
+  { temperature: 1, topP: 0.8 },
+]
+
+/** 变体档位与对应的技术数量（light 11 / standard 22 / heavy 33） */
+export const VARIANT_TIER_SIZE = TIER_SIZES
+
+/**
+ * 按档位生成改写变体：只改写命中的触发词，其余文本原样保留。
+ * 没有命中触发词时各变体文本相同，仅采样参数不同（与上游行为一致）。
+ */
+export const generateVariants = (
+  text: string,
+  tier: VariantTier,
+  customTriggers: string[] = []
+): ParseltongueVariant[] => {
+  const triggers = detectTriggers(text, customTriggers)
+  const names = techniquesForTier(tier) as TechniqueName[]
+  // 最长优先，避免短触发词先替换破坏长触发词
+  const sorted = [...triggers].sort((a, b) => b.length - a.length)
+  return names.map((technique, index) => {
+    const entry = TECHNIQUES[technique]
+    let transformed = text
+    for (const trigger of sorted) {
+      transformed = replaceWith(transformed, trigger, (match) => entry.apply(match))
+    }
+    const sampling = SAMPLING_CYCLE[index % SAMPLING_CYCLE.length]
+    return {
+      technique,
+      label: entry.label,
+      text: transformed,
+      index,
+      temperature: sampling.temperature,
+      topP: sampling.topP,
+    }
+  })
+}
+
+/**
  * Get the default parseltongue config
  */
 export function getDefaultConfig(): ParseltongueConfig {
@@ -589,7 +663,7 @@ export function getDefaultConfig(): ParseltongueConfig {
  * Get human-readable description of a technique
  */
 export function getTechniqueDescription(technique: ObfuscationTechnique): string {
-  const descriptions: Record<ObfuscationTechnique, string> = {
+  const descriptions: Partial<Record<ObfuscationTechnique, string>> = {
     leetspeak: 'Classic 1337speak: a→4, e→3, etc.',
     unicode: 'Unicode lookalikes (cyrillic, greek)',
     zwj: 'Invisible zero-width characters',
@@ -599,7 +673,7 @@ export function getTechniqueDescription(technique: ObfuscationTechnique): string
     spacing: 'Thin spaces inserted between characters (works for CJK)',
     random: 'Random mix of all techniques',
   }
-  return descriptions[technique]
+  return descriptions[technique] ?? TECHNIQUES[technique]?.label ?? technique
 }
 
 /**

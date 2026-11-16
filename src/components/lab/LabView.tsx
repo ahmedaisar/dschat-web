@@ -11,6 +11,7 @@ import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
 import { applyParseltongue } from '../../services/unrestricted/parseltongue.js'
 import { RaceView } from './RaceView.js'
+import { VariantView } from './VariantView.js'
 import styles from './LabView.module.css'
 
 type MethodInfo = {
@@ -69,7 +70,7 @@ export const LabView = () => {
   const [job, setJob] = useState<JobState | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
-  const [tab, setTab] = useState<'attack' | 'race'>('attack')
+  const [tab, setTab] = useState<'attack' | 'race' | 'variants'>('attack')
   const [preprocess, setPreprocess] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -347,6 +348,15 @@ export const LabView = () => {
         >
           {t('labTabRace')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'variants'}
+          className={clsx(styles.tab, tab === 'variants' && styles.tabActive)}
+          onClick={() => setTab('variants')}
+        >
+          {t('labTabVariants')}
+        </button>
       </div>
 
       {error && tab === 'attack' ? <div className={styles.error}>{error}</div> : null}
@@ -354,6 +364,10 @@ export const LabView = () => {
       {tab === 'race' ? (
         <div className={styles.tabBody}>
           <RaceView />
+        </div>
+      ) : tab === 'variants' ? (
+        <div className={styles.tabBody}>
+          <VariantView />
         </div>
       ) : (
         <div className={styles.grid}>
