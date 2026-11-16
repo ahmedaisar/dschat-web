@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { useIsMobile } from '../../app/viewport.js'
 import { useTranslate } from '../../i18n/index.js'
 import type { Session } from '../../services/chat/types.js'
-import { setSessionSystemPrompt } from '../../services/chat/store.js'
+import { setSessionCompression, setSessionSystemPrompt } from '../../services/chat/store.js'
 import { ChatInput } from '../chatInput/ChatInput.js'
 import { MessageList } from '../messages/MessageList.js'
 import { MobileHeader } from './MobileHeader.js'
@@ -41,6 +41,20 @@ export const SessionView = ({
             onClick={() => setSessionSystemPrompt(session.id, null)}
           >
             {t('sessionPromptClear')}
+          </button>
+        </div>
+      ) : null}
+      {session.compression ? (
+        <div className={styles.promptNotice}>
+          <span className={styles.promptNoticeText}>
+            {t('sessionCompressed', { rounds: session.compression.rounds })}
+          </span>
+          <button
+            type="button"
+            className={styles.promptNoticeAction}
+            onClick={() => setSessionCompression(session.id, null)}
+          >
+            {t('sessionCompressClear')}
           </button>
         </div>
       ) : null}

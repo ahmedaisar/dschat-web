@@ -118,6 +118,21 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV245Title: 'v2.4.5 · 2026-11',
+  changelogV245Inject:
+    'Prompt page gains "inject the system prompt every round" so long chats keep the setup',
+  changelogV245Zh:
+    'Advanced gains an experimental switch that translates the built-in jailbreak prompts to Chinese (may weaken them)',
+  changelogV245Compress:
+    'Long-chat compression: auto-compress switch plus manual compression in the stats dialog',
+  changelogV245Credits: 'README credits updated',
+  creditDeepseekAgentLabel: 'DeepSeek-Agent',
+  creditDeepseekAgentNote:
+    'Reference implementation for the thinking slider, context ring and session statistics.',
+  creditDshUnrestrictedLabel: 'dsh-unrestricted',
+  creditDshUnrestrictedNote: 'Upstream reference for jailbreak prompts and experiment settings.',
+  creditLibertasLabel: 'L1B3RT4S',
+  creditLibertasNote: 'Upstream source for GODMODE, Hall of Fame prompts and jailbreak combos.',
   changelogV24Title: 'v2.4.0 · 2026-11',
   changelogV24Techniques:
     'The perturbation engine now carries all 33 techniques from the standalone build, in light / standard / heavy tiers',
@@ -346,6 +361,30 @@ export const en = {
     'Active preset: GODMODE — replaces the whole system prompt, no rules chunk is appended',
   settingsPromptPresetDeepseek: 'DeepSeek v4.1 (default)',
   settingsPromptPresetGodmode: 'GODMODE',
+  settingsInjectPrompt: 'Inject the system prompt every round',
+  settingsInjectPromptDescription:
+    'Silently attaches the current system prompt to latest_reminder on every request so long chats keep the setup; this clearly increases input tokens.',
+  settingsTranslateJailbreak: 'Translate jailbreak prompts to Chinese (experimental)',
+  settingsTranslateJailbreakDescription:
+    'Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak; try it on a small scale first.',
+  settingsAutoCompress: 'Auto-compress long chats',
+  settingsAutoCompressDescription:
+    'Once a chat exceeds 10 rounds, older content is summarised to save context; summaries stay on this device and can be cleared anytime.',
+  compressSummaryHeader:
+    'Summary of earlier conversation ({rounds} rounds condensed); keep it as context:',
+  compressTitle: 'Context compression',
+  compressButton: 'Compress older messages',
+  compressRunning: 'Compressing…',
+  compressDone: 'Older messages compressed',
+  compressFailed: 'Compression failed',
+  compressTooShort: 'At least 3 rounds are needed to compress',
+  compressNeedApiKey: 'Add your API key under Settings → Data first',
+  compressSummaryInfo: 'Compressed {rounds} rounds, summary about {tokens} tokens',
+  compressClear: 'Clear summary',
+  compressCleared: 'Compression summary cleared',
+  sessionCompressed: 'Compressed {rounds} earlier rounds',
+  sessionCompressClear: 'Clear summary',
+
   settingsParseltongue: 'Input perturbation',
   settingsParseltongueDescription:
     'Rewrites matched trigger words before sending so keyword filters miss them; the UI shows exactly what is sent.',

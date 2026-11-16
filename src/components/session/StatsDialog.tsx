@@ -6,10 +6,15 @@ import { readLiveMetrics, subscribeLiveTick, useLiveStats } from '../../services
 import {
   aggregateSession,
   estimateCost,
+  estimateTokens,
   formatMoney,
   formatTokens,
 } from '../../services/chat/sessionStats.js'
-import { useChatStore } from '../../services/chat/store.js'
+import { setSessionCompression, useChatStore } from '../../services/chat/store.js'
+import { compressSession } from '../../services/chat/compression.js'
+import { useSettings } from '../../services/settings.js'
+import { Button } from '../base/Button.js'
+import { showToast } from '../base/toastState.js'
 import { Modal } from '../base/Modal.js'
 import { Switch } from '../base/Switch.js'
 import { closeStats, useStatsDialog } from './statsDialogState.js'
@@ -52,6 +57,9 @@ const StatsContent = () => {
   const totals = useMemo(() => aggregateSession(session), [session])
   const [holiday, setHoliday] = useState(false)
   const [discount, setDiscount] = useState(true)
+  const [compressing, setCompressing] = useState(false)
+  const locale = useSettings((state) => state.locale)
+  const apiKey = useSettings((state) => state.apiKey) ?? ''
   const cost = useMemo(
     () => estimateCost(session, { holiday, voiceDiscount: discount }),
     [session, holiday, discount]
@@ -157,6 +165,66 @@ const StatsContent = () => {
         ) : (
           <div className={styles.empty}>{t('statsEmpty')}</div>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>{t('compressTitle')}</div>
+        {session?.compression ? (
+          <div className={styles.compressInfo}>
+            {t('compressSummaryInfo', {
+              rounds: session.compression.rounds,
+              tokens: formatTokens(estimateTokens(session.compression.summary)),
+            })}
+          </div>
+        ) : null}
+        <div className={styles.compressActions}>
+          <Button
+            size="s"
+            variant="outlined"
+            disabled={!session || compressing}
+            onClick={() => {
+              if (!session) {
+                return
+              }
+              if (!apiKey) {
+                showToast({ key: 'compressNeedApiKey' })
+                return
+              }
+              setCompressing(true)
+              void compressSession(session, apiKey, locale)
+                .then((outcome) => {
+                  if (outcome.ok) {
+                    setSessionCompression(session.id, outcome.compression)
+                    showToast({ key: 'compressDone' })
+                  } else {
+                    showToast({
+                      key:
+                        outcome.reason === 'tooShort'
+                          ? 'compressTooShort'
+                          : outcome.reason === 'noKey'
+                            ? 'compressNeedApiKey'
+                            : 'compressFailed',
+                    })
+                  }
+                })
+                .finally(() => setCompressing(false))
+            }}
+          >
+            {compressing ? t('compressRunning') : t('compressButton')}
+          </Button>
+          {session?.compression ? (
+            <Button
+              size="s"
+              variant="outlined"
+              onClick={() => {
+                setSessionCompression(session.id, null)
+                showToast({ key: 'compressCleared' })
+              }}
+            >
+              {t('compressClear')}
+            </Button>
+          ) : null}
+        </div>
       </section>
 
       <section className={styles.section}>

@@ -6,12 +6,14 @@ import type {
   OutputBlockStart,
   TextBlockParam,
 } from '../api/types.js'
+import { translate } from '../../i18n/index.js'
 import type {
   AssistantMessage,
   FileAttachment,
   Message,
   ReplyBlock,
   ReplyStatus,
+  SessionCompression,
   UserMessage,
 } from './types.js'
 
@@ -409,7 +411,8 @@ export const toRequestMessages = (
   question: UserMessage,
   prefix?: AssistantMessage,
   thinking = prefix?.thinking ?? false,
-  latestReminder?: string
+  latestReminder?: string,
+  compression?: SessionCompression
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
@@ -420,7 +423,20 @@ export const toRequestMessages = (
       previousReminder = reminder
     }
   }
-  for (const [user, reply] of getContextRounds(history)) {
+  let rounds = getContextRounds(history)
+  if (compression) {
+    const cutoff = history.findIndex((message) => message.id === compression.upToMessageId)
+    if (cutoff >= 0) {
+      const kept = new Set(history.slice(cutoff + 1).map((message) => message.id))
+      rounds = rounds.filter(([user]) => kept.has(user.id))
+      // 摘要放在最前面，后面只跟压缩点之后的轮次
+      messages.push({
+        role: 'latest_reminder',
+        content: `${translate('compressSummaryHeader', { rounds: compression.rounds })}\n${compression.summary}`,
+      })
+    }
+  }
+  for (const [user, reply] of rounds) {
     // 历史提问没有文字、附件也都没有 serverId 时，提问为空，连同回答一起省略。
     if (!user.content && toFileBlocks(user.files).length === 0) {
       continue

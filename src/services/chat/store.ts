@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { ApiError, streamMessage } from '../api/client.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { reasoningEffortValue, thinkingBudget, useSettings } from '../settings.js'
@@ -10,10 +11,11 @@ import { noteContextUsage } from './contextUsage.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { noteRunTiming } from './sessionStats.js'
+import { autoCompressNeeded, compressSession } from './compression.js'
 import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
-import { DEPTH_DIRECTIVE, GODMODE_SYSTEM_PROMPT } from '../unrestricted/prompts.js'
+import { depthDirective, jailbreakSystemPrompt } from '../unrestricted/prompts.js'
 import { looksLikeRefusal } from '../unrestricted/refusal.js'
 import { applyHallOfFameCombo, HALL_OF_FAME } from '../unrestricted/libertas.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
@@ -504,6 +506,26 @@ export const setSessionSystemPrompt = (sessionId: string, systemPrompt: string |
       next.systemPrompt = systemPrompt.trim()
     } else {
       delete next.systemPrompt
+    }
+    return next
+  })
+  persist(sessionId)
+}
+
+/** 写入或清除会话压缩摘要 */
+export const setSessionCompression = (
+  sessionId: string,
+  compression: SessionCompression | null
+) => {
+  if (get().importingHistory || deletingSessions.has(sessionId)) {
+    return
+  }
+  updateSession(sessionId, (session) => {
+    const next = { ...session }
+    if (compression) {
+      next.compression = compression
+    } else {
+      delete next.compression
     }
     return next
   })
@@ -1140,7 +1162,8 @@ const maybeAutoRetry = (
   autoRetryCounts.set(questionId, count + 1)
   const combo = HALL_OF_FAME[count % HALL_OF_FAME.length]
   const { system } = applyHallOfFameCombo(combo, question)
-  autoRetryOverride = `${system}${DEPTH_DIRECTIVE}`
+  // L1B3RT4S 组合是英文提示词，深度指令保持英文，避免中英混杂
+  autoRetryOverride = `${system}${depthDirective(false)}`
   showToast({ key: 'autoJailbreakRetrying' })
   // 等当前流的收尾（移除 streaming 标记）完成后再发起新版本
   setTimeout(() => regenerateReply(sessionId, reply.id), 0)
@@ -1186,13 +1209,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         reply = { ...reply, latestReminder }
         updateReply(sessionId, reply)
         persist(sessionId)
-        const messages = toRequestMessages(
-          prepared.history,
-          prepared.question,
-          prepared.prefix,
-          initial.thinking ?? false,
-          latestReminder
-        )
         const {
           apiKey,
           maxTokens,
@@ -1206,7 +1222,28 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           autoTuneStrategy,
           reasoningEffort,
           autoJailbreak,
+          injectPromptEveryTurn,
+          translateJailbreakZh,
         } = useSettings.getState()
+        // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
+        const systemText =
+          takeAutoRetryOverride() ??
+          getSession(sessionId)?.systemPrompt ??
+          (autoJailbreak
+            ? `${jailbreakSystemPrompt(translateJailbreakZh)}${depthDirective(translateJailbreakZh)}`
+            : composeSystemPrompt(unrestricted, systemPrompt, promptPreset, translateJailbreakZh))
+        // 每轮注入：只加在本次请求的 latest_reminder 里，不写入历史快照，避免存储膨胀
+        const requestReminder = injectPromptEveryTurn
+          ? `${latestReminder}\n\n${systemText}`
+          : latestReminder
+        const messages = toRequestMessages(
+          prepared.history,
+          prepared.question,
+          prepared.prefix,
+          initial.thinking ?? false,
+          requestReminder,
+          getSession(sessionId)?.compression
+        )
         const effort = initial.thinking ? reasoningEffort : 0
         // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
         const autoTuned =
@@ -1228,13 +1265,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
-            system:
-              takeAutoRetryOverride() ??
-              getSession(sessionId)?.systemPrompt ??
-              (autoJailbreak
-                ? `${GODMODE_SYSTEM_PROMPT}${DEPTH_DIRECTIVE}`
-                : composeSystemPrompt(unrestricted, systemPrompt, promptPreset)),
+            system: systemText,
             messages,
             thinking: initial.thinking
               ? fallbackNoReasoning
@@ -1376,5 +1407,21 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       ),
     }))
     persist(sessionId)
+    // 自动压缩：回复结束后按轮数阈值在后台总结较早内容，失败静默
+    const { autoCompress, apiKey: compressKey, locale: compressLocale } = useSettings.getState()
+    const current = getSession(sessionId)
+    if (
+      reply.status === 'done' &&
+      autoCompress &&
+      compressKey &&
+      current &&
+      autoCompressNeeded(current)
+    ) {
+      void compressSession(current, compressKey, compressLocale).then((outcome) => {
+        if (outcome.ok) {
+          setSessionCompression(sessionId, outcome.compression)
+        }
+      })
+    }
   }
 }

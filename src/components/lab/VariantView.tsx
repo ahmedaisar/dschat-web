@@ -20,13 +20,14 @@ import {
   type VariantStatus,
 } from '../../services/lab/variantRace.js'
 import { detectTriggers } from '../../services/unrestricted/parseltongue.js'
-import { DEPTH_DIRECTIVE, GODMODE_SYSTEM_PROMPT } from '../../services/unrestricted/prompts.js'
+import { depthDirective, jailbreakSystemPrompt } from '../../services/unrestricted/prompts.js'
 import { formatMoney } from '../../services/chat/sessionStats.js'
 import type { VariantTier } from '../../services/unrestricted/techniques.js'
 import styles from './VariantView.module.css'
 
 /** 变体赛跑固定使用 GODMODE + 深度指令，和自动越狱同一套系统提示词 */
-const VARIANT_SYSTEM = `${GODMODE_SYSTEM_PROMPT}${DEPTH_DIRECTIVE}`
+const variantSystem = (translate: boolean): string =>
+  `${jailbreakSystemPrompt(translate)}${depthDirective(translate)}`
 
 const formatDuration = (ms: number): string => `${(ms / 1000).toFixed(1)}s`
 
@@ -48,6 +49,7 @@ export const VariantView = () => {
   const apiKey = useSettings((state) => state.apiKey) ?? ''
   const budget = useSettings((state) => state.variantRaceBudget)
   const maxTokens = useSettings((state) => state.maxTokens)
+  const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
   const dismissed = useSettings((state) => state.variantRaceConfirmDismissed)
 
   const [query, setQuery] = useState('')
@@ -73,11 +75,11 @@ export const VariantView = () => {
       query: query.trim(),
       tier,
       model,
-      system: VARIANT_SYSTEM,
+      system: variantSystem(translateJailbreak),
       budget,
       maxOutputTokens: maxTokens ?? 2048,
     }),
-    [apiKey, query, tier, model, budget, maxTokens]
+    [apiKey, query, tier, model, budget, maxTokens, translateJailbreak]
   )
   const estimate = useMemo(() => estimateVariantRun(options), [options])
   const triggerCount = query.trim() === '' ? 0 : detectTriggers(query).length

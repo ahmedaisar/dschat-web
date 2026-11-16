@@ -18,6 +18,18 @@
   gap: 8px;
 }
 
+.compressInfo {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.compressActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .sectionTitle {
   color: var(--dsw-alias-label-primary);
   font-size: 13px;

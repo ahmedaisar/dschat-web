@@ -113,6 +113,15 @@ export type AssistantMessage = MessageBranch & {
 
 export type Message = UserMessage | AssistantMessage
 
+/** 会话压缩摘要：摘要覆盖到 upToMessageId 为止的较早消息 */
+export type SessionCompression = {
+  summary: string
+  upToMessageId: string
+  /** 被压缩的对话轮数 */
+  rounds: number
+  at: number
+}
+
 export type Session = {
   id: string
   title: string
@@ -122,6 +131,8 @@ export type Session = {
   messages: Message[]
   /** 本会话专用的系统提示词（如实验台组合）；为空时按全局设置组装 */
   systemPrompt?: string
+  /** 长对话压缩：较早内容的摘要与截止消息 */
+  compression?: SessionCompression
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
 }

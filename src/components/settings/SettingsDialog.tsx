@@ -31,14 +31,17 @@ import {
   setAttachmentLimits,
   setAttachmentMaxCount,
   setAttachmentMaxMB,
+  setAutoCompress,
   setAutoTune,
   setAutoTuneStrategy,
+  setInjectPromptEveryTurn,
   setContinueRefused,
   setParseltongue,
   setParseltongueIntensity,
   setParseltongueTechnique,
   setPromptPreset,
   setStmModules,
+  setTranslateJailbreakZh,
   setKeepReplyContent,
   setLocale,
   setLocation,
@@ -419,6 +422,15 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV245Title',
+      items: [
+        'changelogV245Inject',
+        'changelogV245Zh',
+        'changelogV245Compress',
+        'changelogV245Credits',
+      ],
+    },
+    {
       title: 'changelogV24Title',
       items: [
         'changelogV24Techniques',
@@ -494,6 +506,21 @@ const ChangelogSetting = () => {
       note: 'creditG0dm0d3Note',
       href: 'https://github.com/elder-plinius/G0DM0D3',
     },
+    {
+      label: 'creditDeepseekAgentLabel',
+      note: 'creditDeepseekAgentNote',
+      href: 'https://github.com/Aoan2011/DeepSeek-Agent',
+    },
+    {
+      label: 'creditDshUnrestrictedLabel',
+      note: 'creditDshUnrestrictedNote',
+      href: 'https://github.com/yexi-by/dsh-unrestricted',
+    },
+    {
+      label: 'creditLibertasLabel',
+      note: 'creditLibertasNote',
+      href: 'https://github.com/elder-plinius/L1B3RT4S',
+    },
   ]
   return (
     <div className={styles.about}>
@@ -536,6 +563,7 @@ const ModelSettings = () => {
   const continueRefused = useSettings((state) => state.continueRefused)
   // 越狱模式下两项限制强制执行，开关显示为已开启且不可单独关闭。
   const unrestricted = useSettings((state) => state.unrestricted)
+  const autoCompress = useSettings((state) => state.autoCompress)
   return (
     <>
       <SettingCell
@@ -613,6 +641,18 @@ const ModelSettings = () => {
         }
       />
       <SettingCell
+        label={t('settingsAutoCompress')}
+        description={t('settingsAutoCompressDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={autoCompress}
+            onChange={setAutoCompress}
+            label={t('settingsAutoCompress')}
+          />
+        }
+      />
+      <SettingCell
         label={t('settingsContinueRefused')}
         description={t('settingsContinueRefusedDescription')}
         status={null}
@@ -639,6 +679,8 @@ const UnrestrictedSetting = () => {
   const unrestricted = useSettings((state) => state.unrestricted)
   const systemPrompt = useSettings((state) => state.systemPrompt)
   const promptPreset = useSettings((state) => state.promptPreset)
+  const injectPrompt = useSettings((state) => state.injectPromptEveryTurn)
+  const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
   return (
     <>
       <SettingCell
@@ -650,6 +692,18 @@ const UnrestrictedSetting = () => {
             checked={unrestricted}
             onChange={setUnrestricted}
             label={t('settingsUnrestricted')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsInjectPrompt')}
+        description={t('settingsInjectPromptDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={injectPrompt}
+            onChange={setInjectPromptEveryTurn}
+            label={t('settingsInjectPrompt')}
           />
         }
       />
@@ -668,7 +722,7 @@ const UnrestrictedSetting = () => {
       <details className={styles.promptPreview}>
         <summary className={styles.promptPreviewSummary}>{t('settingsPromptPreview')}</summary>
         <pre className={styles.promptPreviewBody}>
-          {composeSystemPrompt(unrestricted, systemPrompt, promptPreset)}
+          {composeSystemPrompt(unrestricted, systemPrompt, promptPreset, translateJailbreak)}
         </pre>
       </details>
     </>
@@ -684,6 +738,7 @@ const SystemPromptSetting = () => {
   const unrestricted = useSettings((state) => state.unrestricted)
   const systemPrompt = useSettings((state) => state.systemPrompt)
   const promptPreset = useSettings((state) => state.promptPreset)
+  const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
   const [draft, setDraft] = useState(systemPrompt ?? '')
 
   // 外部重置（恢复默认）或切换分组后同步草稿
@@ -717,7 +772,9 @@ const SystemPromptSetting = () => {
         <Button
           variant="outlined"
           size="s"
-          onClick={() => commit(composeSystemPrompt(unrestricted, null, promptPreset))}
+          onClick={() =>
+            commit(composeSystemPrompt(unrestricted, null, promptPreset, translateJailbreak))
+          }
         >
           {t('settingsCustomPromptFill')}
         </Button>
@@ -742,6 +799,7 @@ const AdvancedSettings = () => {
   const t = useTranslate()
   const promptPreset = useSettings((state) => state.promptPreset)
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
+  const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
   const parseltongue = useSettings((state) => state.parseltongue)
   const technique = useSettings((state) => state.parseltongueTechnique)
   const intensity = useSettings((state) => state.parseltongueIntensity)
@@ -803,6 +861,18 @@ const AdvancedSettings = () => {
         status={null}
         action={
           <Switch checked={autoJailbreak} onChange={setAutoJailbreak} label={t('autoJailbreak')} />
+        }
+      />
+      <SettingCell
+        label={t('settingsTranslateJailbreak')}
+        description={t('settingsTranslateJailbreakDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={translateJailbreak}
+            onChange={setTranslateJailbreakZh}
+            label={t('settingsTranslateJailbreak')}
+          />
         }
       />
       <SettingCell

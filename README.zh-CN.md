@@ -280,6 +280,16 @@ Persona（官方身份分块）
 
 ---
 
+### 3.14 提示词注入、中文翻译与长对话压缩
+
+| 功能                     | 位置                                  | 说明                                                                                                                                                                                                     |
+| ------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 每轮注入系统提示词       | 设置 → 提示词                         | 开启后每次请求都把当前系统提示词静默附在 `latest_reminder` 末尾，长对话里模型不容易忘记设定；不写入历史快照，代价是每轮输入 token 明显增加。                                                             |
+| 中文越狱提示词（实验性） | 设置 → 高级                           | 把内置 GODMODE 与深度指令换成中文翻译；中文表达与训练语料差异可能降低越狱效果，默认关闭。赛跑用的 L1B3RT4S 组合保持英文。                                                                                |
+| 长对话压缩               | 设置 → 模型（自动）+ 统计弹窗（手动） | 自动：超过 10 轮且距上次压缩新增 ≥4 轮时，后台把较早内容总结成摘要；手动：统计弹窗「压缩较早对话」，始终保留最近 2 轮原文。摘要作为 `latest_reminder` 注入请求，本地完整历史不删除，可随时「清除摘要」。 |
+
+---
+
 ## 4. 行为对照表
 
 | 场景                 | 原版                    | 本仓库默认（所有开关关闭）                             | 越狱模式开启               |
@@ -324,6 +334,9 @@ Persona（官方身份分块）
 | 输入框 | 自动越狱           | 关             | `chat-demo:auto-jailbreak`                 | 不受影响             |
 | 实验台 | 变体赛跑预算       | 1 元           | `chat-demo:variant-race-budget`            | 不受影响             |
 | 实验台 | 变体赛跑确认已关闭 | 关             | `chat-demo:variant-race-confirm-dismissed` | 不受影响             |
+| 提示词 | 每轮注入系统提示词 | 关             | `chat-demo:inject-prompt-every-turn`       | 不受影响             |
+| 模型   | 自动压缩长对话     | 关             | `chat-demo:auto-compress`                  | 不受影响             |
+| 高级   | 中文越狱提示词     | 关             | `chat-demo:translate-jailbreak-zh`         | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 
@@ -480,4 +493,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 - 头图 `brand.jpg` 为仓库作者提供的素材，版权归其作者；「是，孙笑川聊天」只是项目玩笑，与 DeepSeek 官方无关联。
 - 本仓库是个人修改版，不是 DeepSeek 官方项目；使用前请自行确认所用 API 服务的规则与费用。
 - 感谢[EasyJailbreak项目](https://github.com/EasyJailbreak/EasyJailbreak)的理论支持
+- 感谢 [DeepSeek-Agent](https://github.com/Aoan2011/DeepSeek-Agent)：思考强度轨道、上下文占用圆环与会话统计的参考实现。
+- 感谢 [dsh-unrestricted](https://github.com/yexi-by/dsh-unrestricted)：越狱提示词与实验设置的参考。
+- 感谢 [L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S)：GODMODE、Hall of Fame 组合与越狱提示词的上游来源。
 - `src/services/unrestricted/` 下的引擎代码（输入扰动、AutoTune、STM、赛跑打分、GODMODE 提示词）移植自 [G0DM0D3](https://github.com/elder-plinius/G0DM0D3)，遵循 [AGPL-3.0](src/services/unrestricted/COPYING-AGPL-3.0)；该目录保留原始许可证，与仓库其余 MIT 代码分别适用。

@@ -23,6 +23,12 @@ type Settings = {
   reasoningEffort: number
   /** 自动越狱：GODMODE 提示词 + 自动扰动 + 被拒绝后自动换组合重试 */
   autoJailbreak: boolean
+  /** 每轮把系统提示词静默注入 latest_reminder，防止长对话遗忘设定 */
+  injectPromptEveryTurn: boolean
+  /** 实验性：把内置越狱提示词换成中文翻译 */
+  translateJailbreakZh: boolean
+  /** 长对话自动压缩 */
+  autoCompress: boolean
   /** 变体赛跑的预算上限（元） */
   variantRaceBudget: number
   /** 变体赛跑的开跑确认已永久关闭 */
@@ -78,6 +84,9 @@ const KEYS = {
   thinking: 'chat-demo:thinking',
   reasoningEffort: 'chat-demo:reasoning-effort',
   autoJailbreak: 'chat-demo:auto-jailbreak',
+  injectPromptEveryTurn: 'chat-demo:inject-prompt-every-turn',
+  translateJailbreakZh: 'chat-demo:translate-jailbreak-zh',
+  autoCompress: 'chat-demo:auto-compress',
   variantRaceBudget: 'chat-demo:variant-race-budget',
   variantRaceConfirmDismissed: 'chat-demo:variant-race-confirm-dismissed',
   search: 'chat-demo:search',
@@ -285,6 +294,9 @@ export const useSettings = create<Settings>(() => ({
   thinking: initialReasoningEffort() > 0,
   reasoningEffort: initialReasoningEffort(),
   autoJailbreak: read(KEYS.autoJailbreak) === 'true',
+  injectPromptEveryTurn: read(KEYS.injectPromptEveryTurn) === 'true',
+  translateJailbreakZh: read(KEYS.translateJailbreakZh) === 'true',
+  autoCompress: read(KEYS.autoCompress) === 'true',
   variantRaceBudget: initialNumber(KEYS.variantRaceBudget, 1, 0.01, 1000),
   variantRaceConfirmDismissed: read(KEYS.variantRaceConfirmDismissed) === 'true',
   search: read(KEYS.search) === 'true',
@@ -488,4 +500,19 @@ export const setVariantRaceBudget = (variantRaceBudget: number) => {
 export const setVariantRaceConfirmDismissed = (variantRaceConfirmDismissed: boolean) => {
   write(KEYS.variantRaceConfirmDismissed, String(variantRaceConfirmDismissed))
   useSettings.setState({ variantRaceConfirmDismissed })
+}
+
+export const setInjectPromptEveryTurn = (injectPromptEveryTurn: boolean) => {
+  write(KEYS.injectPromptEveryTurn, String(injectPromptEveryTurn))
+  useSettings.setState({ injectPromptEveryTurn })
+}
+
+export const setTranslateJailbreakZh = (translateJailbreakZh: boolean) => {
+  write(KEYS.translateJailbreakZh, String(translateJailbreakZh))
+  useSettings.setState({ translateJailbreakZh })
+}
+
+export const setAutoCompress = (autoCompress: boolean) => {
+  write(KEYS.autoCompress, String(autoCompress))
+  useSettings.setState({ autoCompress })
 }

@@ -1,4 +1,5 @@
 import { GODMODE_SYSTEM_PROMPT } from './godmode.js'
+import { DEPTH_DIRECTIVE_ZH, GODMODE_SYSTEM_PROMPT_ZH } from './promptsZh.js'
 
 /**
  * 提示词预设与赛跑用的补充指令。
@@ -10,6 +11,14 @@ import { GODMODE_SYSTEM_PROMPT } from './godmode.js'
  */
 
 export { GODMODE_SYSTEM_PROMPT }
+
+/** 按开关返回英文原文或中文翻译的 GODMODE 提示词 */
+export const jailbreakSystemPrompt = (translate: boolean): string =>
+  translate ? GODMODE_SYSTEM_PROMPT_ZH : GODMODE_SYSTEM_PROMPT
+
+/** 按开关返回英文原文或中文翻译的深度指令 */
+export const depthDirective = (translate: boolean): string =>
+  translate ? DEPTH_DIRECTIVE_ZH : DEPTH_DIRECTIVE
 
 export type PromptPreset = 'deepseek' | 'godmode'
 

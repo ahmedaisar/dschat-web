@@ -1,5 +1,5 @@
 import rulesSource from '../../../deepseekv4.1 and v4.1-1017.md'
-import { GODMODE_SYSTEM_PROMPT, type PromptPreset } from '../unrestricted/prompts.js'
+import { jailbreakSystemPrompt, type PromptPreset } from '../unrestricted/prompts.js'
 
 /**
  * 系统提示词组装流水线。
@@ -49,13 +49,14 @@ export const UNRESTRICTED_RULES = normalizeRules(rulesSource)
 export const composeSystemPrompt = (
   unrestricted: boolean,
   custom: string | null = null,
-  preset: PromptPreset = 'deepseek'
+  preset: PromptPreset = 'deepseek',
+  translateJailbreak = false
 ): string => {
   if (custom !== null && custom.trim() !== '') {
     return custom
   }
   if (preset === 'godmode') {
-    return GODMODE_SYSTEM_PROMPT
+    return jailbreakSystemPrompt(translateJailbreak)
   }
   return unrestricted
     ? `${OFFICIAL_SYSTEM_PROMPT}\n\n${UNRESTRICTED_RULES}`

@@ -280,6 +280,16 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 
 ---
 
+### 3.14 Prompt injection, Chinese translation and long-chat compression
+
+| Feature                                  | Where                                           | Notes                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inject the system prompt every round     | Settings → Prompt                               | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                        |
+| Chinese jailbreak prompts (experimental) | Settings → Advanced                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                         |
+| Long-chat compression                    | Settings → Model (auto) + stats dialog (manual) | Auto: past 10 rounds with at least 4 new rounds since the last compression, older content is summarised in the background. Manual: "Compress older messages" in the stats dialog, always keeping the last 2 rounds verbatim. The summary is injected as a `latest_reminder`; local history is untouched and the summary can be cleared anytime. |
+
+---
+
 ## 4. Behaviour matrix
 
 | Scenario                    | Original                    | This fork, defaults (all switches off)                                               | Unrestricted mode on                                      |
@@ -299,31 +309,34 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 
 ## 5. Settings reference
 
-| Group       | Setting                        | Default           | localStorage key                           | Unrestricted mode               |
-| ----------- | ------------------------------ | ----------------- | ------------------------------------------ | ------------------------------- |
-| Model       | Temperature                    | `1`               | `chat-demo:temperature`                    | Unaffected                      |
-| Model       | Top P                          | `1`               | `chat-demo:top-p`                          | Unaffected                      |
-| Model       | Max output tokens              | empty (not sent)  | `chat-demo:max-tokens`                     | Unaffected                      |
-| Model       | Anti-retraction                | off               | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
-| Model       | Skip safety check              | off               | `chat-demo:skip-safety-check`              | Forced on, disabled             |
-| Model       | Continue refused replies       | off               | `chat-demo:continue-refused`               | Forced on, disabled             |
-| Prompt      | Unrestricted mode              | off               | `chat-demo:unrestricted`                   | —                               |
-| Prompt      | Custom system prompt           | empty (assembled) | `chat-demo:system-prompt`                  | Overrides the assembled result  |
-| Advanced    | System prompt preset           | `deepseek`        | `chat-demo:prompt-preset`                  | Unaffected                      |
-| Advanced    | Input perturbation             | off               | `chat-demo:parseltongue`                   | Unaffected                      |
-| Advanced    | Perturbation technique         | `leetspeak`       | `chat-demo:parseltongue-technique`         | Unaffected                      |
-| Advanced    | Perturbation intensity         | `medium`          | `chat-demo:parseltongue-intensity`         | Unaffected                      |
-| Advanced    | AutoTune                       | off               | `chat-demo:autotune`                       | Unaffected                      |
-| Advanced    | AutoTune strategy              | `adaptive`        | `chat-demo:autotune-strategy`              | Unaffected                      |
-| Advanced    | Output shaping                 | empty (off)       | `chat-demo:stm-modules`                    | Unaffected                      |
-| Attachments | Enforce attachment limits      | on                | `chat-demo:attachment-limits`              | Unaffected                      |
-| Attachments | Max size per file              | 64 MB             | `chat-demo:attachment-max-mb`              | Unaffected                      |
-| Attachments | Max files per session          | 50                | `chat-demo:attachment-max-count`           | Unaffected                      |
-| Attachments | Extension whitelist            | built-in          | `chat-demo:attachment-exts`                | Unaffected                      |
-| Input bar   | Thinking effort                | 0 (off)           | `chat-demo:reasoning-effort`               | Unaffected                      |
-| Input bar   | Auto jailbreak                 | off               | `chat-demo:auto-jailbreak`                 | Unaffected                      |
-| Lab         | Variant race budget            | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
-| Lab         | Variant race confirm dismissed | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
+| Group       | Setting                              | Default           | localStorage key                           | Unrestricted mode               |
+| ----------- | ------------------------------------ | ----------------- | ------------------------------------------ | ------------------------------- |
+| Model       | Temperature                          | `1`               | `chat-demo:temperature`                    | Unaffected                      |
+| Model       | Top P                                | `1`               | `chat-demo:top-p`                          | Unaffected                      |
+| Model       | Max output tokens                    | empty (not sent)  | `chat-demo:max-tokens`                     | Unaffected                      |
+| Model       | Anti-retraction                      | off               | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
+| Model       | Skip safety check                    | off               | `chat-demo:skip-safety-check`              | Forced on, disabled             |
+| Model       | Continue refused replies             | off               | `chat-demo:continue-refused`               | Forced on, disabled             |
+| Prompt      | Unrestricted mode                    | off               | `chat-demo:unrestricted`                   | —                               |
+| Prompt      | Custom system prompt                 | empty (assembled) | `chat-demo:system-prompt`                  | Overrides the assembled result  |
+| Advanced    | System prompt preset                 | `deepseek`        | `chat-demo:prompt-preset`                  | Unaffected                      |
+| Advanced    | Input perturbation                   | off               | `chat-demo:parseltongue`                   | Unaffected                      |
+| Advanced    | Perturbation technique               | `leetspeak`       | `chat-demo:parseltongue-technique`         | Unaffected                      |
+| Advanced    | Perturbation intensity               | `medium`          | `chat-demo:parseltongue-intensity`         | Unaffected                      |
+| Advanced    | AutoTune                             | off               | `chat-demo:autotune`                       | Unaffected                      |
+| Advanced    | AutoTune strategy                    | `adaptive`        | `chat-demo:autotune-strategy`              | Unaffected                      |
+| Advanced    | Output shaping                       | empty (off)       | `chat-demo:stm-modules`                    | Unaffected                      |
+| Attachments | Enforce attachment limits            | on                | `chat-demo:attachment-limits`              | Unaffected                      |
+| Attachments | Max size per file                    | 64 MB             | `chat-demo:attachment-max-mb`              | Unaffected                      |
+| Attachments | Max files per session                | 50                | `chat-demo:attachment-max-count`           | Unaffected                      |
+| Attachments | Extension whitelist                  | built-in          | `chat-demo:attachment-exts`                | Unaffected                      |
+| Input bar   | Thinking effort                      | 0 (off)           | `chat-demo:reasoning-effort`               | Unaffected                      |
+| Input bar   | Auto jailbreak                       | off               | `chat-demo:auto-jailbreak`                 | Unaffected                      |
+| Lab         | Variant race budget                  | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
+| Lab         | Variant race confirm dismissed       | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
+| Prompt      | Inject the system prompt every round | off               | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
+| Model       | Auto-compress long chats             | off               | `chat-demo:auto-compress`                  | Unaffected                      |
+| Advanced    | Chinese jailbreak prompts            | off               | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -480,4 +493,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 - `brand.jpg` is artwork provided by the repository author and remains theirs; "Yes, Sun Xiaochuan Chat" is an inside joke and is not affiliated with DeepSeek.
 - This is a personal fork, not an official DeepSeek project. Check the terms and costs of whichever API service you point it at.
 - Thanks to the [EasyJailbreak project](https://github.com/EasyJailbreak/EasyJailbreak) for the theoretical foundation.
+- Thanks to [DeepSeek-Agent](https://github.com/Aoan2011/DeepSeek-Agent) for the reference implementation of the thinking slider, context ring and session statistics.
+- Thanks to [dsh-unrestricted](https://github.com/yexi-by/dsh-unrestricted) for the reference jailbreak prompts and experiment settings.
+- Thanks to [L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S), the upstream source for GODMODE, the Hall of Fame combos and jailbreak prompts.
 - The engines under `src/services/unrestricted/` (input perturbation, AutoTune, STM, race scoring, GODMODE prompt) are ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3) and licensed [AGPL-3.0](src/services/unrestricted/COPYING-AGPL-3.0); that directory keeps its own license, separate from the MIT-licensed rest of the repo.
