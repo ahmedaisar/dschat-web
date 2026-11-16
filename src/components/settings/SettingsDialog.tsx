@@ -7,6 +7,8 @@ import {
   IconEditOutline16,
   IconFollowsystemOutline16,
   IconLightOutline16,
+  IconLinkOutline16,
+  IconRefreshOutline16,
   IconSettingsOutline16,
   IconThinkOutline16,
   IconUploadOutline14,
@@ -68,6 +70,12 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
+  { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconLinkOutline16 /> },
+  {
+    value: 'changelog',
+    label: 'settingDialogAsideChangelogOptionLabel',
+    icon: <IconRefreshOutline16 />,
+  },
 ]
 
 const SettingsContent = () => {
@@ -121,6 +129,10 @@ const SettingsContent = () => {
             <ModelSettings />
           ) : section === 'prompt' ? (
             <UnrestrictedSetting />
+          ) : section === 'about' ? (
+            <AboutSetting />
+          ) : section === 'changelog' ? (
+            <ChangelogSetting />
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
@@ -331,6 +343,105 @@ const TtsVoiceSetting = () => {
         />
       }
     />
+  )
+}
+
+/** 关于：项目简介、仓库与演示地址、上游项目。 */
+const AboutSetting = () => {
+  const t = useTranslate()
+  const version =
+    document.querySelector('meta[name="application-version"]')?.getAttribute('content') ?? ''
+  const links: { label: TranslationKey; href: string }[] = [
+    {
+      label: 'aboutRepositoryLabel',
+      href: 'https://github.com/xiaohuangbo/chat-demo-unrestricted',
+    },
+    { label: 'aboutDemoLabel', href: 'https://chat-unrestricted.fur0.com/' },
+    { label: 'aboutUpstreamLabel', href: 'https://github.com/deepseek-ai/chat-demo' },
+  ]
+  return (
+    <div className={styles.about}>
+      <div className={styles.aboutTitle}>
+        {t('aboutProjectName')}
+        {version ? <span className={styles.aboutVersion}>v{version}</span> : null}
+      </div>
+      <div className={styles.aboutDescription}>{t('aboutDescription')}</div>
+      {links.map((link) => (
+        <a
+          key={link.href}
+          className={styles.aboutLink}
+          href={link.href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className={styles.aboutLinkLabel}>{t(link.label)}</span>
+          {link.href}
+        </a>
+      ))}
+    </div>
+  )
+}
+
+/** 更新日志与上游鸣谢。 */
+const ChangelogSetting = () => {
+  const t = useTranslate()
+  const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogRecentTitle',
+      items: [
+        'changelogRecentLab',
+        'changelogRecentImport',
+        'changelogRecentMcp',
+        'changelogRecentDocs',
+      ],
+    },
+    {
+      title: 'changelogEarlierTitle',
+      items: [
+        'changelogEarlierUnrestricted',
+        'changelogEarlierParams',
+        'changelogEarlierRetract',
+        'changelogEarlierEdit',
+        'changelogEarlierPrompt',
+      ],
+    },
+  ]
+  const credits: { label: TranslationKey; note: TranslationKey; href: string }[] = [
+    {
+      label: 'creditEasyJailbreakLabel',
+      note: 'creditEasyJailbreakNote',
+      href: 'https://github.com/EasyJailbreak/EasyJailbreak',
+    },
+    {
+      label: 'creditDeepseekChatLabel',
+      note: 'creditDeepseekChatNote',
+      href: 'https://github.com/deepseek-ai/chat-demo',
+    },
+  ]
+  return (
+    <div className={styles.about}>
+      <div className={styles.aboutTitle}>{t('changelogTitle')}</div>
+      {groups.map((group) => (
+        <div key={group.title} className={styles.changelogGroup}>
+          <div className={styles.changelogGroupTitle}>{t(group.title)}</div>
+          <ul className={styles.changelogList}>
+            {group.items.map((item) => (
+              <li key={item}>{t(item)}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <div className={styles.aboutTitle}>{t('creditsTitle')}</div>
+      {credits.map((credit) => (
+        <div key={credit.href} className={styles.credit}>
+          <a className={styles.aboutLink} href={credit.href} target="_blank" rel="noreferrer">
+            <span className={styles.aboutLinkLabel}>{t(credit.label)}</span>
+            {credit.href}
+          </a>
+          <div className={styles.creditNote}>{t(credit.note)}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 

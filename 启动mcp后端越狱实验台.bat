@@ -1,0 +1,110 @@
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+cd /d "%~dp0mcp-server"
+
+echo ============================================
+echo   EasyJailbreak MCP 后端启动器
+echo ============================================
+
+rem ---- 1. Python ----
+where python >nul 2>nul
+if errorlevel 1 (
+  echo [1/5] 未找到 Python，尝试自动安装 ...
+  where winget >nul 2>nul
+  if errorlevel 1 (
+    echo       [错误] 未找到 Python 和 winget，请手动安装 Python 3.10+ 并勾选 Add to PATH
+    pause
+    exit /b 1
+  )
+  call winget install Python.Python.3.12 --accept-source-agreements --accept-package-agreements
+  if errorlevel 1 (
+    echo       [错误] Python 自动安装失败，请手动安装：https://www.python.org/downloads/
+    pause
+    exit /b 1
+  )
+  set "PATH=%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python312\Scripts;%PATH%"
+) else (
+  for /f "tokens=2 delims= " %%v in ('python -V 2^>^&1') do echo [1/5] Python 已安装（%%v）
+)
+
+rem ---- 2. 虚拟环境 ----
+if not exist ".venv\Scripts\python.exe" (
+  echo [2/5] 创建虚拟环境 .venv ...
+  python -m venv --system-site-packages .venv
+  if errorlevel 1 (
+    echo       [错误] 虚拟环境创建失败
+    pause
+    exit /b 1
+  )
+) else (
+  echo [2/5] 虚拟环境已存在
+)
+set "PY=.venv\Scripts\python.exe"
+
+rem ---- 3. Python 依赖 ----
+"%PY%" -c "import mcp, openai, jsonlines, nltk" >nul 2>nul
+if errorlevel 1 (
+  echo [3/5] 安装基础依赖 ...
+  "%PY%" -m pip install --upgrade pip
+  "%PY%" -m pip install mcp openai jsonlines nltk
+  if errorlevel 1 (
+    echo       [错误] 基础依赖安装失败
+    pause
+    exit /b 1
+  )
+) else (
+  echo [3/5] 基础依赖已安装
+)
+
+"%PY%" -c "import fastchat" >nul 2>nul
+if errorlevel 1 (
+  echo       安装 fastchat（仅用 conversation 模块）...
+  "%PY%" -m pip install --no-deps fschat==0.2.34
+)
+
+"%PY%" -c "import torch, transformers" >nul 2>nul
+if errorlevel 1 (
+  echo       安装 torch（CPU 版）与 transformers，体积较大请耐心等待 ...
+  "%PY%" -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+  "%PY%" -m pip install transformers
+)
+
+"%PY%" -c "import datasets" >nul 2>nul
+if errorlevel 1 (
+  echo       安装 datasets（可选，用于在线数据集）...
+  "%PY%" -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple datasets
+  if errorlevel 1 echo       [提示] datasets 安装失败，实验台会回退到内置测试语句
+)
+
+rem ---- 4. EasyJailbreak ----
+if not exist "..\..\EasyJailbreak\easyjailbreak" (
+  if "%EASYJAILBREAK_PATH%"=="" (
+    where git >nul 2>nul
+    if not errorlevel 1 (
+      echo [4/5] 克隆 EasyJailbreak 源码到 ..\..\EasyJailbreak ...
+      git clone --depth 1 https://github.com/EasyJailbreak/EasyJailbreak.git "..\..\EasyJailbreak"
+      if errorlevel 1 echo       [提示] 克隆失败，请手动 clone 或设置 EASYJAILBREAK_PATH
+    ) else (
+      echo [4/5] [提示] 未找到 EasyJailbreak 与 git，请手动 clone 到 ..\..\EasyJailbreak 或设置 EASYJAILBREAK_PATH
+    )
+  ) else (
+    echo [4/5] 使用 EASYJAILBREAK_PATH=%EASYJAILBREAK_PATH%
+  )
+) else (
+  echo [4/5] EasyJailbreak 源码已存在
+)
+
+rem ---- EasyJailbreak 导入自检 ----
+if "%EASYJAILBREAK_PATH%"=="" (set "CHECK_JB=..\..\EasyJailbreak") else (set "CHECK_JB=%EASYJAILBREAK_PATH%")
+set "PYTHONPATH=%CHECK_JB%"
+"%PY%" -c "import easyjailbreak" >nul 2>nul
+if errorlevel 1 echo       [提示] EasyJailbreak 仍无法导入，请检查 torch/transformers 是否装好、EASYJAILBREAK_PATH 是否指向源码目录
+set "PYTHONPATH=" 
+
+rem ---- 5. 启动 ----
+echo [5/5] 启动 MCP 后端 http://127.0.0.1:8765/mcp
+"%PY%" -m easyjailbreak_mcp --host 127.0.0.1 --port 8765
+echo.
+echo [退出] MCP 后端已停止
+pause

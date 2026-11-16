@@ -44,6 +44,17 @@ declare const styles: {
   readonly "systemPromptTextarea": string;
   readonly "systemPromptActions": string;
   readonly "systemPromptHint": string;
+  readonly "about": string;
+  readonly "aboutTitle": string;
+  readonly "aboutVersion": string;
+  readonly "aboutDescription": string;
+  readonly "aboutLink": string;
+  readonly "aboutLinkLabel": string;
+  readonly "changelogGroup": string;
+  readonly "changelogGroupTitle": string;
+  readonly "changelogList": string;
+  readonly "credit": string;
+  readonly "creditNote": string;
 };
 export = styles;
 

@@ -576,3 +576,94 @@
   font-size: 12px;
   line-height: 18px;
 }
+
+/* 关于 / 更新日志 / 鸣谢 */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0 20px;
+}
+
+.aboutTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.aboutTitle + .aboutTitle {
+  margin-top: 10px;
+}
+
+.aboutVersion {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.aboutDescription {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.aboutLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--dsw-alias-brand-text);
+  font-size: 13px;
+  line-height: 22px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.aboutLinkLabel {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+}
+
+.changelogGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.changelogGroupTitle {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.changelogList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 22px;
+
+  & li {
+    margin: 2px 0;
+  }
+}
+
+.credit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.creditNote {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}

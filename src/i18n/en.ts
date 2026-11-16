@@ -109,6 +109,35 @@ export const en = {
   settingDialogAsideGeneralOptionLabel: 'General',
   settingDialogAsideModelOptionLabel: 'Model',
   settingDialogAsidePromptOptionLabel: 'Prompt',
+  settingDialogAsideAboutOptionLabel: 'About',
+  settingDialogAsideChangelogOptionLabel: 'Changelog',
+  aboutProjectName: 'deepseek unrestricted',
+  aboutDescription:
+    'A static DeepSeek chat front end with unrestricted mode, custom system prompts, editable replies, and a EasyJailbreak lab powered by a local MCP backend.',
+  aboutRepositoryLabel: 'GitHub repository',
+  aboutDemoLabel: 'Live demo',
+  aboutUpstreamLabel: 'Upstream project',
+  changelogTitle: 'Changelog',
+  changelogRecentTitle: 'v2.1.0 · 2026-11',
+  changelogRecentLab:
+    'Jailbreak lab: run EasyJailbreak API attackers through the local MCP backend',
+  changelogRecentImport:
+    'Lab results can be exported/imported; successful entries can be sent to chat',
+  changelogRecentMcp: 'New easyjailbreak-mcp backend and two Windows launcher scripts',
+  changelogRecentDocs: 'Bilingual README, demo screenshot and star history',
+  changelogEarlierTitle: 'v0.1.0 · 2026-11',
+  changelogEarlierUnrestricted:
+    'Unrestricted mode: swap the system prompt and skip the safety check',
+  changelogEarlierParams: 'Adjustable temperature / Top P / max output tokens',
+  changelogEarlierRetract:
+    'Anti-retraction: keep the text and thinking the model tried to withdraw',
+  changelogEarlierEdit: 'Editable replies: body and chain of thought, used by later turns',
+  changelogEarlierPrompt: 'Custom system prompt with pipeline preview',
+  creditsTitle: 'Credits',
+  creditEasyJailbreakLabel: 'EasyJailbreak',
+  creditEasyJailbreakNote: 'Attackers and experiment methodology used by the jailbreak lab.',
+  creditDeepseekChatLabel: 'deepseek-chat (deepseek-ai/chat-demo)',
+  creditDeepseekChatNote: 'Upstream chat front end; this repository is an unofficial fork.',
   settingDialogAsideDataOptionLabel: 'Data',
   settingsTemperature: 'Temperature',
   settingsTemperatureDescription:
