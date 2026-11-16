@@ -135,7 +135,7 @@ export const en = {
   changelogTitle: 'Changelog',
   changelogV252Title: 'v2.5.2 · 2026-11',
   changelogV252Toolbar:
-    'Input-bar controls show their text labels on desktop (model / auto jailbreak / thinking / search / perturbation) and stay circular with horizontal scrolling below 768px',
+    'A single compact row on desktop (model / auto jailbreak / thinking / search / perturbation), circular icons with horizontal scrolling below 768px',
   changelogV251Title: 'v2.5.1 · 2026-11',
   changelogV251Mobile: 'Fixed the variant-race panel/results overlap and clipped heading on mobile',
   changelogV251Model:

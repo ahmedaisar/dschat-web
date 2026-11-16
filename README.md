@@ -234,7 +234,7 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 
 ### 3.10 Advanced features: prompt presets, perturbation, AutoTune, output shaping, model race
 
-The input bar is responsive: on desktop the controls show their text labels (model, auto jailbreak, thinking, search, perturbation); below 768px they collapse to circular icons with horizontal scrolling instead of hiding desktop labels based on width measurement.
+The input bar is responsive: on desktop a single compact row shows the labels (model, auto jailbreak, thinking, search, perturbation) with a thin divider between the model and the toggles; below 768px they collapse to circular icons with horizontal scrolling instead of hiding desktop labels based on width measurement.
 
 Settings → **Advanced** (everything is off by default, so the out-of-the-box behaviour is unchanged):
 

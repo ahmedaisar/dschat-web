@@ -110,7 +110,6 @@ export const ModelPicker = () => {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className={styles.caption}>{t('modelSelect')}</span>
         <span className={styles.name}>{modelLabel(model)}</span>
         <span className={styles.arrow}>
           <IconChevronDownOutline14 />

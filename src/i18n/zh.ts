@@ -129,7 +129,7 @@ export const zh = {
   changelogTitle: '更新日志',
   changelogV252Title: 'v2.5.2 · 2026-11',
   changelogV252Toolbar:
-    '输入栏按钮桌面端展开文字标签（模型 / 自动越狱 / 思考强度 / 联网搜索 / 扰动），小于 768px 保持圆形图标并横向滚动',
+    '输入栏桌面端单行展开（模型 / 自动越狱 / 思考强度 / 联网搜索 / 扰动），小于 768px 保持圆形图标并横向滚动',
   changelogV251Title: 'v2.5.1 · 2026-11',
   changelogV251Mobile: '修复变体赛跑手机端参数面板与结果区重叠、标题被裁切',
   changelogV251Model: '新增模型选择卡片：内置 DeepSeek Flash / V4 Pro，可一键从云端获取模型列表',

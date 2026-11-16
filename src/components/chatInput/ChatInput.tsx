@@ -191,6 +191,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
         <div className={styles.toggles}>
           <ModelPicker />
+          <span className={styles.toolbarDivider} aria-hidden />
           <Tooltip content={t('autoJailbreakTooltip')}>
             <button
               type="button"
