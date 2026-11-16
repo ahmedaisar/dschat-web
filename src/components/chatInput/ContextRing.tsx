@@ -45,8 +45,7 @@ export const ContextRing = ({
   onOpen?: () => void
 }) => {
   const t = useTranslate()
-  // 应用固定使用 deepseek-flash；窗口长度见 services/chat/contextUsage.ts
-  const model = 'deepseek-flash'
+  const model = useSettings((state) => state.model)
   const maxTokens = useSettings((state) => state.maxTokens)
   const usage = useContextUsage((state) => (sessionId ? state.byId[sessionId] : undefined))
   const compression = useChatStore((state) =>

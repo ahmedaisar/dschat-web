@@ -19,6 +19,7 @@ import {
   reserveGeometry,
 } from '../../services/chat/contextPressure.js'
 import { useSettings } from '../../services/settings.js'
+import { modelLabel } from '../../services/api/models.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
 import { Modal } from '../base/Modal.js'
@@ -67,6 +68,7 @@ const StatsContent = () => {
   const locale = useSettings((state) => state.locale)
   const apiKey = useSettings((state) => state.apiKey) ?? ''
   const maxTokens = useSettings((state) => state.maxTokens)
+  const model = useSettings((state) => state.model)
   const usage = useContextUsage((state) => (activeId ? state.byId[activeId] : undefined))
   // 与输入框圆环同一套压力口径：压缩后按摘要节省量折算
   const contextTokens = effectiveContextTokens(
@@ -74,7 +76,7 @@ const StatsContent = () => {
     usage?.at ?? 0,
     session?.compression
   )
-  const contextWindow = contextWindowFor('deepseek-flash')
+  const contextWindow = contextWindowFor(model)
   const reserve = reserveGeometry(contextWindow, maxTokens ?? 8192)
   const cost = useMemo(
     () => estimateCost(session, { holiday, voiceDiscount: discount }),
@@ -288,6 +290,19 @@ const StatsContent = () => {
         ) : (
           <div className={styles.empty}>{t('billingEmpty')}</div>
         )}
+        {cost.byModel.length > 0 ? (
+          <div className={styles.modelLines}>
+            <div className={styles.modelTitle}>{t('billingModels')}</div>
+            {cost.byModel.map((item) => (
+              <div key={item.model} className={styles.line}>
+                <span className={styles.lineLabel}>
+                  {modelLabel(item.model)} · {t('billingReplies', { count: item.replies })}
+                </span>
+                <span className={styles.lineAmount}>{formatMoney(item.cost)}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className={styles.note}>{t('billingNote')}</div>
       </section>
     </Modal>

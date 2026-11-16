@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { TtsVoice } from './api/speech.js'
+import type { ChatModel } from './api/types.js'
 import { normalizeLocation, type UserLocation } from './location.js'
 import type { AutoTuneStrategy } from './unrestricted/autotune.js'
 import type { ObfuscationTechnique } from './unrestricted/parseltongue.js'
@@ -14,6 +15,8 @@ export type ThemePreference = 'light' | 'dark' | 'system'
 /** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、模型参数、提示词开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
+  /** 当前模型：内置 flash / v4-pro，或云端列表里的任意 id */
+  model: ChatModel
   locale: Locale
   themePreference: ThemePreference
   location: UserLocation | null
@@ -77,6 +80,7 @@ type Settings = {
 
 const KEYS = {
   apiKey: 'chat-demo:api-key',
+  model: 'chat-demo:model',
   locale: 'chat-demo:locale',
   location: 'chat-demo:location',
   themePreference: 'chat-demo:theme-preference',
@@ -135,6 +139,11 @@ const write = (key: string, value: string | null) => {
 /** 位置选择模式跟随浏览器语言，与应用内选择的界面语言无关。 */
 export const isChineseBrowser = (): boolean =>
   (typeof navigator === 'undefined' ? 'zh' : navigator.language).toLowerCase().startsWith('zh')
+
+const initialModel = (): ChatModel => {
+  const saved = read(KEYS.model)
+  return saved !== null && saved.trim() !== '' ? saved.trim() : 'deepseek-flash'
+}
 
 const initialLocale = (): Locale => {
   const saved = read(KEYS.locale)
@@ -287,6 +296,7 @@ const initialStmModules = (): string[] => {
 
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
+  model: initialModel(),
   locale: initialLocale(),
   location: initialLocation(),
   themePreference: initialThemePreference(),
@@ -321,6 +331,15 @@ export const useSettings = create<Settings>(() => ({
   attachmentExts: initialAttachmentExts(),
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
+
+export const setModel = (model: ChatModel) => {
+  const next = model.trim()
+  if (next === '') {
+    return
+  }
+  write(KEYS.model, next)
+  useSettings.setState({ model: next })
+}
 
 export const setLocale = (locale: Locale) => {
   write(KEYS.locale, locale)
@@ -530,6 +549,7 @@ export const resetSettings = () => {
   }
   useSettings.setState({
     apiKey,
+    model: 'deepseek-flash',
     locale: isChineseBrowser() ? 'zh-CN' : 'en-US',
     themePreference: 'system',
     location: null,

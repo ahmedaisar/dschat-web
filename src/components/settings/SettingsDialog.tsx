@@ -22,6 +22,7 @@ import {
   importHistory,
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
+import { modelLabel } from '../../services/api/models.js'
 import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
@@ -480,6 +481,15 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV251Title',
+      items: [
+        'changelogV251Mobile',
+        'changelogV251Model',
+        'changelogV251Billing',
+        'changelogV251Lab',
+      ],
+    },
+    {
       title: 'changelogV25Title',
       items: [
         'changelogV25Official',
@@ -632,6 +642,7 @@ const ModelSettings = () => {
   const temperature = useSettings((state) => state.temperature)
   const topP = useSettings((state) => state.topP)
   const maxTokens = useSettings((state) => state.maxTokens)
+  const model = useSettings((state) => state.model)
   const keepReplyContent = useSettings((state) => state.keepReplyContent)
   const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
   const continueRefused = useSettings((state) => state.continueRefused)
@@ -640,6 +651,12 @@ const ModelSettings = () => {
   const autoCompress = useSettings((state) => state.autoCompress)
   return (
     <>
+      <SettingCell
+        label={t('settingsModel')}
+        description={t('settingsModelDescription')}
+        status={null}
+        action={<span className={styles.modelBadge}>{modelLabel(model)}</span>}
+      />
       <SettingCell
         label={t('settingsTemperature')}
         description={t('settingsTemperatureDescription')}

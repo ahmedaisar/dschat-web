@@ -263,7 +263,14 @@ export const estimateTokens = (text: string): number => {
 }
 
 /** 按模型与时间取单价；未知模型按 flash 计 */
-const priceFor = (model: string) => MODEL_PRICE[model] ?? MODEL_PRICE['deepseek-flash']
+export type ModelPrice = { cacheHit: number; cacheMiss: number; output: number }
+
+/** 未知模型按 Flash 价估算，避免云端模型没有价格时整段统计失效 */
+export const modelPriceFor = (model: string): ModelPrice =>
+  MODEL_PRICE[model] ?? MODEL_PRICE['deepseek-flash']
+
+/** 是否在官方价格表里；界面用它提示「未知模型按 Flash 估算」 */
+export const isKnownModel = (model: string): boolean => model in MODEL_PRICE
 
 /** 用服务端上报的用量算一次请求的费用（元） */
 export const usageCost = (
@@ -272,7 +279,7 @@ export const usageCost = (
   at: Date = new Date(),
   holiday = false
 ): number => {
-  const price = priceFor(model)
+  const price = modelPriceFor(model)
   const multiplier = isPeakHour(at, holiday) ? 2 : 1
   const tokens =
     (usage.cache_read_input_tokens ?? 0) * price.cacheHit +
@@ -289,7 +296,7 @@ export const estimateRequestCost = (
   at: Date = new Date(),
   holiday = false
 ): number => {
-  const price = priceFor(model)
+  const price = modelPriceFor(model)
   const multiplier = isPeakHour(at, holiday) ? 2 : 1
   const tokens = estimateTokens(inputText) * price.cacheMiss + maxOutputTokens * price.output
   return (tokens * multiplier) / 1e6
@@ -306,6 +313,8 @@ export type CostBreakdown = {
   total: number
   /** 按当前时间判断现在是否高峰时段，用于面板上的状态标签 */
   peakNow: boolean
+  /** 按模型分组的条数与费用，用于「分布计费」展示 */
+  byModel: { model: string; replies: number; cost: number }[]
   usage: {
     cacheHit: number
     cacheMiss: number
@@ -336,6 +345,7 @@ export const estimateCost = (
     asrSeconds: 0,
   }
   let modelCost = 0
+  const modelTotals = new Map<string, { replies: number; cost: number }>()
   if (session) {
     for (const message of session.messages) {
       if (message.role === 'user') {
@@ -354,13 +364,19 @@ export const estimateCost = (
       if (!replyUsage) {
         continue
       }
-      const price = MODEL_PRICE[reply.model ?? 'deepseek-flash'] ?? MODEL_PRICE['deepseek-flash']
+      const model = reply.model ?? 'deepseek-flash'
+      const price = modelPriceFor(model)
       const multiplier = isPeakHour(new Date(reply.createdAt), holiday) ? 2 : 1
-      modelCost +=
+      const replyCost =
         ((replyUsage.cache_read_input_tokens ?? 0) * price.cacheHit +
           (replyUsage.input_tokens ?? 0) * price.cacheMiss +
           (replyUsage.output_tokens ?? 0) * price.output) *
         multiplier
+      modelCost += replyCost
+      const entry = modelTotals.get(model) ?? { replies: 0, cost: 0 }
+      entry.replies += 1
+      entry.cost += replyCost
+      modelTotals.set(model, entry)
       usage.cacheHit += replyUsage.cache_read_input_tokens ?? 0
       usage.cacheMiss += replyUsage.input_tokens ?? 0
       usage.output += replyUsage.output_tokens ?? 0
@@ -387,7 +403,7 @@ export const estimateCost = (
       if (message.role !== 'assistant' || !message.usage) {
         continue
       }
-      const price = MODEL_PRICE[message.model ?? 'deepseek-flash'] ?? MODEL_PRICE['deepseek-flash']
+      const price = modelPriceFor(message.model ?? 'deepseek-flash')
       const multiplier = isPeakHour(new Date(message.createdAt), holiday) ? 2 : 1
       sum += (message.usage.cache_read_input_tokens ?? 0) * price.cacheHit * multiplier
     }
@@ -402,7 +418,7 @@ export const estimateCost = (
       if (message.role !== 'assistant' || !message.usage) {
         continue
       }
-      const price = MODEL_PRICE[message.model ?? 'deepseek-flash'] ?? MODEL_PRICE['deepseek-flash']
+      const price = modelPriceFor(message.model ?? 'deepseek-flash')
       const multiplier = isPeakHour(new Date(message.createdAt), holiday) ? 2 : 1
       sum += (message.usage.input_tokens ?? 0) * price.cacheMiss * multiplier
     }
@@ -430,6 +446,13 @@ export const estimateCost = (
     lines,
     total: lines.reduce((sum, line) => sum + line.amount, 0),
     peakNow: isPeakHour(new Date(), holiday),
+    byModel: [...modelTotals.entries()]
+      .map(([model, entry]) => ({
+        model,
+        replies: entry.replies,
+        cost: entry.cost / 1e6,
+      }))
+      .sort((a, b) => b.cost - a.cost),
     usage,
   }
 }

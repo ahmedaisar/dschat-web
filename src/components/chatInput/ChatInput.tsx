@@ -33,6 +33,7 @@ import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { ParseltongueButton } from './ParseltonguePanel.js'
+import { ModelPicker } from './ModelPicker.js'
 import { ThinkingSlider } from './ThinkingSlider.js'
 import { ContextRing } from './ContextRing.js'
 import { Spectrum } from './Spectrum.js'
@@ -207,6 +208,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       <div className={styles.functionRow}>
         {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
+          <ModelPicker />
           <Tooltip content={t('autoJailbreakTooltip')}>
             <button
               type="button"

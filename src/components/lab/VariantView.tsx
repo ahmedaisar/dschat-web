@@ -58,7 +58,9 @@ export const VariantView = () => {
 
   const [query, setQuery] = useState('')
   const [tier, setTier] = useState<VariantTier>('standard')
-  const [model, setModel] = useState<VariantModel>('deepseek-flash')
+  const [model, setModel] = useState<VariantModel>(() =>
+    useSettings.getState().model === 'deepseek-v4-pro' ? 'deepseek-v4-pro' : 'deepseek-flash'
+  )
   const [running, setRunning] = useState(false)
   const [run, setRun] = useState<VariantRun | null>(null)
   const [error, setError] = useState<string | null>(null)

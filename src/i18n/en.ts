@@ -9,6 +9,17 @@ export const en = {
   forkCreated: 'Continued in a new chat; the original is untouched',
   forkFailed: 'Cannot branch right now: wait for generation or import to finish',
   forkTitleSuffix: ' (branch)',
+  modelSelect: 'Model',
+  modelFetch: 'Fetch from cloud',
+  modelFetching: 'Fetching…',
+  modelFetchFailed: 'Could not fetch cloud models; using built-ins',
+  modelRemoteOk: 'Fetched {count} cloud models',
+  modelBuiltinFallback: 'Using built-in models',
+  modelPriceUnknown: 'Price not listed; estimated at Flash rates',
+  modelPriceNote: 'Per 1M tokens: hit / input / output, off-peak; peak ×2',
+  modelPriceUnitShort: 'per 1M',
+  modelBuiltin: 'Built-in',
+  modelRemote: 'Cloud',
   newChat: 'New chat',
   untitledChat: 'New chat',
   sessionLoading: 'Loading chats...',
@@ -122,6 +133,14 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV251Title: 'v2.5.1 · 2026-11',
+  changelogV251Mobile: 'Fixed the variant-race panel/results overlap and clipped heading on mobile',
+  changelogV251Model:
+    'New model picker card: built-in DeepSeek Flash / V4 Pro plus one-click cloud model fetch',
+  changelogV251Billing:
+    'Per-model billing: the stats dialog now breaks usage and cost down by model; unknown models fall back to Flash rates',
+  changelogV251Lab:
+    'The attackers tab now switches between Flash / V4 Pro (shared by attacker, target and judge) and stacks into one scrolling column on mobile',
   changelogV25Title: 'v2.5.0 · 2026-11 (stable)',
   changelogV25Official:
     'Stable release: jailbreak presets, perturbation, model/variant races, statistics and billing, and context compression',
@@ -224,6 +243,9 @@ export const en = {
   creditDeepseekChatLabel: 'deepseek-chat (deepseek-ai/chat-demo)',
   creditDeepseekChatNote: 'Upstream chat front end; this repository is an unofficial fork.',
   settingDialogAsideDataOptionLabel: 'Data',
+  settingsModel: 'Current model',
+  settingsModelDescription:
+    'Switch from the leftmost control in the input toolbar; DeepSeek Flash / V4 Pro are built in, and the list can be fetched from the cloud.',
   settingsTemperature: 'Temperature',
   settingsTemperatureDescription:
     'Sampling temperature from 0 to 2; higher is more random. The server always uses 1 in thinking mode.',
@@ -357,6 +379,7 @@ export const en = {
   labLimit: 'Instance limit',
   labQueries: 'Custom queries',
   labQueriesPlaceholder: 'One per line; custom queries ignore the dataset',
+  labModelHint: 'Used by the attacker, target and judge',
   labBaseUrl: 'Model endpoint',
   labModel: 'Model',
   labApiKey: 'API Key',
@@ -572,6 +595,8 @@ export const en = {
   billingParse: 'Document parsing',
   billingTts: 'Speech synthesis',
   billingAsr: 'Speech recognition',
+  billingModels: 'By model',
+  billingReplies: '{count} replies',
   billingTotal: 'Total',
   billingDiscount: 'Voice limited-time 50% off',
   billingNote:

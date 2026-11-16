@@ -290,12 +290,19 @@
   }
 
   .grid {
+    /* 不再用 flex:1 撑满固定高度，否则两个 grid 行会被压扁、结果区叠到面板上 */
+    flex: none;
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .panel,
   .results {
     overflow-y: visible;
+  }
+
+  .results {
+    min-height: 160px;
   }
 
   .actions {

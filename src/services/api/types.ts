@@ -4,7 +4,11 @@
  * 声明 deepseek_web_search / deepseek_read_url 或设置 safety_check.level 为 high 时进入扩展模式。
  */
 
-export type ChatModel = 'deepseek-flash' | 'deepseek-v4-pro'
+/**
+ * 模型 id：内置的是 deepseek-flash / deepseek-v4-pro，
+ * 云端 GET /models 返回的其他 id 也原样透传给请求。
+ */
+export type ChatModel = string
 
 /** 思考强度；Anthropic 协议用 budget_tokens，OpenAI 兼容协议用 reasoning_effort，这里同时下发 */
 export type ReasoningEffort = 'low' | 'medium' | 'high' | 'max'

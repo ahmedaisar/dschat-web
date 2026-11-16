@@ -12,6 +12,7 @@ import { Switch } from '../base/Switch.js'
 import { applyParseltongue } from '../../services/unrestricted/parseltongue.js'
 import { RaceView } from './RaceView.js'
 import { readAttackFile } from '../../services/lab/ioValidation.js'
+import { modelLabel } from '../../services/api/models.js'
 import { VariantView } from './VariantView.js'
 import styles from './LabView.module.css'
 
@@ -67,7 +68,11 @@ export const LabView = () => {
   const [queries, setQueries] = useState('')
   const [params, setParams] = useState('{}')
   const [baseUrl, setBaseUrl] = useState('https://api.deepseek.com/v1')
-  const [model, setModel] = useState('deepseek-chat')
+  // 默认跟随聊天里选中的内置模型；MCP 的攻击 / 目标 / 判分都使用这一个
+  const [model, setModel] = useState<string>(() =>
+    useSettings.getState().model === 'deepseek-v4-pro' ? 'deepseek-v4-pro' : 'deepseek-flash'
+  )
+  const [jobModel, setJobModel] = useState<string | null>(null)
   const [job, setJob] = useState<JobState | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
@@ -162,6 +167,7 @@ export const LabView = () => {
                 }).transformedText
             )
           : queryList
+      setJobModel(model)
       const payload = {
         method: methodId,
         queries: preparedQueries,
@@ -210,6 +216,7 @@ export const LabView = () => {
       version: 1,
       exportedAt: new Date().toISOString(),
       method: methodId,
+      model: jobModel ?? model,
       job,
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
@@ -259,6 +266,7 @@ export const LabView = () => {
         error: typeof raw.error === 'string' ? raw.error : null,
         results,
       })
+      setJobModel(data.model)
       setError(null)
       showToast({ key: 'labImportedResults' })
     } catch {
@@ -446,13 +454,17 @@ export const LabView = () => {
               </div>
               <div className={styles.field}>
                 <span className={styles.label}>{t('labModel')}</span>
-                <input
-                  className={styles.input}
+                <Select<string>
+                  ariaLabel={t('labModel')}
                   value={model}
                   disabled={!connected}
-                  onChange={(event) => setModel(event.target.value)}
-                  spellCheck={false}
+                  options={[
+                    { value: 'deepseek-flash', label: 'DeepSeek Flash' },
+                    { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+                  ]}
+                  onChange={setModel}
                 />
+                <span className={styles.hint}>{t('labModelHint')}</span>
               </div>
             </div>
 
@@ -517,6 +529,12 @@ export const LabView = () => {
                   <div className={styles.metric}>
                     <span className={styles.metricLabel}>{t('labStatus')}</span>
                     <span className={styles.metricValue}>{job.status}</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>{t('labModel')}</span>
+                    <span className={styles.metricValue}>
+                      {jobModel ? modelLabel(jobModel) : '—'}
+                    </span>
                   </div>
                 </div>
                 {job.error ? <div className={styles.error}>{job.error}</div> : null}

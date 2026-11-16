@@ -55,7 +55,7 @@ export const readVariantFile = (value: unknown): VariantFileData | null => {
   }
 }
 
-export type AttackFileData = { job: LabJsonRecord }
+export type AttackFileData = { job: LabJsonRecord; model: string | null }
 
 /**
  * EasyJailbreak 实验导出（`{ job: {...} }`，或旧版的裸 job）。
@@ -70,5 +70,5 @@ export const readAttackFile = (value: unknown): AttackFileData | null => {
   if (!Array.isArray(job.results) || !asRecord(job.calls)) {
     return null
   }
-  return { job }
+  return { job, model: typeof record.model === 'string' ? record.model : null }
 }

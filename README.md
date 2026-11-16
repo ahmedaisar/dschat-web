@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.0 (stable)**
+> Current version: **2.5.1**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -56,7 +56,7 @@ On top of that, this fork turns the hard-coded limits of the original into confi
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
 - **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
-- **Context and cost**: input-box context ring, session statistics, and cost estimates at official prices;
+- **Models and cost**: a model card in the input bar (built-in Flash / V4 Pro plus cloud fetch), a context ring, session statistics, and per-model billing;
 - **Data and attachments**: configurable size / count / extension limits, history import/export, and one-click restore-default-settings.
 
 - **Unrestricted mode** — swap the system prompt, automatically skip the safety check, and allow continuing refused replies.
@@ -106,16 +106,16 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 The settings dialog grows from two groups to eight:
 
-| Group           | Contents                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------ |
-| General         | Theme, language, read-aloud voice, location (original, untouched)                                                  |
-| **Model**       | Temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
-| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview            |
-| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping      |
-| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                        |
-| Data            | API key, import, export, restore default settings, delete all                                                      |
-| About           | Repository, demo and upstream links                                                                                |
-| Changelog       | Version history and upstream credits                                                                               |
+| Group           | Contents                                                                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| General         | Theme, language, read-aloud voice, location (original, untouched)                                                                 |
+| **Model**       | Current model, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
+| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                           |
+| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                     |
+| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                       |
+| Data            | API key, import, export, restore default settings, delete all                                                                     |
+| About           | Repository, demo and upstream links                                                                                               |
+| Changelog       | Version history and upstream credits                                                                                              |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -224,7 +224,8 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 
 - Backend: `mcp-server/` (Python, MCP Streamable HTTP, default `http://127.0.0.1:8765/mcp`); start it with `./mcp-server/run.sh`;
 - Frontend: `src/services/lab/` (MCP client) and `src/components/lab/` (lab page) only handle scheduling and display;
-- Custom queries, dataset size, method-parameter JSON, and three model channels (target / attack / eval, reusing the API key from Settings by default);
+- Custom queries, dataset size, method-parameter JSON, and three model channels (target / attack / eval, reusing the API key from Settings by default); the model dropdown offers **DeepSeek Flash / V4 Pro**, defaults to the chat model, and is shared by all three channels;
+- On mobile the parameter panel and results stack into one scrolling column, two-column fields collapse, and result summaries wrap;
 - Shows the final prompt, target response, judge result and ASR per instance; supports cancelling and exporting;
 - Available: PAIR, TAP, GPTFuzzer, ReNeLLM, ICA, DeepInception, Jailbroken, Cipher, CodeChameleon, Multilingual (all smoke-tested with the local mock model; the real behaviour of TAP and GPTFuzzer depends on the judge model returning parseable scores). MJP is not adapted yet; GCG / AutoDAN need a local white-box model and do not work with an API-only setup. See [`mcp-server/README.md`](mcp-server/README.md);
 - Datasets: after `pip install datasets`, AdvBench (520 rows) / HarmBench / StrongREJECT can be loaded online through the `hf-mirror.com` mirror by default (override with `HF_ENDPOINT`); without the package the built-in sample queries are used;
@@ -257,7 +258,7 @@ Settings → **Advanced** (everything is off by default, so the out-of-the-box b
 - **Auto jailbreak** (toggle in the input bar): swaps `system` to GODMODE plus the depth directive, forces perturbation (full-width when no technique is chosen), forces AutoTune and skips the safety check. When a reply is refused (`stop_reason: refusal` or refusal text) with no retained text, it retries with L1B3RT4S combos twice, then stops and tells you (each retry is a real request and costs tokens).
 - **Reply ratings**: thumbs up / down on any reply feed the AutoTune EMA profile together with that run's context type and sampling parameters, so later AutoTune runs learn from your feedback (stored locally only).
 - **Per-chat system prompt**: `Start a chat with this combo` now affects only the new chat, with a notice bar to restore the default; global prompt settings are untouched. It is stored with the chat in IndexedDB; history exports do not include it.
-- **Cost estimate**: priced from the official price page (yuan per million tokens) with separate rates for `deepseek-flash` and `deepseek-v4-pro`, split into peak and off-peak (Beijing time weekdays 09:00–12:00 and 14:00–18:00 are peak; off-peak costs half), with a "treat today as a holiday" override. Search and fetch are billed at 5 yuan / 1000 calls, document parsing at 1.5 yuan / 1000 pages (pages estimated from file size), TTS at 3 yuan / 10k characters (optional limited-time 50% off) and ASR at 0.78 yuan / hour.
+- **Cost estimate**: priced from the official price page (yuan per million tokens) with separate rates for `deepseek-flash` and `deepseek-v4-pro` (each reply is priced by its own model; unknown models fall back to Flash), split into peak and off-peak (Beijing time weekdays 09:00–12:00 and 14:00–18:00 are peak; off-peak costs half), with a "treat today as a holiday" override. Search and fetch are billed at 5 yuan / 1000 calls, document parsing at 1.5 yuan / 1000 pages (pages estimated from file size), TTS at 3 yuan / 10k characters (optional limited-time 50% off) and ASR at 0.78 yuan / hour.
 
 ### 3.12 Attachment limits
 
@@ -293,11 +294,11 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 
 ### 3.14 Prompt injection, Chinese translation and long-chat compression
 
-| Feature                                  | Where                                           | Notes                                                                                                                                                                                                                                                                                                                                           |
-| ---------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inject the system prompt every round     | Settings → Prompt                               | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                        |
-| Chinese jailbreak prompts (experimental) | Settings → Advanced                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                         |
-| Long-chat compression                    | Settings → Model (auto) + stats dialog (manual) | Auto: past 10 rounds with at least 4 new rounds since the last compression, older content is summarised in the background. Manual: "Compress older messages" in the stats dialog, always keeping the last 2 rounds verbatim. The summary is injected as a `latest_reminder`; local history is untouched and the summary can be cleared anytime. |
+| Feature                                  | Where                                           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inject the system prompt every round     | Settings → Prompt                               | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                                                                                                     |
+| Chinese jailbreak prompts (experimental) | Settings → Advanced                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                                                                                                      |
+| Long-chat compression                    | Settings → Model (auto) + stats dialog (manual) | Auto: once context pressure reaches 80% of the window (after the 64k headroom and output reserve) with at least 2 new rounds since the last compression, older content is summarised in the background. Manual: "Compress older messages" in the stats dialog, always keeping the last 2 rounds verbatim. The summary is injected as a `latest_reminder`; local history is untouched and the summary can be cleared anytime. |
 
 ---
 
@@ -311,6 +312,27 @@ Use the session menu (⋯ → **Branch to new chat**) or the button in the deskt
 - Branching is disabled while generating, importing, or before the session loads.
 
 This is different from the in-session branch switcher (which keeps alternative answer versions inside one chat): here you get a separate line in the session list.
+
+---
+
+### 3.16 Model switching and per-model billing
+
+The leftmost control in the input toolbar is the model card, with **DeepSeek Flash** and **DeepSeek V4 Pro** built in:
+
+- Open it to see each model's cache-hit / input / output price per 1M tokens (off-peak; peak ×2);
+- "Fetch from cloud" calls `GET /models`, then the Anthropic prefix `/anthropic/v1/models`; fetched models are cached for an hour and their ids are passed through to requests;
+- A switch affects only new replies: old replies keep their own model, continuations keep the original model, and statistics/cost are computed per reply;
+- The context ring uses the current model's window; models without a price entry fall back to Flash rates and a 128k window;
+- Settings → Model shows the current model; restoring defaults resets it to DeepSeek Flash.
+
+Prices (yuan per million tokens, off-peak; peak ×2):
+
+| Model             | Cache hit | Input (miss) | Output |
+| ----------------- | --------- | ------------ | ------ |
+| `deepseek-flash`  | 0.02      | 1            | 4      |
+| `deepseek-v4-pro` | 0.15      | 4.5          | 13.5   |
+
+The billing section in the stats dialog gains a "By model" breakdown with reply counts and cost per model.
 
 ---
 
@@ -354,6 +376,7 @@ This is different from the in-session branch switcher (which keeps alternative a
 | Attachments | Max size per file                    | 64 MB             | `chat-demo:attachment-max-mb`              | Unaffected                      |
 | Attachments | Max files per session                | 50                | `chat-demo:attachment-max-count`           | Unaffected                      |
 | Attachments | Extension whitelist                  | built-in          | `chat-demo:attachment-exts`                | Unaffected                      |
+| Input bar   | Model                                | `deepseek-flash`  | `chat-demo:model`                          | Next reply                      |
 | Input bar   | Thinking effort                      | 0 (off)           | `chat-demo:reasoning-effort`               | Unaffected                      |
 | Input bar   | Auto jailbreak                       | off               | `chat-demo:auto-jailbreak`                 | Unaffected                      |
 | Lab         | Variant race budget                  | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
@@ -428,6 +451,8 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | Long-chat compression: structured summary, auto trigger and savings                                                  |
 | [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | Context pressure and compaction reserve (matching DSH)                                                               |
 | [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                         | Reply ratings and the AutoTune EMA profile                                                                           |
+| [`src/services/api/models.ts`](src/services/api/models.ts)                                         | Built-in models, cloud `/models` fetch and cache                                                                     |
+| [`src/components/chatInput/ModelPicker.tsx`](src/components/chatInput/ModelPicker.tsx)             | Model picker card                                                                                                    |
 | [`src/components/chatInput/ContextRing.tsx`](src/components/chatInput/ContextRing.tsx)             | Context ring linked with compression                                                                                 |
 | [`src/components/chatInput/ParseltonguePanel.tsx`](src/components/chatInput/ParseltonguePanel.tsx) | Input perturbation panel                                                                                             |
 | [`src/services/unrestricted/promptsZh.ts`](src/services/unrestricted/promptsZh.ts)                 | Chinese translation of GODMODE and the depth directive                                                               |
@@ -506,6 +531,8 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 11. **Branch to new chat copies the current visible branch**: other answer versions and drafts are not copied; attachments reuse the original file ids; the new chat starts its statistics at zero and inherited usage is not counted.
 12. **Restore default settings keeps the API key**: it only resets preferences and switches, never chats, attachments or statistics.
 13. **Auto jailbreak and variant races cost extra**: every retry and every variant is a real request; variant races are bounded by the budget cap.
+14. **Cloud model lists depend on the API and network**: a failed fetch falls back to the two built-ins; models without a price entry are estimated at Flash rates with a 128k window, and actual capabilities come from the server.
+15. **Switching models does not rewrite old replies**: old replies keep their model and cost; continuations keep that reply's model, and only new replies use the current choice.
 
 ---
 

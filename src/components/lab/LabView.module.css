@@ -125,6 +125,12 @@
   font-size: 12px;
 }
 
+.hint {
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 16px;
+}
+
 .input,
 .textarea {
   box-sizing: border-box;
@@ -160,7 +166,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
 }
 
@@ -272,9 +278,22 @@
 }
 
 @media (max-width: 900px) {
+  /* 窄屏改为单列纵向滚动：参数区与结果区不再各自抢高度 */
   .grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     overflow-y: auto;
+  }
+
+  .panel,
+  .results {
+    flex: none;
+    overflow-y: visible;
+  }
+
+  .results {
+    min-height: 160px;
   }
 }
 
@@ -290,6 +309,32 @@
 
   .endpoint {
     width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .connection {
+    width: 100%;
+  }
+
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .resultSummary {
+    align-items: flex-start;
+  }
+
+  .resultQuery {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .actions > button {
+    flex: 1;
   }
 }
 
