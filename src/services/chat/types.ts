@@ -119,6 +119,8 @@ export type SessionCompression = {
   upToMessageId: string
   /** 被压缩的对话轮数 */
   rounds: number
+  /** 摘要替代的历史估算节省的 token */
+  savedTokens?: number
   at: number
 }
 

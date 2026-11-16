@@ -12,6 +12,7 @@ import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { noteRunTiming } from './sessionStats.js'
 import { autoCompressNeeded, compressSession } from './compression.js'
+import { contextWindowFor, useContextUsage } from './contextUsage.js'
 import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
 import { applyParseltongue } from '../unrestricted/parseltongue.js'
@@ -1408,14 +1409,26 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
     }))
     persist(sessionId)
     // 自动压缩：回复结束后按轮数阈值在后台总结较早内容，失败静默
-    const { autoCompress, apiKey: compressKey, locale: compressLocale } = useSettings.getState()
+    const {
+      autoCompress,
+      apiKey: compressKey,
+      locale: compressLocale,
+      maxTokens,
+    } = useSettings.getState()
     const current = getSession(sessionId)
+    // 压力取最近一次请求的真实用量；阈值与圆环、统计弹窗共用 reserveGeometry
+    const usageTokens = useContextUsage.getState().byId[sessionId]?.tokens ?? 0
+    const window = contextWindowFor(initial.model ?? MODEL)
     if (
       reply.status === 'done' &&
       autoCompress &&
       compressKey &&
       current &&
-      autoCompressNeeded(current)
+      autoCompressNeeded(current, {
+        tokens: usageTokens,
+        window,
+        maxOutputTokens: maxTokens ?? 8192,
+      })
     ) {
       void compressSession(current, compressKey, compressLocale).then((outcome) => {
         if (outcome.ok) {

@@ -3,6 +3,8 @@ import type { Locale } from '../settings.js'
 import { getVisibleMessages } from './branches.js'
 import { getReplyAnswerText } from './reply.js'
 import type { Session, SessionCompression } from './types.js'
+import { estimateTokens } from './sessionStats.js'
+import { reserveGeometry } from './contextPressure.js'
 
 /**
  * 长对话压缩：把较早的轮次交给模型总结成摘要，摘要进入后续请求的上下文，
@@ -15,10 +17,8 @@ import type { Session, SessionCompression } from './types.js'
 const MIN_ROUNDS = 3
 /** 压缩时始终保留最近 2 轮原文 */
 const KEEP_ROUNDS = 2
-/** 自动压缩的触发轮数 */
-export const AUTO_MIN_ROUNDS = 10
 /** 上次压缩后新增多少轮再触发一次自动压缩 */
-const AUTO_MIN_NEW_ROUNDS = 4
+const AUTO_MIN_NEW_ROUNDS = 2
 /** 摘要请求的输入上限，避免一次塞入过长文本 */
 const MAX_TRANSCRIPT_CHARS = 48_000
 
@@ -33,9 +33,23 @@ export type CompressOutcome =
 const roundCount = (session: Session): number =>
   getVisibleMessages(session).filter((message) => message.role === 'user').length
 
-/** 自动压缩判断：轮数够多，且距上次压缩已经积累了足够的新轮次 */
-export const autoCompressNeeded = (session: Session): boolean => {
-  if (roundCount(session) < AUTO_MIN_ROUNDS) {
+/** 自动压缩判断的输入：最近一次请求的实际用量与窗口 */
+export type AutoCompressInput = {
+  tokens: number
+  window: number
+  maxOutputTokens: number
+}
+
+/**
+ * 自动压缩判断（对齐 DSH：压力达到窗口 80%，且不吃掉输出预留与 64k 余量）：
+ * 先按阈值判断压力，再要求至少有一组可压缩轮次、且距上次压缩有新增内容。
+ */
+export const autoCompressNeeded = (session: Session, pressure: AutoCompressInput): boolean => {
+  const reserve = reserveGeometry(pressure.window, pressure.maxOutputTokens)
+  if (!reserve || pressure.tokens < reserve.threshold) {
+    return false
+  }
+  if (roundCount(session) < MIN_ROUNDS + KEEP_ROUNDS) {
     return false
   }
   const compression = session.compression
@@ -90,8 +104,8 @@ const summarize = async (
 ): Promise<string> => {
   const system =
     locale === 'zh-CN'
-      ? '你是对话压缩器。把用户给出的对话记录压缩成要点摘要：保留用户的目标、偏好与约束，已确认的事实与结论，未完成的事项与下一步；用第三人称中文分条列出，不要编造，不要评论，只输出摘要正文。'
-      : 'You compress conversations. Summarise the supplied transcript into bullet points: keep the user goals, preferences and constraints, confirmed facts and conclusions, open items and next steps. Use third person, do not invent, do not comment; output only the summary body.'
+      ? '你是对话压缩器。把用户给出的对话记录压缩成结构化摘要，固定包含：1) 目标与约束；2) 已确认的事实、决定与结论；3) 代码/文件/产物的当前状态；4) 未完成事项与下一步；5) 重要错误与规避方式。用第三人称中文分条列出，保留关键标识符与数字；不要编造，不要评论，只输出摘要正文。'
+      : 'You compress conversations. Summarise the supplied transcript into a structured summary with: 1) goals and constraints; 2) confirmed facts, decisions and conclusions; 3) current state of code/files/artifacts; 4) open items and next steps; 5) important errors and workarounds. Use third person bullets, keep identifiers and numbers; do not invent, do not comment; output only the summary body.'
   const body = {
     model: 'deepseek-flash' as const,
     system,
@@ -164,6 +178,8 @@ export const compressSession = async (
         summary,
         upToMessageId: visible[cutoffIndex].id,
         rounds: cutoffRound,
+        // 摘要替换掉的那段历史与摘要本身的 token 差，用于圆环折算与统计展示
+        savedTokens: Math.max(0, estimateTokens(transcript) - estimateTokens(summary)),
         at: Date.now(),
       },
     }

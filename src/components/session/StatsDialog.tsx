@@ -12,6 +12,12 @@ import {
 } from '../../services/chat/sessionStats.js'
 import { setSessionCompression, useChatStore } from '../../services/chat/store.js'
 import { compressSession } from '../../services/chat/compression.js'
+import { contextWindowFor, useContextUsage } from '../../services/chat/contextUsage.js'
+import {
+  effectiveContextTokens,
+  pressurePercent,
+  reserveGeometry,
+} from '../../services/chat/contextPressure.js'
 import { useSettings } from '../../services/settings.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
@@ -60,6 +66,16 @@ const StatsContent = () => {
   const [compressing, setCompressing] = useState(false)
   const locale = useSettings((state) => state.locale)
   const apiKey = useSettings((state) => state.apiKey) ?? ''
+  const maxTokens = useSettings((state) => state.maxTokens)
+  const usage = useContextUsage((state) => (activeId ? state.byId[activeId] : undefined))
+  // 与输入框圆环同一套压力口径：压缩后按摘要节省量折算
+  const contextTokens = effectiveContextTokens(
+    usage?.tokens ?? 0,
+    usage?.at ?? 0,
+    session?.compression
+  )
+  const contextWindow = contextWindowFor('deepseek-flash')
+  const reserve = reserveGeometry(contextWindow, maxTokens ?? 8192)
   const cost = useMemo(
     () => estimateCost(session, { holiday, voiceDiscount: discount }),
     [session, holiday, discount]
@@ -169,11 +185,19 @@ const StatsContent = () => {
 
       <section className={styles.section}>
         <div className={styles.sectionTitle}>{t('compressTitle')}</div>
+        <div className={styles.compressInfo}>
+          {t('compressPressureInfo', {
+            used: formatTokens(contextTokens),
+            threshold: formatTokens(reserve?.threshold ?? 0),
+            percent: Math.round(pressurePercent(contextTokens, contextWindow)),
+          })}
+        </div>
         {session?.compression ? (
           <div className={styles.compressInfo}>
             {t('compressSummaryInfo', {
               rounds: session.compression.rounds,
               tokens: formatTokens(estimateTokens(session.compression.summary)),
+              saved: formatTokens(session.compression.savedTokens ?? 0),
             })}
           </div>
         ) : null}

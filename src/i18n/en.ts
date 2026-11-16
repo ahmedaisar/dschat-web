@@ -118,6 +118,13 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV246Title: 'v2.4.6 · 2026-11',
+  changelogV246Pressure:
+    'Auto-compression now triggers on context pressure: 80% window threshold with 64k headroom and output reserve (matching DSH)',
+  changelogV246Ring:
+    'The context ring now reflects compression: threshold, effective usage after compression and tokens saved',
+  changelogV246Summary:
+    'Compression summaries use a structured template (goals/facts/artifacts/open items/errors)',
   changelogV245Title: 'v2.4.5 · 2026-11',
   changelogV245Inject:
     'Prompt page gains "inject the system prompt every round" so long chats keep the setup',
@@ -369,7 +376,7 @@ export const en = {
     'Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak; try it on a small scale first.',
   settingsAutoCompress: 'Auto-compress long chats',
   settingsAutoCompressDescription:
-    'Once a chat exceeds 10 rounds, older content is summarised to save context; summaries stay on this device and can be cleared anytime.',
+    'Once context usage reaches 80% of the window, older content is summarised (keeping a 64k headroom plus output reserve); summaries stay on this device and can be cleared anytime.',
   compressSummaryHeader:
     'Summary of earlier conversation ({rounds} rounds condensed); keep it as context:',
   compressTitle: 'Context compression',
@@ -379,7 +386,8 @@ export const en = {
   compressFailed: 'Compression failed',
   compressTooShort: 'At least 3 rounds are needed to compress',
   compressNeedApiKey: 'Add your API key under Settings → Data first',
-  compressSummaryInfo: 'Compressed {rounds} rounds, summary about {tokens} tokens',
+  compressSummaryInfo: 'Compressed {rounds} rounds, summary about {tokens} tokens (saved {saved})',
+  compressPressureInfo: 'Context {used} / compaction threshold {threshold} ({percent}%)',
   compressClear: 'Clear summary',
   compressCleared: 'Compression summary cleared',
   sessionCompressed: 'Compressed {rounds} earlier rounds',
@@ -497,6 +505,8 @@ export const en = {
 
   contextUsageLabel: 'Context used {percent}%',
   contextUsageTip: 'Context {used} / {total} ({percent}%)',
+  contextPressureLine: 'Compaction threshold {threshold} ({percent}%)',
+  contextCompressionLine: 'Compressed {rounds} rounds, about {saved} saved',
   contextUsageEmpty: 'Context usage appears after the first message',
 
   sessionPromptNotice: 'This chat uses a lab combo system prompt',

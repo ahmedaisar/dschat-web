@@ -1,6 +1,13 @@
 import clsx from 'clsx'
 import { useTranslate } from '../../i18n/index.js'
 import { contextWindowFor, useContextUsage } from '../../services/chat/contextUsage.js'
+import {
+  effectiveContextTokens,
+  pressurePercent,
+  reserveGeometry,
+} from '../../services/chat/contextPressure.js'
+import { useChatStore } from '../../services/chat/store.js'
+import { useSettings } from '../../services/settings.js'
 import { Tooltip } from '../base/Tooltip.js'
 import styles from './ContextRing.module.css'
 
@@ -40,30 +47,48 @@ export const ContextRing = ({
   const t = useTranslate()
   // 应用固定使用 deepseek-flash；窗口长度见 services/chat/contextUsage.ts
   const model = 'deepseek-flash'
-  const tokens = useContextUsage((state) => (sessionId ? (state.byId[sessionId]?.tokens ?? 0) : 0))
+  const maxTokens = useSettings((state) => state.maxTokens)
+  const usage = useContextUsage((state) => (sessionId ? state.byId[sessionId] : undefined))
+  const compression = useChatStore((state) =>
+    sessionId ? state.sessionCache[sessionId]?.compression : undefined
+  )
+  const tokens = effectiveContextTokens(usage?.tokens ?? 0, usage?.at ?? 0, compression)
   const window = contextWindowFor(model)
+  const reserve = reserveGeometry(window, maxTokens ?? 8192)
+  const percent = pressurePercent(tokens, window)
   const ratio = window > 0 ? Math.min(1, tokens / window) : 0
-  const percent = Math.round(ratio * 100)
   const level = ratio >= 0.85 ? 'full' : ratio >= 0.6 ? 'high' : 'normal'
+  const tip = [
+    t('contextUsageTip', {
+      used: formatTokens(tokens),
+      total: formatTokens(window),
+      percent: Math.round(percent),
+    }),
+    reserve
+      ? t('contextPressureLine', {
+          threshold: formatTokens(reserve.threshold),
+          percent: Math.round((reserve.threshold / window) * 100),
+        })
+      : null,
+    compression
+      ? t('contextCompressionLine', {
+          rounds: compression.rounds,
+          saved: formatTokens(compression.savedTokens ?? 0),
+        })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <Tooltip
-      content={
-        tokens > 0
-          ? t('contextUsageTip', {
-              used: formatTokens(tokens),
-              total: formatTokens(window),
-              percent,
-            })
-          : t('contextUsageEmpty')
-      }
-    >
+    <Tooltip content={tokens > 0 ? tip : t('contextUsageEmpty')}>
       <button
         type="button"
         className={clsx(styles.ring, streaming && styles.active)}
         data-level={level}
         data-empty={tokens === 0 || undefined}
-        aria-label={t('contextUsageLabel', { percent })}
+        data-compressed={compression ? true : undefined}
+        aria-label={t('contextUsageLabel', { percent: Math.round(percent) })}
         onClick={onOpen}
       >
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden>
@@ -89,7 +114,7 @@ export const ContextRing = ({
           />
         </svg>
         {/* 没有用量时给一个破折号，比 0 更像「还没开始」 */}
-        <span className={styles.percent}>{tokens > 0 ? percent : '–'}</span>
+        <span className={styles.percent}>{tokens > 0 ? Math.round(percent) : '–'}</span>
       </button>
     </Tooltip>
   )

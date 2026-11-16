@@ -42,6 +42,17 @@
 }
 
 /* 还没有用量时整圈淡下去，别看起来像坏掉的按钮 */
+.ring[data-compressed]::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--dsw-alias-brand-primary);
+}
+
 .ring[data-empty] .track {
   opacity: 0.55;
 }

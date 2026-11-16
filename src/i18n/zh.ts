@@ -112,6 +112,11 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV246Title: 'v2.4.6 · 2026-11',
+  changelogV246Pressure:
+    '自动压缩改为上下文压力触发：窗口 80% 阈值，预留 64k 余量与输出空间（对齐 DSH）',
+  changelogV246Ring: '输入框上下文圆环联动压缩：显示压缩阈值、压缩后等效占用与节省量',
+  changelogV246Summary: '压缩摘要改为结构化模板（目标/事实/产物/待办/错误）',
   changelogV245Title: 'v2.4.5 · 2026-11',
   changelogV245Inject: '提示词页新增「每轮注入系统提示词」，长对话里靜默重申设定',
   changelogV245Zh: '高级页新增实验性开关：把内置越狱提示词换成中文翻译（可能降低效果）',
@@ -330,7 +335,7 @@ export const zh = {
     '把内置的 GODMODE 与深度指令换成中文翻译。中文表达与训练语料差异可能降低越狱效果，建议先小范围试用。',
   settingsAutoCompress: '自动压缩长对话',
   settingsAutoCompressDescription:
-    '对话超过 10 轮时自动把较早内容压缩成摘要，减少上下文占用；摘要只保存在本机，可随时清除。',
+    '上下文占用达到窗口的 80% 时自动把较早内容压缩成摘要（预留 64k 余量与输出空间）；摘要只保存在本机，可随时清除。',
   compressSummaryHeader: '以下是此前对话的摘要（压缩自较早的 {rounds} 轮），请据此保持上下文：',
   compressTitle: '上下文压缩',
   compressButton: '压缩较早对话',
@@ -339,7 +344,8 @@ export const zh = {
   compressFailed: '压缩失败',
   compressTooShort: '至少需要 3 轮对话才能压缩',
   compressNeedApiKey: '请先在设置 → 数据管理中填写 API Key',
-  compressSummaryInfo: '已压缩 {rounds} 轮，摘要约 {tokens} tokens',
+  compressSummaryInfo: '已压缩 {rounds} 轮，摘要约 {tokens} tokens（约省 {saved}）',
+  compressPressureInfo: '当前上下文 {used} / 压缩阈值 {threshold}（{percent}%）',
   compressClear: '清除摘要',
   compressCleared: '已清除压缩摘要',
   sessionCompressed: '已压缩 {rounds} 轮较早对话',
@@ -450,6 +456,8 @@ export const zh = {
 
   contextUsageLabel: '上下文占用 {percent}%',
   contextUsageTip: '上下文 {used} / {total}（{percent}%）',
+  contextPressureLine: '压缩阈值 {threshold}（{percent}%）',
+  contextCompressionLine: '已压缩 {rounds} 轮，约省 {saved}',
   contextUsageEmpty: '发送消息后显示上下文占用',
 
   sessionPromptNotice: '本会话使用实验台组合的系统提示词',
