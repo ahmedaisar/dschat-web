@@ -119,10 +119,10 @@
 
 .locationSelectors {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 8px 12px;
   min-width: 0;
   max-width: 100%;
 }
@@ -144,6 +144,11 @@
 
 .regionSelect {
   max-width: min(285px, 100%);
+}
+
+.specialSelect {
+  width: 200px;
+  max-width: 100%;
 }
 
 .theme {
@@ -386,8 +391,10 @@
   }
 
   .provinceSelect,
-  .citySelect {
+  .citySelect,
+  .specialSelect {
     flex: 1 1 auto;
+    width: auto;
   }
 
   .apiKey {

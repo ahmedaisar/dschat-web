@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { useSettings } from '../../services/settings.js'
 
-/** 设置弹窗的分组：通用 / 模型 / 提示词 / 高级 / 附件 / 数据管理 / 关于 / 更新日志 */
+/** 设置弹窗的分组：通用 / 模型 / 提示词 / 高级 / 记忆 / 附件 / 数据管理 / 关于 / 更新日志 */
 export type SettingsSection =
   | 'general'
   | 'model'
   | 'prompt'
   | 'advanced'
+  | 'memory'
   | 'attachments'
   | 'data'
   | 'about'

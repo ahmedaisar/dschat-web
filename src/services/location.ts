@@ -10,10 +10,28 @@ export const provinces = Object.entries(provinceNames).map(([code, name]) => ({
     .map(([code, name]) => ({ code, name })),
 }))
 
+/** 科幻/特殊位置：空间站、月球、火星，覆盖普通行政区选择 */
+export const specialPlaces = [
+  { id: 'station-satellite', zh: '空间站 · 卫星', en: 'Space Station · Satellite' },
+  { id: 'station-core', zh: '空间站 · 空间站', en: 'Space Station · Station' },
+  { id: 'moon-near', zh: '月球 · 月之明面', en: 'Moon · Near Side' },
+  { id: 'moon-far', zh: '月球 · 月之暗面', en: 'Moon · Far Side' },
+  { id: 'mars-center', zh: '火星 · 时空管理中心', en: 'Mars · Spacetime Management Center' },
+] as const
+
+export type SpecialPlace = (typeof specialPlaces)[number]['id']
+
+const specialPlaceIds = new Set<string>(specialPlaces.map((item) => item.id))
+
+export const specialPlaceName = (id: SpecialPlace, locale: 'zh-CN' | 'en-US'): string =>
+  specialPlaces.find((item) => item.id === id)?.[locale === 'zh-CN' ? 'zh' : 'en'] ?? id
+
 export type UserLocation = {
   region: string
   province?: string
   city?: string
+  /** 设置后忽略行政区，作为位置注入 latest_reminder */
+  place?: SpecialPlace
 }
 
 const regions = new Set(regionCodes)
@@ -32,7 +50,12 @@ export const normalizeLocation = (value: unknown): UserLocation | null => {
     return null
   }
   const location = value as Record<string, unknown>
-  const { region, province, city } = location
+  const { region, province, city, place } = location
+  if (place !== undefined) {
+    return typeof place === 'string' && specialPlaceIds.has(place)
+      ? { region: 'CN', place: place as SpecialPlace }
+      : null
+  }
   if (typeof region !== 'string' || !regions.has(region)) {
     return null
   }

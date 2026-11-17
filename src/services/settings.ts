@@ -30,8 +30,31 @@ type Settings = {
   injectPromptEveryTurn: boolean
   /** 实验性：把内置越狱提示词换成中文翻译 */
   translateJailbreakZh: boolean
+  /** 把上一轮历史 thinking 伪装成助手正文，避免服务端丢弃 */
+  thinkingAsBody: boolean
   /** 长对话自动压缩 */
   autoCompress: boolean
+  /** 保存的长期记忆是否注入 system */
+  savedMemoryEnabled: boolean
+  /** 每轮结束后自动提炼长期记忆（额外一次模型调用） */
+  autoExtractMemory: boolean
+  /** 网状记忆库是否参与检索 */
+  memoryBankEnabled: boolean
+  /** 注入的记忆条数 */
+  memoryBankLimit: number
+  /** 记忆检索阈值 */
+  memoryBankThreshold: number
+  /** 本地向量维度 */
+  memoryBankDimension: number
+  /** 记忆检索权重 */
+  memoryBankKeywordWeight: number
+  memoryBankTagWeight: number
+  memoryBankVectorWeight: number
+  memoryBankEdgeWeight: number
+  /** 每日 Token / 费用提醒 */
+  dailyLimitEnabled: boolean
+  dailyTokenLimit: number
+  dailyCostLimit: number
   /** 变体赛跑的预算上限（元） */
   variantRaceBudget: number
   /** 变体赛跑的开跑确认已永久关闭 */
@@ -90,7 +113,21 @@ const KEYS = {
   autoJailbreak: 'chat-demo:auto-jailbreak',
   injectPromptEveryTurn: 'chat-demo:inject-prompt-every-turn',
   translateJailbreakZh: 'chat-demo:translate-jailbreak-zh',
+  thinkingAsBody: 'chat-demo:thinking-as-body',
   autoCompress: 'chat-demo:auto-compress',
+  savedMemoryEnabled: 'chat-demo:saved-memory-enabled',
+  autoExtractMemory: 'chat-demo:auto-extract-memory',
+  memoryBankEnabled: 'chat-demo:memory-bank-enabled',
+  memoryBankLimit: 'chat-demo:memory-bank-limit',
+  memoryBankThreshold: 'chat-demo:memory-bank-threshold',
+  memoryBankDimension: 'chat-demo:memory-bank-dimension',
+  memoryBankKeywordWeight: 'chat-demo:memory-bank-keyword-weight',
+  memoryBankTagWeight: 'chat-demo:memory-bank-tag-weight',
+  memoryBankVectorWeight: 'chat-demo:memory-bank-vector-weight',
+  memoryBankEdgeWeight: 'chat-demo:memory-bank-edge-weight',
+  dailyLimitEnabled: 'chat-demo:daily-limit-enabled',
+  dailyTokenLimit: 'chat-demo:daily-token-limit',
+  dailyCostLimit: 'chat-demo:daily-cost-limit',
   variantRaceBudget: 'chat-demo:variant-race-budget',
   variantRaceConfirmDismissed: 'chat-demo:variant-race-confirm-dismissed',
   search: 'chat-demo:search',
@@ -159,6 +196,10 @@ const initialLocation = (): UserLocation | null => {
     if (!location) {
       return null
     }
+    // 空间站 / 月球 / 火星等特殊位置不受浏览器语言和行政区校验影响
+    if (location.place) {
+      return location
+    }
     return isChineseBrowser()
       ? location.region === 'CN' && location.province
         ? location
@@ -202,6 +243,12 @@ const initialNumber = (key: string, fallback: number, min: number, max: number):
   }
   const value = Number(raw)
   return Number.isFinite(value) && value >= min && value <= max ? value : fallback
+}
+
+const MEMORY_DIMENSIONS = [64, 128, 256, 384, 768] as const
+const initialDimension = (): number => {
+  const value = Number(read(KEYS.memoryBankDimension))
+  return MEMORY_DIMENSIONS.includes(value as (typeof MEMORY_DIMENSIONS)[number]) ? value : 256
 }
 
 /** 思考强度：优先读新键，旧数据只有 thinking 开关时按标准档恢复 */
@@ -306,7 +353,21 @@ export const useSettings = create<Settings>(() => ({
   autoJailbreak: read(KEYS.autoJailbreak) === 'true',
   injectPromptEveryTurn: read(KEYS.injectPromptEveryTurn) === 'true',
   translateJailbreakZh: read(KEYS.translateJailbreakZh) === 'true',
+  thinkingAsBody: read(KEYS.thinkingAsBody) === 'true',
   autoCompress: read(KEYS.autoCompress) === 'true',
+  savedMemoryEnabled: read(KEYS.savedMemoryEnabled) !== 'false',
+  autoExtractMemory: read(KEYS.autoExtractMemory) === 'true',
+  memoryBankEnabled: read(KEYS.memoryBankEnabled) !== 'false',
+  memoryBankLimit: initialNumber(KEYS.memoryBankLimit, 4, 1, 12),
+  memoryBankThreshold: initialNumber(KEYS.memoryBankThreshold, 0.15, 0, 1),
+  memoryBankDimension: initialDimension(),
+  memoryBankKeywordWeight: initialNumber(KEYS.memoryBankKeywordWeight, 1, 0, 5),
+  memoryBankTagWeight: initialNumber(KEYS.memoryBankTagWeight, 0.5, 0, 5),
+  memoryBankVectorWeight: initialNumber(KEYS.memoryBankVectorWeight, 0.8, 0, 5),
+  memoryBankEdgeWeight: initialNumber(KEYS.memoryBankEdgeWeight, 0.4, 0, 5),
+  dailyLimitEnabled: read(KEYS.dailyLimitEnabled) === 'true',
+  dailyTokenLimit: initialNumber(KEYS.dailyTokenLimit, 1_000_000, 1000, 100_000_000),
+  dailyCostLimit: initialNumber(KEYS.dailyCostLimit, 10, 0.01, 100_000),
   variantRaceBudget: initialNumber(KEYS.variantRaceBudget, 1, 0.01, 1000),
   variantRaceConfirmDismissed: read(KEYS.variantRaceConfirmDismissed) === 'true',
   search: read(KEYS.search) === 'true',
@@ -526,9 +587,78 @@ export const setInjectPromptEveryTurn = (injectPromptEveryTurn: boolean) => {
   useSettings.setState({ injectPromptEveryTurn })
 }
 
+export const setThinkingAsBody = (thinkingAsBody: boolean) => {
+  write(KEYS.thinkingAsBody, String(thinkingAsBody))
+  useSettings.setState({ thinkingAsBody })
+}
+
 export const setTranslateJailbreakZh = (translateJailbreakZh: boolean) => {
   write(KEYS.translateJailbreakZh, String(translateJailbreakZh))
   useSettings.setState({ translateJailbreakZh })
+}
+
+export const setSavedMemoryEnabled = (savedMemoryEnabled: boolean) => {
+  write(KEYS.savedMemoryEnabled, String(savedMemoryEnabled))
+  useSettings.setState({ savedMemoryEnabled })
+}
+
+export const setAutoExtractMemory = (autoExtractMemory: boolean) => {
+  write(KEYS.autoExtractMemory, String(autoExtractMemory))
+  useSettings.setState({ autoExtractMemory })
+}
+
+export const setMemoryBankEnabled = (memoryBankEnabled: boolean) => {
+  write(KEYS.memoryBankEnabled, String(memoryBankEnabled))
+  useSettings.setState({ memoryBankEnabled })
+}
+
+export const setMemoryBankLimit = (memoryBankLimit: number) => {
+  const next = Math.min(12, Math.max(1, Math.round(memoryBankLimit)))
+  write(KEYS.memoryBankLimit, String(next))
+  useSettings.setState({ memoryBankLimit: next })
+}
+
+export const setMemoryBankThreshold = (memoryBankThreshold: number) => {
+  const next = Math.min(1, Math.max(0, memoryBankThreshold))
+  write(KEYS.memoryBankThreshold, String(next))
+  useSettings.setState({ memoryBankThreshold: next })
+}
+
+export const setMemoryBankDimension = (memoryBankDimension: number) => {
+  if (!MEMORY_DIMENSIONS.includes(memoryBankDimension as (typeof MEMORY_DIMENSIONS)[number])) {
+    return
+  }
+  write(KEYS.memoryBankDimension, String(memoryBankDimension))
+  useSettings.setState({ memoryBankDimension })
+}
+
+export const setMemoryBankWeight = (key: 'keyword' | 'tag' | 'vector' | 'edge', value: number) => {
+  const next = Math.min(5, Math.max(0, value))
+  const field = {
+    keyword: 'memoryBankKeywordWeight',
+    tag: 'memoryBankTagWeight',
+    vector: 'memoryBankVectorWeight',
+    edge: 'memoryBankEdgeWeight',
+  } as const
+  write(KEYS[field[key]], String(next))
+  useSettings.setState({ [field[key]]: next } as Partial<Settings>)
+}
+
+export const setDailyLimitEnabled = (dailyLimitEnabled: boolean) => {
+  write(KEYS.dailyLimitEnabled, String(dailyLimitEnabled))
+  useSettings.setState({ dailyLimitEnabled })
+}
+
+export const setDailyTokenLimit = (dailyTokenLimit: number) => {
+  const next = Math.min(100_000_000, Math.max(1000, Math.round(dailyTokenLimit)))
+  write(KEYS.dailyTokenLimit, String(next))
+  useSettings.setState({ dailyTokenLimit: next })
+}
+
+export const setDailyCostLimit = (dailyCostLimit: number) => {
+  const next = Math.min(100_000, Math.max(0.01, dailyCostLimit))
+  write(KEYS.dailyCostLimit, String(next))
+  useSettings.setState({ dailyCostLimit: next })
 }
 
 export const setAutoCompress = (autoCompress: boolean) => {
@@ -559,7 +689,21 @@ export const resetSettings = () => {
     autoJailbreak: false,
     injectPromptEveryTurn: false,
     translateJailbreakZh: false,
+    thinkingAsBody: false,
     autoCompress: false,
+    savedMemoryEnabled: true,
+    autoExtractMemory: false,
+    memoryBankEnabled: true,
+    memoryBankLimit: 4,
+    memoryBankThreshold: 0.15,
+    memoryBankDimension: 256,
+    memoryBankKeywordWeight: 1,
+    memoryBankTagWeight: 0.5,
+    memoryBankVectorWeight: 0.8,
+    memoryBankEdgeWeight: 0.4,
+    dailyLimitEnabled: false,
+    dailyTokenLimit: 1_000_000,
+    dailyCostLimit: 10,
     variantRaceBudget: 1,
     variantRaceConfirmDismissed: false,
     search: false,

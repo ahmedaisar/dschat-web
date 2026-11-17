@@ -10,11 +10,13 @@ import {
 import {
   BUILTIN_MODELS,
   fetchRemoteModels,
+  modelInitial,
   modelLabel,
   readCachedModels,
   type ModelOption,
 } from '../../services/api/models.js'
 import { setModel, useSettings } from '../../services/settings.js'
+import { useIsMobile } from '../../app/viewport.js'
 import { formatMoney, isKnownModel, modelPriceFor } from '../../services/chat/sessionStats.js'
 import { showToast } from '../base/toastState.js'
 import { useTranslate } from '../../i18n/index.js'
@@ -41,6 +43,7 @@ const priceText = (model: string, t: ReturnType<typeof useTranslate>): string =>
 export const ModelPicker = () => {
   const t = useTranslate()
   const model = useSettings((state) => state.model)
+  const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<ModelOption[]>(() => mergeModels(readCachedModels() ?? []))
   const [loading, setLoading] = useState(false)
@@ -105,12 +108,13 @@ export const ModelPicker = () => {
         ref={anchorRef}
         type="button"
         className={clsx(styles.trigger, open && styles.open)}
-        aria-label={t('modelSelect')}
+        aria-label={`${t('modelSelect')}: ${modelLabel(model)}`}
+        title={modelLabel(model)}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className={styles.name}>{modelLabel(model)}</span>
+        <span className={styles.name}>{isMobile ? modelInitial(model) : modelLabel(model)}</span>
         <span className={styles.arrow}>
           <IconChevronDownOutline14 />
         </span>

@@ -36,6 +36,21 @@ export const prettyModelName = (id: string): string =>
 export const modelLabel = (id: string): string =>
   BUILTIN_MODELS.find((item) => item.id === id)?.label ?? prettyModelName(id)
 
+/** 手机端工具行空间紧张，模型胶囊只显示短名（Flash / V4 Pro / Chat） */
+export const modelInitial = (id: string): string =>
+  modelShortLabel(id).trim().slice(0, 1).toUpperCase()
+
+export const modelShortLabel = (id: string): string => {
+  const builtin: Record<string, string> = {
+    'deepseek-flash': 'Flash',
+    'deepseek-v4-pro': 'V4 Pro',
+  }
+  if (builtin[id]) {
+    return builtin[id]
+  }
+  return prettyModelName(id).split(' ').at(-1) ?? id
+}
+
 export const readCachedModels = (): ModelOption[] | null => {
   try {
     const raw = localStorage.getItem(CACHE_KEY)

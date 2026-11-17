@@ -19,6 +19,7 @@ import {
   reserveGeometry,
 } from '../../services/chat/contextPressure.js'
 import { useSettings } from '../../services/settings.js'
+import { syncDailyUsageDate, useDailyUsage } from '../../services/chat/dailyUsage.js'
 import { modelLabel } from '../../services/api/models.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
@@ -82,6 +83,10 @@ const StatsContent = () => {
     () => estimateCost(session, { holiday, voiceDiscount: discount }),
     [session, holiday, discount]
   )
+  const daily = useDailyUsage()
+  useEffect(() => {
+    syncDailyUsageDate()
+  }, [])
   const run = useLiveStats((state) => state.run)
   const active = run?.active ?? false
   // 生成中每秒重渲染一次，让用时、速度、估算是新值
@@ -118,6 +123,8 @@ const StatsContent = () => {
 
   const sessionItems: MetricItem[] = [
     { key: 'statsRounds', value: String(totals.rounds) },
+    { key: 'dailyUsageTokens', value: formatTokens(daily.totalTokens) },
+    { key: 'dailyUsageCost', value: formatMoney(daily.cost) },
     { key: 'statsSteps', value: String(totals.steps) },
     { key: 'statsSpeed', value: `${totals.outputSpeed.toFixed(1)} ${t('statsUnitSpeed')}` },
     {

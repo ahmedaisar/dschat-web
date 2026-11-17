@@ -372,6 +372,8 @@ export const LabView = () => {
         </button>
       </div>
 
+      {tab !== 'attack' ? <div className={styles.directNote}>{t('labDirectApiNote')}</div> : null}
+
       {error && tab === 'attack' ? <div className={styles.error}>{error}</div> : null}
 
       {tab === 'race' ? (

@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.2**
+> Current version: **2.5.5**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -56,7 +56,8 @@ On top of that, this fork turns the hard-coded limits of the original into confi
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
 - **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
-- **Models and cost**: a model card in the input bar (built-in Flash / V4 Pro plus cloud fetch), a context ring, session statistics, and per-model billing;
+- **Models and cost**: a model card in the input bar (built-in Flash / V4 Pro plus cloud fetch), a context ring, session statistics, per-model billing, and daily token / cost alerts;
+- **Memory**: long-term memory (manual / auto-extracted) and a memory graph (nodes, edges, vector dimension, retrieval weights, search debug) injected into requests;
 - **Data and attachments**: configurable size / count / extension limits, history import/export, and one-click restore-default-settings.
 
 - **Unrestricted mode** — swap the system prompt, automatically skip the safety check, and allow continuing refused replies.
@@ -104,14 +105,15 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to eight:
+The settings dialog grows from two groups to nine:
 
 | Group           | Contents                                                                                                                          |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| General         | Theme, language, read-aloud voice, location (original, untouched)                                                                 |
+| General         | Theme, language, TTS voice, location, daily usage and alerts                                                                      |
 | **Model**       | Current model, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
 | **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                           |
 | **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                     |
+| **Memory**      | Long-term memory, auto-extraction, memory graph, vector dimension, retrieval weights, search debug                                |
 | **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                       |
 | Data            | API key, import, export, restore default settings, delete all                                                                     |
 | About           | Repository, demo and upstream links                                                                                               |
@@ -277,6 +279,8 @@ Settings → **Attachments**:
 
 ### 3.13 Variant race (third lab tab)
 
+> Model race and variant race call the API directly and **need no MCP backend**; only the attackers tab uses MCP.
+
 The standalone app's Parseltongue v4 now lives in the lab: **33 perturbation techniques**, selected by tier (light 11 / standard 22 / heavy 33), rewrite each trigger word in the question, fire requests in parallel batches and keep the best composite score.
 
 | Item              | Notes                                                                                                                                                                                |
@@ -300,6 +304,7 @@ Chinese support: `spaced / zwj / dotted / underscored / reversed / brackets / st
 | ---------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Inject the system prompt every round     | Settings → Prompt                               | Silently appends the current system prompt to `latest_reminder` on every request so long chats keep the setup; it is not stored in history snapshots, and input tokens clearly increase.                                                                                                                                                                                                                                     |
 | Chinese jailbreak prompts (experimental) | Settings → Advanced                             | Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak, so it is off by default. L1B3RT4S combos stay in English.                                                                                                                                                                                                                      |
+| Disguise historical thinking             | Settings → Prompt                               | Folds the **previous** reply’s thinking into the historical assistant text so the server does not drop it; only the last historical round is converted and token usage rises slightly.                                                                                                                                                                                                                                       |
 | Long-chat compression                    | Settings → Model (auto) + stats dialog (manual) | Auto: once context pressure reaches 80% of the window (after the 64k headroom and output reserve) with at least 2 new rounds since the last compression, older content is summarised in the background. Manual: "Compress older messages" in the stats dialog, always keeping the last 2 rounds verbatim. The summary is injected as a `latest_reminder`; local history is untouched and the summary can be cleared anytime. |
 
 ---
@@ -325,6 +330,7 @@ The leftmost control in the input toolbar is the model card, with **DeepSeek Fla
 - "Fetch from cloud" calls `GET /models`, then the Anthropic prefix `/anthropic/v1/models`; fetched models are cached for an hour and their ids are passed through to requests;
 - A switch affects only new replies: old replies keep their own model, continuations keep the original model, and statistics/cost are computed per reply;
 - The context ring uses the current model's window; models without a price entry fall back to Flash rates and a 128k window;
+- On mobile the model button collapses to a circular short mark (F / V); tapping it still opens the full card;
 - Settings → Model shows the current model; restoring defaults resets it to DeepSeek Flash.
 
 Prices (yuan per million tokens, off-peak; peak ×2):
@@ -335,6 +341,39 @@ Prices (yuan per million tokens, off-peak; peak ×2):
 | `deepseek-v4-pro` | 0.15      | 4.5          | 13.5   |
 
 The billing section in the stats dialog gains a "By model" breakdown with reply counts and cost per model.
+
+### 3.17 Long-term memory and daily usage
+
+**Long-term memory** (Settings → Memory):
+
+- Add / edit / enable / delete / clear entries manually; enabled entries are injected into every request's `system`;
+- With **auto-extract** on, one extra Flash call after each turn turns stable facts, identity and long-term preferences into JSON operations (small extra cost, off by default);
+- Memories stay on this device and are not part of history exports; enabled entries also sync into the memory graph as `saved` nodes.
+
+**Daily usage and alerts** (Settings → General):
+
+- Tracks today's `input + cache_read + cache_creation + output` tokens and cost at each model's peak/off-peak rates;
+- Optional daily token and cost limits; crossing one shows a toast once per day and never blocks requests;
+- The stats dialog shows today's tokens and cost, with a reset button.
+
+### 3.18 Memory graph (ported from Operit)
+
+Settings → Memory → **Memory graph**:
+
+- Nodes carry a title, content, tags, importance and credibility; a new node is auto-linked to up to 3 similar nodes by local hashed-vector cosine similarity;
+- Retrieval combines keyword, tag, vector and weighted edge expansion; all four weights, the relevance threshold and the number of results are configurable;
+- Vector dimension can be 64 / 128 / 256 / 384 / 768 (default 256), generated locally without an embedding service;
+- **Search debug** shows each candidate's keyword / tag / vector / edge score, total, pass flag, plus node/edge counts, match counts and edges traversed;
+- At request time the top N matches are injected into `system` together with long-term memory; no matches means no injection;
+- On mobile the weights become single-column, the search-debug table scrolls horizontally, and nodes/tags wrap.
+
+### 3.19 Locations: clear and off-world
+
+Settings → General → Location:
+
+- When a location is set, a **Clear location** button removes it;
+- New special locations: Space Station (Satellite / Station), Moon (Near Side / Far Side) and Mars (Spacetime Management Center);
+- A special location overrides the administrative selection and is written directly into `latest_reminder`; it does not affect weather or networking.
 
 ---
 
@@ -384,8 +423,17 @@ The billing section in the stats dialog gains a "By model" breakdown with reply 
 | Lab         | Variant race budget                  | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
 | Lab         | Variant race confirm dismissed       | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
 | Prompt      | Inject the system prompt every round | off               | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
+| Prompt      | Disguise historical thinking         | off               | `chat-demo:thinking-as-body`               | Unaffected                      |
 | Model       | Auto-compress long chats             | off               | `chat-demo:auto-compress`                  | Unaffected                      |
 | Advanced    | Chinese jailbreak prompts            | off               | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
+| General     | Daily limit alerts                   | off               | `chat-demo:daily-limit-enabled`            | Unaffected                      |
+| General     | Daily token limit                    | 1000000           | `chat-demo:daily-token-limit`              | Unaffected                      |
+| General     | Daily cost limit (yuan)              | 10                | `chat-demo:daily-cost-limit`               | Unaffected                      |
+| Memory      | Long-term memory                     | on                | `chat-demo:saved-memory-enabled`           | Unaffected                      |
+| Memory      | Auto-extract memory                  | off               | `chat-demo:auto-extract-memory`            | Unaffected                      |
+| Memory      | Memory-graph retrieval               | on                | `chat-demo:memory-bank-enabled`            | Unaffected                      |
+| Memory      | Results to inject                    | 4                 | `chat-demo:memory-bank-limit`              | Unaffected                      |
+| Memory      | Vector dimension                     | 256               | `chat-demo:memory-bank-dimension`          | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -451,6 +499,10 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)       | Thinking effort 0–4 track                                                                                            |
 | [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                 | Statistics and billing dialog                                                                                        |
 | [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | Long-chat compression: structured summary, auto trigger and savings                                                  |
+| [`src/services/chat/savedMemory.ts`](src/services/chat/savedMemory.ts)                             | Long-term memory: CRUD, auto-extraction, system injection                                                            |
+| [`src/services/chat/memoryBank.ts`](src/services/chat/memoryBank.ts)                               | Memory graph: nodes / edges / hashed vectors / weighted search / debug                                               |
+| [`src/services/chat/dailyUsage.ts`](src/services/chat/dailyUsage.ts)                               | Daily token and cost tracking with limit alerts                                                                      |
+| [`src/components/settings/MemorySettings.tsx`](src/components/settings/MemorySettings.tsx)         | Memory settings and search debug                                                                                     |
 | [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | Context pressure and compaction reserve (matching DSH)                                                               |
 | [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                         | Reply ratings and the AutoTune EMA profile                                                                           |
 | [`src/services/api/models.ts`](src/services/api/models.ts)                                         | Built-in models, cloud `/models` fetch and cache                                                                     |
@@ -535,6 +587,11 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 13. **Auto jailbreak and variant races cost extra**: every retry and every variant is a real request; variant races are bounded by the budget cap.
 14. **Cloud model lists depend on the API and network**: a failed fetch falls back to the two built-ins; models without a price entry are estimated at Flash rates with a 128k window, and actual capabilities come from the server.
 15. **Switching models does not rewrite old replies**: old replies keep their model and cost; continuations keep that reply's model, and only new replies use the current choice.
+16. **Auto-extraction costs an extra call**: one Flash request per turn; long-term memory and the memory graph stay on this device and are not exported.
+17. **The memory graph uses local hashed vectors**, not semantic embeddings: retrieval is approximate but needs no external service; changing the dimension recomputes vectors.
+18. **Daily usage only counts chat replies**: MCP lab, races and title generation are not included; costs are estimated from current peak/off-peak rates and may differ slightly from the bill.
+19. **Special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
+20. **Disguised thinking only covers the previous round**: it is sent as ordinary text, so the server no longer treats it as thinking; token usage rises slightly.
 
 ---
 
@@ -559,4 +616,6 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 - Thanks to [DeepSeek-Agent](https://github.com/Aoan2011/DeepSeek-Agent) for the reference implementation of the thinking slider, context ring and session statistics.
 - Thanks to [dsh-unrestricted](https://github.com/yexi-by/dsh-unrestricted) for the reference jailbreak prompts and experiment settings.
 - Thanks to [L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S), the upstream source for GODMODE, the Hall of Fame combos and jailbreak prompts.
+- Thanks to [Operit](https://github.com/AAswordman/Operit) for the memory graph, vector dimensions, retrieval weights and search-debug reference.
+- Thanks to [DeepChat](https://github.com/YanJiuWeiYuanHui/DeepChat) for the long-term memory and daily token / cost alert reference.
 - The engines under `src/services/unrestricted/` (input perturbation, AutoTune, STM, race scoring, GODMODE prompt) are ported from [G0DM0D3](https://github.com/elder-plinius/G0DM0D3) and licensed [AGPL-3.0](src/services/unrestricted/COPYING-AGPL-3.0); that directory keeps its own license, separate from the MIT-licensed rest of the repo.

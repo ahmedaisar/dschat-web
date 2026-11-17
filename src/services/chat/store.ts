@@ -13,6 +13,9 @@ import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { noteRunTiming } from './sessionStats.js'
 import { autoCompressNeeded, compressSession } from './compression.js'
+import { extractMemoriesFromTurn, formatSavedMemories } from './savedMemory.js'
+import { formatMemoryBankContext } from './memoryBank.js'
+import { noteDailyUsage } from './dailyUsage.js'
 import { contextWindowFor, useContextUsage } from './contextUsage.js'
 import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
@@ -1345,17 +1348,48 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           autoJailbreak,
           injectPromptEveryTurn,
           translateJailbreakZh,
+          thinkingAsBody,
+          savedMemoryEnabled,
+          memoryBankEnabled,
+          memoryBankLimit,
+          memoryBankThreshold,
+          memoryBankDimension,
+          memoryBankKeywordWeight,
+          memoryBankTagWeight,
+          memoryBankVectorWeight,
+          memoryBankEdgeWeight,
         } = useSettings.getState()
         // 组装流水线：自动重试的组合 > 会话级提示词（实验台组合）> 自动越狱的 GODMODE > 默认预设
-        const systemText =
+        const baseSystemText =
           takeAutoRetryOverride() ??
           getSession(sessionId)?.systemPrompt ??
           (autoJailbreak
             ? `${jailbreakSystemPrompt(translateJailbreakZh)}${depthDirective(translateJailbreakZh)}`
             : composeSystemPrompt(unrestricted, systemPrompt, promptPreset, translateJailbreakZh))
+        // 长期记忆与网状记忆库检索结果追加到 system；标题请求不需要
+        const memoryContext = titleRequests.has(controller)
+          ? ''
+          : [
+              savedMemoryEnabled ? formatSavedMemories() : '',
+              memoryBankEnabled
+                ? formatMemoryBankContext(prepared.question.content, {
+                    dimension: memoryBankDimension,
+                    limit: memoryBankLimit,
+                    threshold: memoryBankThreshold,
+                    keywordWeight: memoryBankKeywordWeight,
+                    tagWeight: memoryBankTagWeight,
+                    vectorWeight: memoryBankVectorWeight,
+                    edgeWeight: memoryBankEdgeWeight,
+                  })
+                : '',
+            ]
+              .filter(Boolean)
+              .join('\n\n')
+        const systemText =
+          memoryContext === '' ? baseSystemText : `${baseSystemText}\n\n${memoryContext}`
         // 每轮注入：只加在本次请求的 latest_reminder 里，不写入历史快照，避免存储膨胀
         const requestReminder = injectPromptEveryTurn
-          ? `${latestReminder}\n\n${systemText}`
+          ? `${latestReminder}\n\n${baseSystemText}`
           : latestReminder
         const messages = toRequestMessages(
           prepared.history,
@@ -1363,7 +1397,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           prepared.prefix,
           initial.thinking ?? false,
           requestReminder,
-          getSession(sessionId)?.compression
+          getSession(sessionId)?.compression,
+          thinkingAsBody
         )
         const effort = initial.thinking ? reasoningEffort : 0
         // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
@@ -1518,6 +1553,30 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       controller.signal.aborted
     )
     finishLiveRun(sessionId)
+    // 每日用量与费用：标题请求不计入用户可见的日用量
+    if (reply.usage && !titleRequests.has(controller)) {
+      noteDailyUsage(reply.model ?? MODEL, reply.usage)
+    }
+    if (
+      reply.status === 'done' &&
+      reply.stopReason !== 'refusal' &&
+      !titleRequests.has(controller) &&
+      reply.usage &&
+      useSettings.getState().savedMemoryEnabled &&
+      useSettings.getState().autoExtractMemory
+    ) {
+      const memoryKey = useSettings.getState().apiKey ?? ''
+      const userText = request.question.content
+      void extractMemoriesFromTurn({
+        apiKey: memoryKey,
+        userText,
+        assistantText: getReplyAnswerText(reply),
+      }).then((changed) => {
+        if (changed) {
+          showToast({ key: 'memoryUpdatedToast' })
+        }
+      })
+    }
     titleRequests.delete(controller)
     streamFlushes.delete(sessionId)
     cancelAnimationFrame(frame)

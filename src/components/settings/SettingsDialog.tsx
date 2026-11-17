@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  IconBranchOutline16,
   IconBrowseOutline16,
   IconDarkOutline16,
   IconDataOutline16,
@@ -23,8 +24,15 @@ import {
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { modelLabel } from '../../services/api/models.js'
+import { MemorySettings } from './MemorySettings.js'
 import { useChatStore } from '../../services/chat/store.js'
-import { regionCodes, getRegionName, provinces } from '../../services/location.js'
+import {
+  regionCodes,
+  getRegionName,
+  provinces,
+  specialPlaces,
+  type SpecialPlace,
+} from '../../services/location.js'
 import {
   isChineseBrowser,
   resetSettings,
@@ -38,11 +46,15 @@ import {
   setAutoTuneStrategy,
   setInjectPromptEveryTurn,
   setContinueRefused,
+  setDailyCostLimit,
+  setDailyLimitEnabled,
+  setDailyTokenLimit,
   setParseltongue,
   setParseltongueIntensity,
   setParseltongueTechnique,
   setPromptPreset,
   setStmModules,
+  setThinkingAsBody,
   setTranslateJailbreakZh,
   setKeepReplyContent,
   setLocale,
@@ -58,6 +70,12 @@ import {
   useSettings,
   type ThemePreference,
 } from '../../services/settings.js'
+import {
+  resetDailyUsage,
+  syncDailyUsageDate,
+  useDailyUsage,
+} from '../../services/chat/dailyUsage.js'
+import { formatMoney, formatTokens } from '../../services/chat/sessionStats.js'
 import type { AutoTuneStrategy } from '../../services/unrestricted/autotune.js'
 import type { ObfuscationTechnique } from '../../services/unrestricted/parseltongue.js'
 import type { PromptPreset } from '../../services/unrestricted/prompts.js'
@@ -96,6 +114,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'advanced',
     label: 'settingDialogAsideAdvancedOptionLabel',
     icon: <IconBrowseOutline16 />,
+  },
+  {
+    value: 'memory',
+    label: 'settingDialogAsideMemoryOptionLabel',
+    icon: <IconBranchOutline16 />,
   },
   {
     value: 'attachments',
@@ -158,6 +181,7 @@ const SettingsContent = () => {
               <LocaleSetting />
               <TtsVoiceSetting />
               <LocationSetting />
+              <DailyUsageSetting />
             </>
           ) : section === 'model' ? (
             <ModelSettings />
@@ -165,6 +189,8 @@ const SettingsContent = () => {
             <UnrestrictedSetting />
           ) : section === 'advanced' ? (
             <AdvancedSettings />
+          ) : section === 'memory' ? (
+            <MemorySettings />
           ) : section === 'attachments' ? (
             <AttachmentsSetting />
           ) : section === 'about' ? (
@@ -331,6 +357,87 @@ const useHistoryDelete = () => {
   }
 }
 
+const DailyUsageSetting = () => {
+  const t = useTranslate()
+  const enabled = useSettings((state) => state.dailyLimitEnabled)
+  const tokenLimit = useSettings((state) => state.dailyTokenLimit)
+  const costLimit = useSettings((state) => state.dailyCostLimit)
+  const usage = useDailyUsage()
+  useEffect(() => {
+    syncDailyUsageDate()
+  }, [])
+  return (
+    <>
+      <div className={styles.groupTitle}>{t('dailyUsageSection')}</div>
+      <SettingCell
+        label={t('dailyLimitEnabledLabel')}
+        description={t('dailyLimitEnabledDesc')}
+        status={null}
+        action={
+          <Switch
+            checked={enabled}
+            onChange={setDailyLimitEnabled}
+            label={t('dailyLimitEnabledLabel')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('dailyUsageTitle')}
+        description={t('dailyUsageText', {
+          tokens: formatTokens(usage.totalTokens),
+          cost: formatMoney(usage.cost),
+        })}
+        status={null}
+        action={
+          <Button
+            variant="outlined"
+            size="m"
+            disabled={usage.totalTokens === 0 && usage.cost === 0}
+            onClick={() => {
+              resetDailyUsage()
+              showToast({ key: 'dailyResetToast' })
+            }}
+          >
+            {t('dailyResetButton')}
+          </Button>
+        }
+      />
+      {enabled ? (
+        <>
+          <SettingCell
+            label={t('dailyTokenLimitLabel')}
+            status={null}
+            action={
+              <ParamControl
+                label={t('dailyTokenLimitLabel')}
+                value={tokenLimit}
+                min={1000}
+                max={100_000_000}
+                step={1000}
+                onChange={(value) => setDailyTokenLimit(value ?? 1_000_000)}
+              />
+            }
+          />
+          <SettingCell
+            label={t('dailyCostLimitLabel')}
+            status={null}
+            action={
+              <ParamControl
+                label={t('dailyCostLimitLabel')}
+                value={costLimit}
+                min={0.01}
+                max={1000}
+                step={0.1}
+                onChange={(value) => setDailyCostLimit(value ?? 10)}
+              />
+            }
+          />
+        </>
+      ) : null}
+    </>
+  )
+}
+
 const LocationSetting = () => {
   const t = useTranslate()
   const locale = useSettings((state) => state.locale)
@@ -381,7 +488,7 @@ const LocationSetting = () => {
             <Select
               ariaLabel={t('settingsLocationRegion')}
               className={styles.regionSelect}
-              value={location?.region ?? ''}
+              value={location?.place ? '' : (location?.region ?? '')}
               placeholder={t('settingsLocationRegion')}
               options={regionCodes
                 .map((code) => ({ value: code, label: getRegionName(code, locale) }))
@@ -389,6 +496,27 @@ const LocationSetting = () => {
               onChange={(value) => setLocation({ region: value })}
             />
           )}
+          <Select<string>
+            ariaLabel={t('settingsLocationSpecial')}
+            className={styles.specialSelect}
+            value={location?.place ?? ''}
+            placeholder={t('settingsLocationSpecial')}
+            options={[
+              { value: '', label: t('settingsLocationNone') },
+              ...specialPlaces.map((item) => ({
+                value: item.id,
+                label: locale === 'zh-CN' ? item.zh : item.en,
+              })),
+            ]}
+            onChange={(value) => {
+              setLocation(value === '' ? null : { region: 'CN', place: value as SpecialPlace })
+            }}
+          />
+          {location ? (
+            <Button variant="outlined" size="s" onClick={() => setLocation(null)}>
+              {t('settingsLocationClear')}
+            </Button>
+          ) : null}
         </div>
       }
     />
@@ -452,6 +580,8 @@ const AboutSetting = () => {
     },
     { label: 'aboutDemoLabel', href: 'https://chat-unrestricted.fur0.com/' },
     { label: 'aboutUpstreamLabel', href: 'https://github.com/deepseek-ai/chat-demo' },
+    { label: 'aboutOperitLabel', href: 'https://github.com/AAswordman/Operit' },
+    { label: 'aboutDeepChatLabel', href: 'https://github.com/YanJiuWeiYuanHui/DeepChat' },
   ]
   return (
     <div className={styles.about}>
@@ -480,6 +610,19 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV255Title',
+      items: [
+        'changelogV255Preview',
+        'changelogV255Location',
+        'changelogV255Memory',
+        'changelogV255Daily',
+        'changelogV255Bank',
+        'changelogV255Lab',
+        'changelogV255Thinking',
+        'changelogV255Mobile',
+      ],
+    },
     {
       title: 'changelogV252Title',
       items: ['changelogV252Toolbar'],
@@ -776,6 +919,7 @@ const UnrestrictedSetting = () => {
   const promptPreset = useSettings((state) => state.promptPreset)
   const injectPrompt = useSettings((state) => state.injectPromptEveryTurn)
   const translateJailbreak = useSettings((state) => state.translateJailbreakZh)
+  const thinkingAsBody = useSettings((state) => state.thinkingAsBody)
   return (
     <>
       <SettingCell
@@ -799,6 +943,18 @@ const UnrestrictedSetting = () => {
             checked={injectPrompt}
             onChange={setInjectPromptEveryTurn}
             label={t('settingsInjectPrompt')}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsThinkingAsBody')}
+        description={t('settingsThinkingAsBodyDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={thinkingAsBody}
+            onChange={setThinkingAsBody}
+            label={t('settingsThinkingAsBody')}
           />
         }
       />

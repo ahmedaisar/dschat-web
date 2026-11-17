@@ -235,8 +235,20 @@
 
 @media not all and (min-width: 768px) {
   .trigger {
-    max-width: 132px;
-    padding: 0 8px 0 10px;
+    width: 34px;
+    max-width: 34px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .name {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .arrow {
+    display: none;
   }
 
   .caption {
