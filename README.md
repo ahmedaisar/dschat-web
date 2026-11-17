@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.5**
+> Current version: **2.5.6**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -113,7 +113,7 @@ The settings dialog grows from two groups to nine:
 | **Model**       | Current model, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
 | **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                           |
 | **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                     |
-| **Memory**      | Long-term memory, auto-extraction, memory graph, vector dimension, retrieval weights, search debug                                |
+| **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug |
 | **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                       |
 | Data            | API key, import, export, restore default settings, delete all                                                                     |
 | About           | Repository, demo and upstream links                                                                                               |
@@ -236,7 +236,7 @@ The sidebar now has a **Lab** entry: it connects to the local `mcp-server/` over
 
 ### 3.10 Advanced features: prompt presets, perturbation, AutoTune, output shaping, model race
 
-The input bar is responsive: on desktop a single compact row shows the labels (model, auto jailbreak, thinking, search, perturbation) with a thin divider between the model and the toggles; below 768px they collapse to circular icons with horizontal scrolling instead of hiding desktop labels based on width measurement.
+The input bar is responsive: on desktop a single compact row shows the labels (model, auto jailbreak, thinking, search, perturbation) with a thin divider between the model and the toggles; below 768px everything except the model picker collapses to circular icons with horizontal scrolling, instead of hiding desktop labels based on width measurement.
 
 Settings → **Advanced** (everything is off by default, so the out-of-the-box behaviour is unchanged):
 
@@ -330,7 +330,7 @@ The leftmost control in the input toolbar is the model card, with **DeepSeek Fla
 - "Fetch from cloud" calls `GET /models`, then the Anthropic prefix `/anthropic/v1/models`; fetched models are cached for an hour and their ids are passed through to requests;
 - A switch affects only new replies: old replies keep their own model, continuations keep the original model, and statistics/cost are computed per reply;
 - The context ring uses the current model's window; models without a price entry fall back to Flash rates and a 128k window;
-- On mobile the model button collapses to a circular short mark (F / V); tapping it still opens the full card;
+- On mobile the model picker stays expanded with the current model name and dropdown arrow; only the other input controls collapse to circles;
 - Settings → Model shows the current model; restoring defaults resets it to DeepSeek Flash.
 
 Prices (yuan per million tokens, off-peak; peak ×2):
@@ -365,6 +365,10 @@ Settings → Memory → **Memory graph**:
 - Vector dimension can be 64 / 128 / 256 / 384 / 768 (default 256), generated locally without an embedding service;
 - **Search debug** shows each candidate's keyword / tag / vector / edge score, total, pass flag, plus node/edge counts, match counts and edges traversed;
 - At request time the top N matches are injected into `system` together with long-term memory; no matches means no injection;
+- Import/export a JSON archive of long-term memories plus graph nodes/edges; import can merge (content-deduplicated) or replace;
+- The relation graph draws nodes and weighted edges; click a node to inspect its content and tags; on mobile it keeps a readable size and scrolls horizontally;
+- Shows the current vector dimension, node count, average degree and estimated Float32 footprint; search debug adds dimension, query-token count and top score;
+- Chat statistics and the input context ring show memory nodes/edges/dimension/last injected hits; restoring defaults resets retrieval settings and daily alerts but keeps saved memory data;
 - On mobile the weights become single-column, the search-debug table scrolls horizontally, and nodes/tags wrap.
 
 ### 3.19 Locations: clear and off-world
@@ -501,6 +505,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | Long-chat compression: structured summary, auto trigger and savings                                                  |
 | [`src/services/chat/savedMemory.ts`](src/services/chat/savedMemory.ts)                             | Long-term memory: CRUD, auto-extraction, system injection                                                            |
 | [`src/services/chat/memoryBank.ts`](src/services/chat/memoryBank.ts)                               | Memory graph: nodes / edges / hashed vectors / weighted search / debug                                               |
+| [`src/services/chat/memoryArchive.ts`](src/services/chat/memoryArchive.ts)                         | Memory archive JSON import/export: merge or replace                                                                  |
 | [`src/services/chat/dailyUsage.ts`](src/services/chat/dailyUsage.ts)                               | Daily token and cost tracking with limit alerts                                                                      |
 | [`src/components/settings/MemorySettings.tsx`](src/components/settings/MemorySettings.tsx)         | Memory settings and search debug                                                                                     |
 | [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | Context pressure and compaction reserve (matching DSH)                                                               |
@@ -592,6 +597,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 18. **Daily usage only counts chat replies**: MCP lab, races and title generation are not included; costs are estimated from current peak/off-peak rates and may differ slightly from the bill.
 19. **Special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
 20. **Disguised thinking only covers the previous round**: it is sent as ordinary text, so the server no longer treats it as thinking; token usage rises slightly.
+21. **The relation graph draws at most 80 nodes**: extra nodes are still searched, just not drawn; importing in Replace mode overwrites current long-term memories and graph data, so export a backup first.
 
 ---
 

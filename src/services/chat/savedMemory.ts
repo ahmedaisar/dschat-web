@@ -137,6 +137,11 @@ export const deleteSavedMemory = (id: string) => {
   removeSavedMemoryNode(id)
 }
 
+/** 导入记忆归档时整体替换（不自动同步记忆库，归档里通常已包含节点） */
+export const replaceSavedMemories = (items: SavedMemoryItem[]) => {
+  commit(items)
+}
+
 export const clearSavedMemories = () => {
   const current = useSavedMemories.getState().items
   for (const item of current) {

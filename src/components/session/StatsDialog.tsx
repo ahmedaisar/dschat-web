@@ -21,6 +21,7 @@ import {
 import { useSettings } from '../../services/settings.js'
 import { syncDailyUsageDate, useDailyUsage } from '../../services/chat/dailyUsage.js'
 import { modelLabel } from '../../services/api/models.js'
+import { useMemoryBank, useMemorySearchStats } from '../../services/chat/memoryBank.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
 import { Modal } from '../base/Modal.js'
@@ -70,6 +71,10 @@ const StatsContent = () => {
   const apiKey = useSettings((state) => state.apiKey) ?? ''
   const maxTokens = useSettings((state) => state.maxTokens)
   const model = useSettings((state) => state.model)
+  const memoryDimension = useSettings((state) => state.memoryBankDimension)
+  const memoryNodes = useMemoryBank((state) => state.nodes.length)
+  const memoryEdges = useMemoryBank((state) => state.edges.length)
+  const lastMemorySearch = useMemorySearchStats((state) => state.last)
   const usage = useContextUsage((state) => (activeId ? state.byId[activeId] : undefined))
   // 与输入框圆环同一套压力口径：压缩后按摘要节省量折算
   const contextTokens = effectiveContextTokens(
@@ -257,6 +262,30 @@ const StatsContent = () => {
               {t('compressClear')}
             </Button>
           ) : null}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>{t('memoryStatsTitle')}</div>
+        <div className={styles.liveRow}>
+          <div className={styles.liveItem}>
+            <span className={styles.liveLabel}>{t('memoryStatsNodes')}</span>
+            <span className={styles.liveValue}>{memoryNodes}</span>
+          </div>
+          <div className={styles.liveItem}>
+            <span className={styles.liveLabel}>{t('memoryStatsEdges')}</span>
+            <span className={styles.liveValue}>{memoryEdges}</span>
+          </div>
+          <div className={styles.liveItem}>
+            <span className={styles.liveLabel}>{t('memoryStatsDimension')}</span>
+            <span className={styles.liveValue}>{memoryDimension}</span>
+          </div>
+          <div className={styles.liveItem}>
+            <span className={styles.liveLabel}>{t('memoryStatsLastHits')}</span>
+            <span className={styles.liveValue}>
+              {lastMemorySearch ? lastMemorySearch.passed : t('memoryStatsNoSearch')}
+            </span>
+          </div>
         </div>
       </section>
 

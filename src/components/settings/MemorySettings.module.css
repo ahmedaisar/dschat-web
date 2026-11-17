@@ -49,6 +49,83 @@
   font-size: 11px;
 }
 
+.archiveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.archiveRow .hint {
+  flex: 1 1 100%;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.dimensionUsage {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.graphWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 10px;
+  padding: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background-color: var(--dsw-alias-bg-base);
+}
+
+.graph {
+  width: 100%;
+  height: auto;
+  color: var(--dsw-alias-border-l3);
+}
+
+.graphNode {
+  cursor: pointer;
+}
+
+.graphNodeCircle {
+  fill: var(--dsw-alias-brand-primary);
+  fill-opacity: 0.7;
+}
+
+.graphNodeSelected {
+  fill: var(--dsw-alias-brand-primary);
+  stroke: var(--dsw-alias-label-primary);
+  stroke-width: 2;
+}
+
+.graphLabel {
+  fill: var(--dsw-alias-label-secondary);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+.selectedNode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+}
+
+.importActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .addRow {
   display: flex;
   align-items: center;
@@ -299,6 +376,15 @@
 }
 
 @media not all and (min-width: 768px) {
+  /* 手机上让关系图保持可读尺寸，横向滚动查看 */
+  .graphWrap {
+    overflow-x: auto;
+  }
+
+  .graph {
+    min-width: 560px;
+  }
+
   .fieldGrid {
     grid-template-columns: 1fr;
   }

@@ -138,6 +138,18 @@ export const en = {
   aboutDeepChatLabel: 'Credits: DeepChat',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV256Title: 'v2.5.6 · 2026-11',
+  changelogV256ModelMobile:
+    'On mobile the model picker stays expanded with its name while the other input controls remain circular',
+  changelogV256Archive:
+    'Memory JSON import/export with merge or replace for long-term memories and graph nodes/edges',
+  changelogV256Graph: 'New relation graph with clickable nodes; scrolls horizontally on mobile',
+  changelogV256Dimension:
+    'The memory graph shows vector-dimension usage and estimated footprint; search debug adds dimension, query tokens and top score',
+  changelogV256Stats:
+    'Chat statistics and the context ring now show memory nodes / edges / dimension / last injected hits',
+  changelogV256Reset:
+    'Restore defaults now covers memory retrieval and daily alerts while keeping saved memory data',
   changelogV255Title: 'v2.5.5 · 2026-11',
   changelogV255Preview:
     'Fixed the perturbation preview doing nothing for Chinese triggers and added a copy button',
@@ -273,6 +285,13 @@ export const en = {
     'Here is the user’s long-term memory (personal facts, preferences and requirements; follow them naturally):',
   memoryBankHeader:
     'Here are relevant memories retrieved from the user’s memory graph (ranked by relevance; cite naturally when useful):',
+  memoryStatsTitle: 'Memory graph',
+  memoryStatsNodes: 'Nodes',
+  memoryStatsEdges: 'Edges',
+  memoryStatsDimension: 'Vector dim',
+  memoryStatsLastHits: 'Last injected',
+  memoryStatsNoSearch: '—',
+  contextMemoryLine: 'Memory: {nodes} nodes · {edges} edges',
   memorySavedSection: 'Long-term memory',
   memorySavedEnabledLabel: 'Enable long-term memory',
   memorySavedEnabledDesc:
@@ -308,6 +327,22 @@ export const en = {
   memoryBankNodes: 'Nodes',
   memoryBankEdges: 'Edges',
   memoryBankClear: 'Clear graph',
+  memoryGraphTitle: 'Relation graph',
+  memoryGraphHint: 'Click a node to inspect it; up to 80 nodes are drawn.',
+  memoryGraphShowing: 'Showing {shown} / {total} nodes',
+  memoryExport: 'Export memories',
+  memoryImport: 'Import memories',
+  memoryArchiveHint: 'Long-term memories plus graph nodes/edges; import can merge or replace.',
+  memoryImportInvalid: 'Import failed: not a valid memory archive',
+  memoryImportConfirmTitle: 'Import memory archive',
+  memoryImportConfirmDesc:
+    'This will import {saved} long-term memories, {nodes} nodes and {edges} edges. Merge deduplicates by content; Replace overwrites current memories.',
+  memoryImportMerge: 'Merge',
+  memoryImportReplace: 'Replace',
+  memoryImported: 'Memories imported',
+  memoryDimensionUsage: 'Current vectors: {dimension} dimensions · {count} nodes · about {size}',
+  memoryDimensionHint: 'Hashed locally at the current dimension on demand; never uploaded.',
+  memoryDebugVectorInfo: 'Dimension {dimension} · query tokens {tokens} · top score {top}',
   memorySearchTitle: 'Search debug',
   memorySearchPlaceholder: 'Enter a query to inspect every candidate score',
   memorySearchButton: 'Search',
@@ -513,11 +548,11 @@ export const en = {
     'Replaces the built-in GODMODE and depth directive with Chinese translations. Phrasing and training-data differences may weaken the jailbreak; try it on a small scale first.',
   settingsResetAll: 'Restore default settings',
   settingsResetAllDescription:
-    'Resets every local setting to its default; the API key, chats and attachments are kept.',
+    'Resets every local setting (including model, memory retrieval and daily alerts) to its default; the API key, chats, attachments and saved memories are kept.',
   resetSettings: 'Restore defaults',
   resetSettingsModalTitle: 'Restore default settings',
   resetSettingsModalDescription:
-    'All settings will return to their defaults. The API key, chats, attachments and statistics are kept. Continue?',
+    'All settings (including model, memory retrieval and daily alerts) will return to their defaults. The API key, chats, attachments, statistics and saved memories are kept. Continue?',
   resetSettingsDone: 'Default settings restored',
   settingsAutoCompress: 'Auto-compress long chats',
   settingsAutoCompressDescription:

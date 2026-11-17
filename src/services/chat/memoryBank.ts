@@ -74,6 +74,21 @@ export type MemorySearchDebug = {
 
 type MemoryBankState = { nodes: MemoryNode[]; edges: MemoryEdge[] }
 
+export type MemorySearchSnapshot = {
+  at: number
+  query: string
+  dimension: number
+  nodes: number
+  edges: number
+  passed: number
+  topScore: number
+}
+
+/** 聊天栏统计用：最近一次实际注入前的记忆检索结果（不持久化） */
+export const useMemorySearchStats = create<{ last: MemorySearchSnapshot | null }>(() => ({
+  last: null,
+}))
+
 const STOP_WORDS = new Set([
   'the',
   'and',
@@ -434,6 +449,32 @@ export const clearMemoryBank = () => {
   commit({ nodes: [], edges: [] })
 }
 
+/** 导入记忆归档时整体替换节点与边 */
+export const replaceMemoryBank = (nodes: MemoryNode[], edges: MemoryEdge[]) => {
+  commit({ nodes, edges })
+}
+
+export type MemoryBankStats = {
+  nodes: number
+  edges: number
+  dimension: number
+  avgDegree: number
+  vectorBytes: number
+}
+
+/** 向量维度使用情况：当前维度、节点数、平均度、Float32 估算占用 */
+export const memoryBankStats = (dimension: number): MemoryBankStats => {
+  const { nodes, edges } = useMemoryBank.getState()
+  const size = Math.max(8, Math.floor(dimension))
+  return {
+    nodes: nodes.length,
+    edges: edges.length,
+    dimension: size,
+    avgDegree: nodes.length === 0 ? 0 : (edges.length * 2) / nodes.length,
+    vectorBytes: nodes.length * size * 4,
+  }
+}
+
 const tokenOverlapScore = (queryTokens: string[], targetTokens: Set<string>): number => {
   if (queryTokens.length === 0) {
     return 0
@@ -534,6 +575,17 @@ export const formatMemoryBankContext = (query: string, config: MemorySearchConfi
     return ''
   }
   const debug = searchMemoryBank(query, config)
+  useMemorySearchStats.setState({
+    last: {
+      at: Date.now(),
+      query,
+      dimension: config.dimension,
+      nodes: debug.nodes,
+      edges: debug.edges,
+      passed: debug.results.length,
+      topScore: debug.candidates[0]?.total ?? 0,
+    },
+  })
   if (debug.results.length === 0) {
     return ''
   }

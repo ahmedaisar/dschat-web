@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
   addSavedMemory,
@@ -14,9 +14,19 @@ import {
   clearMemoryBank,
   deleteMemoryNode,
   searchMemoryBank,
+  memoryBankStats,
   useMemoryBank,
+  type MemoryEdge,
+  type MemoryNode,
   type MemorySearchDebug,
 } from '../../services/chat/memoryBank.js'
+import {
+  applyMemoryArchive,
+  buildMemoryArchive,
+  parseMemoryArchive,
+  type ImportMode,
+  type MemoryArchive,
+} from '../../services/chat/memoryArchive.js'
 import {
   setAutoExtractMemory,
   setMemoryBankDimension,
@@ -32,12 +42,177 @@ import { IconButton } from '../base/IconButton.js'
 import { ParamControl } from './ParamControls.js'
 import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
+import { Modal } from '../base/Modal.js'
 import { IconEditOutline16, IconTrashOutline16 } from '../base/icons.js'
+import { showToast } from '../base/toastState.js'
 import styles from './MemorySettings.module.css'
 
 const DIMENSIONS = [64, 128, 256, 384, 768]
 
 const score = (value: number): string => value.toFixed(2)
+
+/** 简单力导向布局，最多渲染 80 个节点，避免大图卡顿 */
+const layoutGraph = (nodes: MemoryNode[], edges: MemoryEdge[]) => {
+  const width = 640
+  const height = 280
+  const visible = nodes.slice(0, 80)
+  const positions = new Map<string, { x: number; y: number }>()
+  visible.forEach((node, index) => {
+    const angle = (index / Math.max(1, visible.length)) * Math.PI * 2
+    positions.set(node.id, {
+      x: width / 2 + Math.cos(angle) * 200,
+      y: height / 2 + Math.sin(angle) * 100,
+    })
+  })
+  const pairs = edges.filter((edge) => positions.has(edge.sourceId) && positions.has(edge.targetId))
+  for (let iteration = 0; iteration < 60; iteration += 1) {
+    const ids = [...positions.keys()]
+    for (let i = 0; i < ids.length; i += 1) {
+      for (let j = i + 1; j < ids.length; j += 1) {
+        const a = positions.get(ids[i])
+        const b = positions.get(ids[j])
+        if (!a || !b) {
+          continue
+        }
+        const dx = a.x - b.x
+        const dy = a.y - b.y
+        const distance = Math.max(8, Math.hypot(dx, dy))
+        const force = 6000 / (distance * distance)
+        const ux = (dx / distance) * force
+        const uy = (dy / distance) * force
+        a.x += ux
+        a.y += uy
+        b.x -= ux
+        b.y -= uy
+      }
+    }
+    for (const edge of pairs) {
+      const a = positions.get(edge.sourceId)
+      const b = positions.get(edge.targetId)
+      if (!a || !b) {
+        continue
+      }
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const distance = Math.max(1, Math.hypot(dx, dy))
+      const force = (distance - 90) * 0.004 * (0.4 + edge.weight)
+      const ux = (dx / distance) * force
+      const uy = (dy / distance) * force
+      a.x += ux
+      a.y += uy
+      b.x -= ux
+      b.y -= uy
+    }
+    for (const point of positions.values()) {
+      point.x += (width / 2 - point.x) * 0.003
+      point.y += (height / 2 - point.y) * 0.003
+      point.x = Math.min(width - 24, Math.max(24, point.x))
+      point.y = Math.min(height - 24, Math.max(24, point.y))
+    }
+  }
+  return { visible, positions }
+}
+
+const formatBytes = (bytes: number): string =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
+const MemoryGraph = ({
+  nodes,
+  edges,
+  selectedId,
+  onSelect,
+}: {
+  nodes: MemoryNode[]
+  edges: MemoryEdge[]
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+}) => {
+  const t = useTranslate()
+  const { visible, positions } = useMemo(() => layoutGraph(nodes, edges), [nodes, edges])
+  const visibleIds = new Set(visible.map((node) => node.id))
+  const visibleEdges = edges.filter(
+    (edge) => visibleIds.has(edge.sourceId) && visibleIds.has(edge.targetId)
+  )
+  const degree = new Map<string, number>()
+  for (const edge of visibleEdges) {
+    degree.set(edge.sourceId, (degree.get(edge.sourceId) ?? 0) + 1)
+    degree.set(edge.targetId, (degree.get(edge.targetId) ?? 0) + 1)
+  }
+  return (
+    <div className={styles.graphWrap}>
+      <svg
+        className={styles.graph}
+        viewBox="0 0 640 280"
+        role="img"
+        aria-label={t('memoryGraphTitle')}
+        onClick={() => onSelect(null)}
+      >
+        {visibleEdges.map((edge) => {
+          const a = positions.get(edge.sourceId)
+          const b = positions.get(edge.targetId)
+          if (!a || !b) {
+            return null
+          }
+          return (
+            <line
+              key={edge.id}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+              stroke="currentColor"
+              strokeOpacity={0.2 + edge.weight * 0.5}
+              strokeWidth={0.6 + edge.weight * 1.8}
+            />
+          )
+        })}
+        {visible.map((node) => {
+          const point = positions.get(node.id)
+          if (!point) {
+            return null
+          }
+          const selected = node.id === selectedId
+          const radius = 5 + node.importance * 3
+          const showLabel = selected || (degree.get(node.id) ?? 0) > 0 || visible.length <= 20
+          return (
+            <g
+              key={node.id}
+              className={styles.graphNode}
+              onClick={(event) => {
+                event.stopPropagation()
+                onSelect(selected ? null : node.id)
+              }}
+            >
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={selected ? radius + 3 : radius}
+                className={selected ? styles.graphNodeSelected : styles.graphNodeCircle}
+              />
+              {showLabel ? (
+                <text
+                  x={point.x}
+                  y={point.y - radius - 4}
+                  textAnchor="middle"
+                  className={styles.graphLabel}
+                >
+                  {node.title.length > 12 ? `${node.title.slice(0, 12)}…` : node.title}
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+      {nodes.length > visible.length ? (
+        <div className={styles.hint}>
+          {t('memoryGraphShowing', { shown: visible.length, total: nodes.length })}
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 /** 记忆设置：长期记忆列表 + 网状记忆库（节点 / 连边 / 检索权重 / 搜索调试） */
 export const MemorySettings = () => {
@@ -55,6 +230,11 @@ export const MemorySettings = () => {
   const [nodeTags, setNodeTags] = useState('')
   const [query, setQuery] = useState('')
   const [debug, setDebug] = useState<MemorySearchDebug | null>(null)
+  const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  const [pendingArchive, setPendingArchive] = useState<MemoryArchive | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const bankUsage = memoryBankStats(settings.memoryBankDimension)
+  const selected = nodes.find((node) => node.id === selectedNode) ?? null
 
   const config = useMemo(
     () => ({
@@ -102,6 +282,31 @@ export const MemorySettings = () => {
 
   const runSearch = () => {
     setDebug(searchMemoryBank(query, config))
+  }
+
+  const exportMemories = () => {
+    const archive = buildMemoryArchive()
+    const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `memory-archive-${Date.now()}.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
+  const importMemories = async (file: File) => {
+    try {
+      const parsed: unknown = JSON.parse(await file.text())
+      const archive = parseMemoryArchive(parsed)
+      if (!archive) {
+        showToast({ key: 'memoryImportInvalid' })
+        return
+      }
+      setPendingArchive(archive)
+    } catch {
+      showToast({ key: 'memoryImportInvalid' })
+    }
   }
 
   return (
@@ -229,6 +434,29 @@ export const MemorySettings = () => {
 
       <div className={styles.groupTitle}>{t('memoryBankSection')}</div>
 
+      <div className={styles.archiveRow}>
+        <Button variant="outlined" size="s" onClick={exportMemories}>
+          {t('memoryExport')}
+        </Button>
+        <Button variant="outlined" size="s" onClick={() => fileRef.current?.click()}>
+          {t('memoryImport')}
+        </Button>
+        <input
+          ref={fileRef}
+          className={styles.hiddenInput}
+          type="file"
+          accept=".json,application/json"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) {
+              void importMemories(file)
+            }
+          }}
+        />
+        <span className={styles.hint}>{t('memoryArchiveHint')}</span>
+      </div>
+
       <div className={styles.toggleRow}>
         <div className={styles.text}>
           <div className={styles.label}>{t('memoryBankEnabledLabel')}</div>
@@ -251,6 +479,14 @@ export const MemorySettings = () => {
             onChange={(value) => setMemoryBankDimension(Number(value))}
           />
           <div className={styles.hint}>{t('memoryBankDimensionDesc')}</div>
+          <div className={styles.dimensionUsage}>
+            {t('memoryDimensionUsage', {
+              dimension: bankUsage.dimension,
+              count: bankUsage.nodes,
+              size: formatBytes(bankUsage.vectorBytes),
+            })}
+          </div>
+          <div className={styles.hint}>{t('memoryDimensionHint')}</div>
         </div>
         <div className={styles.field}>
           <div className={styles.label}>{t('memoryBankLimitLabel')}</div>
@@ -346,6 +582,39 @@ export const MemorySettings = () => {
         {t('memoryBankNodes')}: {nodes.length} · {t('memoryBankEdges')}: {edges.length}
       </div>
 
+      <div className={styles.groupTitle}>{t('memoryGraphTitle')}</div>
+      {nodes.length > 0 ? (
+        <>
+          <MemoryGraph
+            nodes={nodes}
+            edges={edges}
+            selectedId={selectedNode}
+            onSelect={setSelectedNode}
+          />
+          {selected ? (
+            <div className={styles.selectedNode}>
+              <div className={styles.nodeHead}>
+                <span className={styles.nodeTitle}>{selected.title}</span>
+              </div>
+              <div className={styles.itemContent}>{selected.content}</div>
+              {selected.tags.length > 0 ? (
+                <div className={styles.chips}>
+                  {selected.tags.map((tag) => (
+                    <span key={tag} className={styles.chip}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className={styles.hint}>{t('memoryGraphHint')}</div>
+          )}
+        </>
+      ) : (
+        <div className={styles.empty}>{t('memoryBankEmpty')}</div>
+      )}
+
       {nodes.length > 0 ? (
         <div className={clsx(styles.list, styles.nodeList)}>
           {nodes.map((node) => {
@@ -439,6 +708,13 @@ export const MemorySettings = () => {
               edges: debug.edgesTraversed,
             })}
           </div>
+          <div className={styles.meta}>
+            {t('memoryDebugVectorInfo', {
+              dimension: debug.config.dimension,
+              tokens: debug.tokens.length,
+              top: debug.candidates[0]?.total.toFixed(2) ?? '0.00',
+            })}
+          </div>
           {debug.candidates.length === 0 ? (
             <div className={styles.empty}>{t('memoryDebugEmpty')}</div>
           ) : (
@@ -472,6 +748,49 @@ export const MemorySettings = () => {
             </div>
           )}
         </div>
+      ) : null}
+
+      {pendingArchive ? (
+        <Modal
+          title={t('memoryImportConfirmTitle')}
+          closable
+          onClose={() => setPendingArchive(null)}
+          footer={
+            <div className={styles.importActions}>
+              <Button variant="outlined" size="m" onClick={() => setPendingArchive(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="m"
+                onClick={() => {
+                  applyMemoryArchive(pendingArchive, 'merge' satisfies ImportMode)
+                  setPendingArchive(null)
+                  showToast({ key: 'memoryImported' })
+                }}
+              >
+                {t('memoryImportMerge')}
+              </Button>
+              <Button
+                variant="danger"
+                size="m"
+                onClick={() => {
+                  applyMemoryArchive(pendingArchive, 'replace' satisfies ImportMode)
+                  setPendingArchive(null)
+                  showToast({ key: 'memoryImported' })
+                }}
+              >
+                {t('memoryImportReplace')}
+              </Button>
+            </div>
+          }
+        >
+          {t('memoryImportConfirmDesc', {
+            saved: pendingArchive.savedMemories.length,
+            nodes: pendingArchive.nodes.length,
+            edges: pendingArchive.edges.length,
+          })}
+        </Modal>
       ) : null}
     </div>
   )
