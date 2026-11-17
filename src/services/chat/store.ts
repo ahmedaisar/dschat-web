@@ -1305,18 +1305,23 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
   let reply = initial
+  // 本轮是否逐字渲染；关闭时只累积到结束，避免中间态暴露
+  const streamOutput = useSettings.getState().streamOutput
   let frame = 0
   // 首 token 时间与整轮耗时用于会话统计；服务端拒绝思考强度时退回普通思考请求
   const runStartedAt = Date.now()
   let firstTokenAt: number | null = null
   let fallbackNoReasoning = false
   beginLiveRun(sessionId, initial.model ?? MODEL)
-  const flush = () => {
+  const flush = (force = false) => {
     cancelAnimationFrame(frame)
     frame = 0
-    updateReply(sessionId, reply)
+    // 非流式模式不展示中间态；页面隐藏/关闭时仍强制写回，避免丢内容
+    if (streamOutput || force) {
+      updateReply(sessionId, reply)
+    }
   }
-  streamFlushes.set(sessionId, flush)
+  streamFlushes.set(sessionId, () => flush(true))
 
   try {
     for (let attempt = 0; ; attempt += 1) {
@@ -1471,10 +1476,12 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             titleRequests.delete(controller)
           }
           reply = applyEvent(reply, event, Date.now(), blockIndexes)
-          if (document.visibilityState === 'hidden') {
-            flush()
-          } else {
-            frame ||= requestAnimationFrame(flush)
+          if (streamOutput) {
+            if (document.visibilityState === 'hidden') {
+              flush()
+            } else {
+              frame ||= requestAnimationFrame(() => flush())
+            }
           }
         }
         reply = settle(reply, 'done', Date.now())

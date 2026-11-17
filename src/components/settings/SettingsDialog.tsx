@@ -54,6 +54,7 @@ import {
   setParseltongueTechnique,
   setPromptPreset,
   setStmModules,
+  setStreamOutput,
   setThinkingAsBody,
   setTranslateJailbreakZh,
   setKeepReplyContent,
@@ -609,6 +610,10 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV257Title',
+      items: ['changelogV257Stream'],
+    },
+    {
       title: 'changelogV256Title',
       items: [
         'changelogV256Archive',
@@ -810,6 +815,7 @@ const ModelSettings = () => {
   const topP = useSettings((state) => state.topP)
   const maxTokens = useSettings((state) => state.maxTokens)
   const model = useSettings((state) => state.model)
+  const streamOutput = useSettings((state) => state.streamOutput)
   const keepReplyContent = useSettings((state) => state.keepReplyContent)
   const skipSafetyCheck = useSettings((state) => state.skipSafetyCheck)
   const continueRefused = useSettings((state) => state.continueRefused)
@@ -823,6 +829,18 @@ const ModelSettings = () => {
         description={t('settingsModelDescription')}
         status={null}
         action={<span className={styles.modelBadge}>{modelLabel(model)}</span>}
+      />
+      <SettingCell
+        label={t('settingsStreamOutput')}
+        description={t('settingsStreamOutputDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={streamOutput}
+            onChange={setStreamOutput}
+            label={t('settingsStreamOutput')}
+          />
+        }
       />
       <SettingCell
         label={t('settingsTemperature')}

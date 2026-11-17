@@ -136,6 +136,9 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV257Title: 'v2.5.7 · 2026-11',
+  changelogV257Stream:
+    'Settings → Model gains a Stream output switch: turn it off to render after completion, while anti-retraction still keeps the final content',
   changelogV256Title: 'v2.5.6 · 2026-11',
   changelogV256ModelMobile:
     'On mobile the model picker stays expanded with its name while the other input controls remain circular',
@@ -377,6 +380,9 @@ export const en = {
   settingsModel: 'Current model',
   settingsModelDescription:
     'Switch from the leftmost control in the input toolbar; DeepSeek Flash / V4 Pro are built in, and the list can be fetched from the cloud.',
+  settingsStreamOutput: 'Stream output',
+  settingsStreamOutputDescription:
+    'Streams the reply as it arrives; turn off to render it after completion. Anti-retraction still preserves the final content.',
   settingsTemperature: 'Temperature',
   settingsTemperatureDescription:
     'Sampling temperature from 0 to 2; higher is more random. The server always uses 1 in thinking mode.',

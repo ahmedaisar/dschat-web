@@ -17,6 +17,8 @@ type Settings = {
   apiKey: string | null
   /** 当前模型：内置 flash / v4-pro，或云端列表里的任意 id */
   model: ChatModel
+  /** 是否逐字渲染回复；关闭后等完整回复生成完再显示 */
+  streamOutput: boolean
   locale: Locale
   themePreference: ThemePreference
   location: UserLocation | null
@@ -104,6 +106,7 @@ type Settings = {
 const KEYS = {
   apiKey: 'chat-demo:api-key',
   model: 'chat-demo:model',
+  streamOutput: 'chat-demo:stream-output',
   locale: 'chat-demo:locale',
   location: 'chat-demo:location',
   themePreference: 'chat-demo:theme-preference',
@@ -344,6 +347,7 @@ const initialStmModules = (): string[] => {
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
   model: initialModel(),
+  streamOutput: read(KEYS.streamOutput) !== 'false',
   locale: initialLocale(),
   location: initialLocation(),
   themePreference: initialThemePreference(),
@@ -392,6 +396,11 @@ export const useSettings = create<Settings>(() => ({
   attachmentExts: initialAttachmentExts(),
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
+
+export const setStreamOutput = (streamOutput: boolean) => {
+  write(KEYS.streamOutput, String(streamOutput))
+  useSettings.setState({ streamOutput })
+}
 
 export const setModel = (model: ChatModel) => {
   const next = model.trim()
@@ -680,6 +689,7 @@ export const resetSettings = () => {
   useSettings.setState({
     apiKey,
     model: 'deepseek-flash',
+    streamOutput: true,
     locale: isChineseBrowser() ? 'zh-CN' : 'en-US',
     themePreference: 'system',
     location: null,

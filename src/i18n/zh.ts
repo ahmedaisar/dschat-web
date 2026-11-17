@@ -130,6 +130,9 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV257Title: 'v2.5.7 · 2026-11',
+  changelogV257Stream:
+    '设置 → 模型新增「流式输出」开关：关闭后等完整回复生成完再显示，防撤回仍保留最终内容',
   changelogV256Title: 'v2.5.6 · 2026-11',
   changelogV256ModelMobile: '手机端模型选择保持展开显示模型名，其他输入栏开关继续为圆形',
   changelogV256Archive: '记忆支持 JSON 导入导出，可合并或覆盖长期记忆与网状节点/边',
@@ -318,6 +321,9 @@ export const zh = {
   settingsModel: '当前模型',
   settingsModelDescription:
     '在输入框工具行最左侧切换；内置 DeepSeek Flash / V4 Pro，也可从云端获取模型列表。',
+  settingsStreamOutput: '流式输出',
+  settingsStreamOutputDescription:
+    '开启后逐字显示回复；关闭后等完整回复生成完再一次性显示。关闭不影响防撤回对最终内容的保留。',
   settingsTemperature: '温度',
   settingsTemperatureDescription: '采样温度 0–2，越高越随机；思考模式下服务端固定按 1 处理。',
   settingsTopP: 'Top P',

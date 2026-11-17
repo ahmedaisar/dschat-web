@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.6**
+> Current version: **2.5.7**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -107,17 +107,17 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 The settings dialog grows from two groups to nine:
 
-| Group           | Contents                                                                                                                          |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| General         | Theme, language, TTS voice, location, daily usage and alerts                                                                      |
-| **Model**       | Current model, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
-| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                           |
-| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                     |
-| **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug |
-| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                       |
-| Data            | API key, import, export, restore default settings, delete all                                                                     |
-| About           | Repository, demo and upstream links                                                                                               |
-| Changelog       | Version history and upstream credits                                                                                              |
+| Group           | Contents                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| General         | Theme, language, TTS voice, location, daily usage and alerts                                                                                     |
+| **Model**       | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
+| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                          |
+| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                    |
+| **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
+| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                                      |
+| Data            | API key, import, export, restore default settings, delete all                                                                                    |
+| About           | Repository, demo and upstream links                                                                                                              |
+| Changelog       | Version history and upstream credits                                                                                                             |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -256,6 +256,7 @@ Settings → **Advanced** (everything is off by default, so the out-of-the-box b
 
 ### 3.11 Thinking effort, context usage, session statistics and cost estimate
 
+- **Stream output**: a new switch in Settings → Model, on by default; turn it off to hide the intermediate state and render the complete reply at once. Anti-retraction still applies to the final content.
 - **Thinking effort**: the old on/off switch in the input bar becomes a 0–4 slider (Off / Light / Standard / Deep / Max). The level is sent as `thinking: { type: "enabled", budget_tokens }` plus `reasoning_effort` (low / medium / high / max). If the server answers 400 mentioning reasoning / thinking / budget / effort, the client drops the effort fields, retries once with plain `thinking: { type: "enabled" }` and tells you it fell back.
 - **Context usage**: the ring in the input corner converts the last request's context (`input + cache_read + cache_creation`) into a share of the model window (1M); amber past 60%, red past 85%. The tooltip shows the exact numbers, the compaction threshold (80% of the window after a 64k headroom and the output reserve) and, after compression, the effective usage and tokens saved.
 - **Session statistics** (the stats button next to the ring): rounds, steps (replies + tool calls), output speed, average first token, model time, cache hit rate, plus uncached input / cache read / cache write / output tokens; a live section shows the current run while it streams.
@@ -428,6 +429,7 @@ Settings → General → Location:
 | Lab         | Variant race confirm dismissed       | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
 | Prompt      | Inject the system prompt every round | off               | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
 | Prompt      | Disguise historical thinking         | off               | `chat-demo:thinking-as-body`               | Unaffected                      |
+| Model       | Stream output                        | on                | `chat-demo:stream-output`                  | Unaffected                      |
 | Model       | Auto-compress long chats             | off               | `chat-demo:auto-compress`                  | Unaffected                      |
 | Advanced    | Chinese jailbreak prompts            | off               | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
 | General     | Daily limit alerts                   | off               | `chat-demo:daily-limit-enabled`            | Unaffected                      |
@@ -598,6 +600,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 19. **Special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
 20. **Disguised thinking only covers the previous round**: it is sent as ordinary text, so the server no longer treats it as thinking; token usage rises slightly.
 21. **The relation graph draws at most 80 nodes**: extra nodes are still searched, just not drawn; importing in Replace mode overwrites current long-term memories and graph data, so export a backup first.
+22. **The stream-output switch only controls rendering**: when off, replies are still received over SSE and accumulated, just not shown mid-flight; accumulated content is written back when the page is hidden or closed to avoid loss.
 
 ---
 
