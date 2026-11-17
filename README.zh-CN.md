@@ -18,7 +18,7 @@
 >
 > 📦仓库：<https://github.com/xiaohuangbo/chat-demo-unrestricted>
 >
-> 🎥介绍视频：<https://www.bilibili.com/video/BV1p5sL6LEfd/>
+> 🎥介绍视频：<https://www.bilibili.com/video/BV1m3s66WESg/>
 >
 > 📚参考论文：<https://arxiv.org/pdf/2403.12171>
 
