@@ -234,21 +234,10 @@
 }
 
 @media not all and (min-width: 768px) {
+  /* 手机端模型选择保持展开：完整模型名 + 下拉箭头，不做圆形收起 */
   .trigger {
-    width: 34px;
-    max-width: 34px;
-    padding: 0;
-    border-radius: 50%;
-    justify-content: center;
-  }
-
-  .name {
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .arrow {
-    display: none;
+    max-width: 168px;
+    padding: 0 8px 0 10px;
   }
 
   .caption {
