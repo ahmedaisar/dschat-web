@@ -48,7 +48,7 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.6.0**
+> 当前版本：**2.6.1**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
@@ -638,6 +638,22 @@ pnpm build      # 产物在 dist/
 
 API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrigin })` 里配置，默认 `https://api.deepseek.com`。
 
+### 9.1 Android APK
+
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.1.apk`：
+
+- 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
+- 支持文件选择、麦克风权限、返回键和外部链接跳转；
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）：
+  ```sh
+  export ANDROID_HOME=$HOME/android-sdk
+  export JAVA_HOME=/path/to/jdk-17
+  pnpm build
+  KS_PASS=... KEY_PASS=... ./android/build-apk.sh
+  ```
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 261；
+- **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
+
 ---
 
 ## 10. 已知限制
@@ -671,6 +687,8 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 27. **客户端改写是尽力而为**：图片文字覆盖需要 Canvas，PDF 文件尾与图片元数据是实验性方式，不保证模型一定读取；PDF / Office 建议优先使用伴随文本附件。
 28. **伴随文本附件占用附件名额**：名额不足时不会生成；恢复默认只清理本机配置与草稿中自动生成的伴随附件，不删除服务器或历史附件。
 29. **图片文字覆盖会重新编码**：GIF / 动图会变成静态图，GIF / BMP 等可能转为 PNG；文件尾附加对 ZIP 类 Office 文件自动跳过。
+30. **APK 内的 Python 后端不会执行**：EasyJailbreak / torch 依赖无法放进普通 WebView APK；后端源码只随包附带，实验台必须连接电脑或服务器上的 MCP 服务。
+31. **APK 是 WebView 壳**：文件下载等浏览器能力取决于系统 WebView；本地服务固定占用 18765 端口，被占用时应用会显示启动失败提示。
 
 ---
 

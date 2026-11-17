@@ -134,6 +134,12 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV261Title: 'v2.6.1 · 2026-11',
+  changelogV261Android:
+    '新增 Android APK：WebView + 本地静态服务器，完整保留聊天、设置、附件投毒与语音输入；包内附带后端源码',
+  changelogV261Backend:
+    'Python MCP 后端依赖 EasyJailbreak / torch，不能在 Android 内直接运行；实验台仍通过可配置的 MCP 地址连接电脑或服务器上的后端',
+  changelogV261Sign: 'APK 使用 xiaohuangbo.jks 签名，版本 2.6.1',
   changelogV260Title: 'v2.6.0 · 2026-11',
   changelogV260Attachment:
     '新增「附件投毒」：默认关闭，可用文本正文、图片文字、DOCX 正文、图片元数据、文件尾、文件名或伴随文本附件等方式，把自定义提示词写进附件',

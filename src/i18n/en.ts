@@ -140,6 +140,12 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV261Title: 'v2.6.1 · 2026-11',
+  changelogV261Android:
+    'New Android APK: WebView + local static server, preserving chat, settings, attachment poisoning and voice input; backend sources are bundled',
+  changelogV261Backend:
+    'The Python MCP backend depends on EasyJailbreak / torch and cannot run inside Android; the lab still connects to a backend on a PC or server via the configurable MCP endpoint',
+  changelogV261Sign: 'APK signed with xiaohuangbo.jks, version 2.6.1',
   changelogV260Title: 'v2.6.0 · 2026-11',
   changelogV260Attachment:
     'New Attachment poisoning, off by default: inject custom prompts via text body, image overlay, DOCX body, image metadata, file trailer, filename or a companion text attachment',

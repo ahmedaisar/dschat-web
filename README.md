@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.0**
+> Current version: **2.6.1**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -638,6 +638,22 @@ pnpm build      # output in dist/
 
 The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfig({ apiOrigin })`; it defaults to `https://api.deepseek.com`.
 
+### 9.1 Android APK
+
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.1.apk`:
+
+- The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
+- File selection, microphone permission, the back key and external links are wired up;
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8):
+  ```sh
+  export ANDROID_HOME=$HOME/android-sdk
+  export JAVA_HOME=/path/to/jdk-17
+  pnpm build
+  KS_PASS=... KEY_PASS=... ./android/build-apk.sh
+  ```
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 261;
+- **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
+
 ---
 
 ## 10. Known limitations
@@ -671,6 +687,8 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 27. **Client-side rewriting is best-effort**: image text overlay needs Canvas, while PDF trailers and image metadata are experimental and not guaranteed to be read; prefer the companion text attachment for PDF / Office.
 28. **Companion text attachments use an attachment slot**: none are generated when the limit is full; restoring defaults only clears the local config and generated companions in drafts, not server or historical attachments.
 29. **Image text overlay re-encodes the image**: GIF / animations become static and GIF / BMP may become PNG; the file trailer skips ZIP-based Office files.
+30. **The Python backend does not run inside the APK**: EasyJailbreak / torch cannot be packed into a normal WebView APK; the bundled backend sources are for reference and the lab must connect to an MCP service on a PC or server.
+31. **The APK is a WebView shell**: browser capabilities such as file downloads depend on the system WebView; the local server occupies port 18765 and shows a startup error if the port is taken.
 
 ---
 
