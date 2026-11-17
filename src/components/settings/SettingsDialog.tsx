@@ -12,6 +12,7 @@ import {
   IconLinkOutline16,
   IconPaperclipOutline16,
   IconRefreshOutline16,
+  IconSearchWarningOutline16,
   IconSettingsOutline16,
   IconThinkOutline16,
   IconUploadOutline14,
@@ -25,6 +26,8 @@ import {
 import { useIsMobile } from '../../app/viewport.js'
 import { modelLabel } from '../../services/api/models.js'
 import { MemorySettings } from './MemorySettings.js'
+import { SearchPoisonSettings } from './SearchPoisonSettings.js'
+import { AttachmentPoisonSettings } from './AttachmentPoisonSettings.js'
 import { useChatStore } from '../../services/chat/store.js'
 import {
   regionCodes,
@@ -117,6 +120,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     icon: <IconBrowseOutline16 />,
   },
   {
+    value: 'poison',
+    label: 'settingDialogAsidePoisonOptionLabel',
+    icon: <IconSearchWarningOutline16 />,
+  },
+  {
     value: 'memory',
     label: 'settingDialogAsideMemoryOptionLabel',
     icon: <IconBranchOutline16 />,
@@ -124,6 +132,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   {
     value: 'attachments',
     label: 'settingDialogAsideAttachmentsOptionLabel',
+    icon: <IconPaperclipOutline16 />,
+  },
+  {
+    value: 'attachmentPoison',
+    label: 'settingDialogAsideAttachmentPoisonOptionLabel',
     icon: <IconPaperclipOutline16 />,
   },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
@@ -140,6 +153,13 @@ const SettingsContent = () => {
   const isMobile = useIsMobile()
   // 打开时按调用方指定的分组选中，之后在弹窗内切换
   const [section, setSection] = useState(() => useSettingsDialog.getState().section)
+  const navigationRef = useRef<HTMLDivElement>(null)
+  // 手机端导航横向滚动：打开较后的分组时把选中项滚到可视区域
+  useEffect(() => {
+    navigationRef.current
+      ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }, [section])
   // 切换分组不丢失正在输入的 API Key 与导入状态
   const apiKeyEditor = useApiKeyEditor()
   const historyImport = useHistoryImport()
@@ -160,7 +180,7 @@ const SettingsContent = () => {
           }
         }}
       >
-        <div role="tablist" className={styles.navigation}>
+        <div ref={navigationRef} role="tablist" className={styles.navigation}>
           {sections.map((item) => (
             <button
               key={item.value}
@@ -190,10 +210,14 @@ const SettingsContent = () => {
             <UnrestrictedSetting />
           ) : section === 'advanced' ? (
             <AdvancedSettings />
+          ) : section === 'poison' ? (
+            <SearchPoisonSettings />
           ) : section === 'memory' ? (
             <MemorySettings />
           ) : section === 'attachments' ? (
             <AttachmentsSetting />
+          ) : section === 'attachmentPoison' ? (
+            <AttachmentPoisonSettings />
           ) : section === 'about' ? (
             <AboutSetting />
           ) : section === 'changelog' ? (
@@ -447,6 +471,27 @@ const LocationSetting = () => {
     location?.region === 'CN'
       ? provinces.find((item) => item.code === location.province)
       : undefined
+  const [customDraft, setCustomDraft] = useState(location?.custom ?? '')
+  // Esc 取消时不要触发失焦保存
+  const skipCustomCommit = useRef(false)
+
+  // 选择行政区、特殊位置或清除后，自定义输入框跟随设置值同步
+  useEffect(() => {
+    setCustomDraft(location?.custom ?? '')
+  }, [location?.custom])
+
+  const commitCustom = (value: string) => {
+    const next = value.trim()
+    if (next !== '') {
+      if (next !== location?.custom) {
+        setLocation({ region: 'CN', custom: next })
+      }
+      return
+    }
+    if (location?.custom) {
+      setLocation(null)
+    }
+  }
 
   return (
     <SettingCell
@@ -511,6 +556,31 @@ const LocationSetting = () => {
             ]}
             onChange={(value) => {
               setLocation(value === '' ? null : { region: 'CN', place: value as SpecialPlace })
+            }}
+          />
+          <input
+            className={styles.locationCustomInput}
+            aria-label={t('settingsLocationCustom')}
+            placeholder={t('settingsLocationCustomPlaceholder')}
+            maxLength={120}
+            value={customDraft}
+            onChange={(event) => setCustomDraft(event.target.value)}
+            onBlur={(event) => {
+              if (skipCustomCommit.current) {
+                skipCustomCommit.current = false
+                return
+              }
+              commitCustom(event.target.value)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                event.currentTarget.blur()
+              } else if (event.key === 'Escape') {
+                skipCustomCommit.current = true
+                setCustomDraft(location?.custom ?? '')
+                event.currentTarget.blur()
+              }
             }}
           />
           {location ? (
@@ -609,6 +679,14 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV260Title',
+      items: ['changelogV260Attachment', 'changelogV260Compatibility'],
+    },
+    {
+      title: 'changelogV258Title',
+      items: ['changelogV258Poison', 'changelogV258Location', 'changelogV258Consistency'],
+    },
     {
       title: 'changelogV257Title',
       items: ['changelogV257Stream'],

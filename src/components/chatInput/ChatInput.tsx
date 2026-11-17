@@ -17,8 +17,10 @@ import {
   getDraft,
   prepareDraftMessage,
   removeDraftAttachment,
+  restartDraftAttachment,
   retryDraftAttachment,
   setDraftText,
+  syncDraftSidecars,
   useDrafts,
 } from '../../services/chat/drafts.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
@@ -59,6 +61,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
+  const attachmentPoisonEnabled = useSettings((state) => state.attachmentPoison.enabled)
+  const attachmentPoisonSidecar = useSettings((state) =>
+    state.attachmentPoison.methods.includes('sidecar')
+  )
+  // 只跟随启用状态与伴随附件开关，避免在设置里每敲一个字都重传伴随附件
+  const sidecarMode = `${attachmentPoisonEnabled ? 1 : 0}:${attachmentPoisonSidecar ? 1 : 0}`
+  const lastSidecarMode = useRef(sidecarMode)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -116,6 +125,21 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
 
   // 移动端录音时用频谱替代输入框内容
   const recording = voice.status === 'recording'
+
+  // 附件投毒启用状态或伴随附件开关变化时：同步伴随附件，并按当前配置重新上传原附件
+  useEffect(() => {
+    if (lastSidecarMode.current === sidecarMode) {
+      return
+    }
+    lastSidecarMode.current = sidecarMode
+    const apiKey = useSettings.getState().apiKey ?? ''
+    syncDraftSidecars(sessionId, apiKey)
+    for (const attachment of getDraft(sessionId).attachments) {
+      if (!attachment.generated) {
+        restartDraftAttachment(sessionId, attachment.id, apiKey)
+      }
+    }
+  }, [sessionId, sidecarMode])
 
   // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送
   const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady

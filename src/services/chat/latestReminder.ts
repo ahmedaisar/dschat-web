@@ -7,6 +7,9 @@ const locationName = (location: UserLocation | null, locale: Locale): string => 
   if (!location) {
     return ''
   }
+  if (location.custom) {
+    return location.custom
+  }
   if (location.place) {
     return specialPlaceName(location.place, locale)
   }

@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.5.7**
+> Current version: **2.6.0**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -105,7 +105,7 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to nine:
+The settings dialog grows from two groups to eleven:
 
 | Group           | Contents                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -113,8 +113,10 @@ The settings dialog grows from two groups to nine:
 | **Model**       | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
 | **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                          |
 | **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                    |
+| **Search poison** | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist              |
 | **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
 | **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                                      |
+| **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment          |
 | Data            | API key, import, export, restore default settings, delete all                                                                                    |
 | About           | Repository, demo and upstream links                                                                                                              |
 | Changelog       | Version history and upstream credits                                                                                                             |
@@ -372,17 +374,64 @@ Settings → Memory → **Memory graph**:
 - Chat statistics and the input context ring show memory nodes/edges/dimension/last injected hits; restoring defaults resets retrieval settings and daily alerts but keeps saved memory data;
 - On mobile the weights become single-column, the search-debug table scrolls horizontally, and nodes/tags wrap.
 
-### 3.19 Locations: clear and off-world
+### 3.19 Locations: clear, custom and off-world
 
 Settings → General → Location:
 
 - When a location is set, a **Clear location** button removes it;
-- New special locations: Space Station (Satellite / Station), Moon (Near Side / Far Side) and Mars (Spacetime Management Center);
-- A special location overrides the administrative selection and is written directly into `latest_reminder`; it does not affect weather or networking.
+- A free-form input next to the selects accepts any place (for example “Paris” or “Zhongshan Station, Antarctica”); press Enter or leave the field to apply;
+- A custom location takes precedence over administrative and special choices and is written directly into `latest_reminder`;
+- Special locations: Space Station (Satellite / Station), Moon (Near Side / Far Side) and Mars (Spacetime Management Center);
+- Special locations override the administrative selection; custom and special locations only affect `latest_reminder`, not weather, web search or server-side region detection.
+
+### 3.20 Search poisoning
+
+Settings → Search poisoning. This group exposes every search input the client can control:
+
+| Capability | Behaviour |
+| --- | --- |
+| Current time | A `datetime-local` value injected as the model’s date and weekday; empty uses the real time |
+| Knowledge cutoff | Declares the model database / training-data cutoff; empty means no declaration |
+| Search takeover | With custom results, `deepseek_web_search` is not declared and the model only sees the filtered local results; turn it off to keep real search |
+| Replacement | Keyword or regex replacement by URL / title / snippet / all fields; regex supports `$1` groups |
+| Blacklist | Matching results are removed from the UI, exports and model context; forces takeover |
+| Forced results | Custom results are injected and shown as search results regardless of real search hits |
+| Whitelist | Only custom results matching the whitelist are returned; all server results are withheld |
+
+- The engine lives in [`src/services/searchPoison.ts`](src/services/searchPoison.ts): replacement, blacklist and whitelist run before injection; at most 50 rules and 20 custom results;
+- Custom results go into `system`, so long snippets increase input tokens; each snippet is capped at 4000 characters;
+- Takeover mode: `tools` only keeps `deepseek_read_url`, `system` gains a `[LOCAL SEARCH LAYER]` block, and a “poisoned search” step is added to the reply timeline; the bottom web summary opens it;
+- Non-takeover mode: real server search stays; result blocks are replaced / filtered as they reach the client and citation markers follow, but results already consumed by the server cannot be retracted;
+- The custom time goes into the `latest_reminder` date, weekday and location; the knowledge cutoff and search results go into `system`; UI time, billing, weather and geolocation stay unchanged;
+- Compatible with anti-retraction and stream output: only request context and result display change; refusal handling is untouched, and with streaming off the poisoned step appears once at completion;
+- Everything is stored under `chat-demo:search-poison` and reset by Restore default settings; takeover means no real web search, so turn it off (or clear blacklist / whitelist) when real search is needed.
+
+### 3.21 Attachment poisoning
+
+Settings → Attachment poisoning. Off by default; when enabled, attachments are rewritten locally before upload so the model sees your text when it reads them.
+
+| Method | File types | Behaviour |
+| --- | --- | --- |
+| Text body injection | TXT / MD / CSV / code / HTML / JSON | Inserts text with an `[ATTACHMENT NOTE]` marker before or after the body |
+| DOCX body injection | `.docx` | Unzips the file and appends a paragraph to the end of `word/document.xml` |
+| Image text overlay | PNG / JPG / WebP / GIF and other raster images | Draws a text panel at the top or bottom for vision / OCR |
+| Image metadata (experimental) | JPEG / PNG | Writes a JPEG COM or PNG tEXt comment; some extractors read it |
+| File trailer (experimental) | PDF / unknown binary | Appends text at the end; ZIP-based Office files are skipped |
+| Filename injection | Any format | Puts the first 40 characters into the upload filename; works when the model can see it |
+| Companion text attachment | PDF / Office / any format | Adds a separate `.txt` to the message; most reliable, but uses one attachment slot |
+
+- Methods can be combined; only those that fit the file type are applied, and failures fall back to the original file without blocking the upload;
+- Content is capped at 4000 characters and wrapped in an `[ATTACHMENT NOTE]` marker; text, DOCX and the image panel go before or after the body;
+- The original file stays in IndexedDB and the processed copy is uploaded; re-uploading can apply a new configuration;
+- After a settings change, the next send re-uploads attachments in the input box that still have a local original; attachments already sent are not rewritten, and imported files without a local original stay as-is;
+- Enabling / disabling or toggling the companion attachment immediately re-uploads the originals in the input box; companion text attachments sync when enabled / disabled, and should be re-selected after content changes;
+- Restoring defaults disables and clears the config and removes automatically generated companion attachments from drafts;
+- Image text overlay re-encodes the image: GIF / animations become static and GIF / BMP may become PNG; prefer the companion text attachment for PDF / Office.
 
 ---
 
 ## 4. Behaviour matrix
+
 
 | Scenario                    | Original                    | This fork, defaults (all switches off)                                               | Unrestricted mode on                                      |
 | --------------------------- | --------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
@@ -396,6 +445,7 @@ Settings → General → Location:
 | Sampling parameters         | Not sent                    | Adjustable                                                                           | Adjustable                                                |
 | Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                           | Same as default                                           |
 | Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
+| Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                | Same as default                                           |
 
 ---
 
@@ -431,6 +481,8 @@ Settings → General → Location:
 | Prompt      | Disguise historical thinking         | off               | `chat-demo:thinking-as-body`               | Unaffected                      |
 | Model       | Stream output                        | on                | `chat-demo:stream-output`                  | Unaffected                      |
 | Model       | Auto-compress long chats             | off               | `chat-demo:auto-compress`                  | Unaffected                      |
+| Search poison | Enable search poisoning            | off               | `chat-demo:search-poison`                  | Unaffected                      |
+| Attachment poison | Enable attachment poisoning    | off               | `chat-demo:attachment-poison`              | Unaffected                      |
 | Advanced    | Chinese jailbreak prompts            | off               | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
 | General     | Daily limit alerts                   | off               | `chat-demo:daily-limit-enabled`            | Unaffected                      |
 | General     | Daily token limit                    | 1000000           | `chat-demo:daily-token-limit`              | Unaffected                      |
@@ -469,6 +521,10 @@ A normal request (all switches at defaults):
 
 (`title` appears only while the conversation has no title yet, `thinking` follows the DeepThink toggle, and `max_tokens` appears only when set.)
 
+With search poisoning enabled and takeover active, `tools` only keeps `deepseek_read_url`, `system` gains a `[LOCAL SEARCH LAYER]` block, and `latest_reminder` uses the custom date and location; with takeover off or no custom results the real-search request above is unchanged.
+
+Attachment poisoning changes only the uploaded file bytes sent to the Files API, not the request shape; attachments are still referenced by `file_id`.
+
 Unrestricted mode with adjusted parameters (only fields that differ are shown):
 
 ```json
@@ -497,6 +553,11 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | Refusal notices: a hint line when content was kept, the template otherwise                                           |
 | [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | Export status and template handling for refused replies                                                              |
 | [`src/services/settings.ts`](src/services/settings.ts)                                             | New settings, defaults, and persistence                                                                              |
+| [`src/services/searchPoison.ts`](src/services/searchPoison.ts)                                     | Search-poison engine: replacement / blacklist / whitelist, context injection, result and citation rewriting          |
+| [`src/services/attachmentPoison.ts`](src/services/attachmentPoison.ts)                             | Attachment-poison engine: text / DOCX / image text / metadata / trailer / filename / companion attachment            |
+| [`src/components/settings/AttachmentPoisonSettings.tsx`](src/components/settings/AttachmentPoisonSettings.tsx) | Attachment-poison settings UI and method descriptions                                                              |
+| [`src/components/settings/SearchPoisonSettings.tsx`](src/components/settings/SearchPoisonSettings.tsx) | Search-poison settings UI: time, takeover, rules and result editing                                                  |
+| [`src/services/location.ts`](src/services/location.ts)                                             | Location normalization and custom places                                                                             |
 | [`src/services/api/types.ts`](src/services/api/types.ts)                                           | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
 | [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | Settings page: Model group, Prompt group, switches and preview                                                       |
 | [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | Slider + number input control                                                                                        |
@@ -534,6 +595,8 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 ## 8. Data, privacy, and network
 
 - API key and settings: browser localStorage (keys listed in section 5).
+- Search-poison settings (time, replacement / filter rules, custom results) live only in localStorage; when enabled they are sent as system context to the API origin you configured.
+- Attachment-poison settings live only in localStorage; original attachments stay on this device, the processed copies are uploaded, and companion text attachments are sent as ordinary files.
 - Conversations and original attachments: IndexedDB, isolated per browser profile and site origin.
 - The only outbound traffic goes to the API origin you configured (default `https://api.deepseek.com`): `/models` for key validation, `/anthropic/v1/messages` for chat, `/anthropic/v1/files` for attachments, and the ASR / TTS endpoints for speech.
 - No analytics, no telemetry, no third-party scripts, no relay server.
@@ -597,10 +660,17 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 16. **Auto-extraction costs an extra call**: one Flash request per turn; long-term memory and the memory graph stay on this device and are not exported.
 17. **The memory graph uses local hashed vectors**, not semantic embeddings: retrieval is approximate but needs no external service; changing the dimension recomputes vectors.
 18. **Daily usage only counts chat replies**: MCP lab, races and title generation are not included; costs are estimated from current peak/off-peak rates and may differ slightly from the bill.
-19. **Special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
+19. **Custom and special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
 20. **Disguised thinking only covers the previous round**: it is sent as ordinary text, so the server no longer treats it as thinking; token usage rises slightly.
 21. **The relation graph draws at most 80 nodes**: extra nodes are still searched, just not drawn; importing in Replace mode overwrites current long-term memories and graph data, so export a backup first.
 22. **The stream-output switch only controls rendering**: when off, replies are still received over SSE and accumulated, just not shown mid-flight; accumulated content is written back when the page is hidden or closed to avoid loss.
+23. **Search poisoning is not a server-side proxy**: server search runs on the server and the client only sees what the model already consumed; with takeover off it can rewrite display only, not retract this turn’s results.
+24. **Takeover depends on custom results**: with no custom results it does not disable server search (unless a blacklist / whitelist is present); with takeover on the model only sees the configured results and real search does not run.
+25. **Custom time / knowledge cutoff are hints**: they only affect `latest_reminder` and the injected context, not the UI, billing, weather or server region detection, and the model may not fully obey the cutoff.
+26. **Attachment poisoning only affects new / re-uploaded attachments**: server files for messages already sent are not rewritten; attachments in the input box with a local original are re-uploaded on the next send with the current config, while imported files without an original stay as-is and sent history is never rewritten.
+27. **Client-side rewriting is best-effort**: image text overlay needs Canvas, while PDF trailers and image metadata are experimental and not guaranteed to be read; prefer the companion text attachment for PDF / Office.
+28. **Companion text attachments use an attachment slot**: none are generated when the limit is full; restoring defaults only clears the local config and generated companions in drafts, not server or historical attachments.
+29. **Image text overlay re-encodes the image**: GIF / animations become static and GIF / BMP may become PNG; the file trailer skips ZIP-based Office files.
 
 ---
 

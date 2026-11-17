@@ -23,6 +23,10 @@ export type FileAttachment = {
   isImage: boolean
   /** 具体 MIME；导入时没有原件或无法识别的为空字符串，不影响图片身份。 */
   mimeType: string
+  /** 上传时使用的附件投毒指纹；off 为干净文件，skip 为伴随文本附件 */
+  poison?: string
+  /** 自动生成的伴随文本附件 */
+  generated?: boolean
 }
 
 /** 本地消息的分支关系；字段缺省时按线性消息列表处理。 */

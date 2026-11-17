@@ -7,6 +7,15 @@ import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { reasoningEffortValue, thinkingBudget, useSettings } from '../settings.js'
+import { attachmentPoisonSignature } from '../attachmentPoison.js'
+import {
+  attachPoisonResults,
+  formatSearchPoisonContext,
+  parsePoisonNow,
+  poisonStreamEvent,
+  sanitizePoisonedReply,
+  shouldTakeoverSearch,
+} from '../searchPoison.js'
 import { composeSystemPrompt } from './systemPrompt.js'
 import { noteContextUsage } from './contextUsage.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
@@ -817,13 +826,15 @@ export const sendMessage = (targetSessionId: string | null) => {
     id: createId(),
     role: 'user',
     content,
-    files: files.map(({ id, serverId, name, size, isImage, mimeType }) => ({
+    files: files.map(({ id, serverId, name, size, isImage, mimeType, poison, generated }) => ({
       id,
       serverId,
       name,
       size,
       isImage,
       mimeType,
+      ...(poison !== undefined ? { poison } : {}),
+      ...(generated ? { generated: true } : {}),
     })),
     createdAt: now,
   }
@@ -1047,20 +1058,25 @@ export const retryUpload = (sessionId: string, messageId: string) => {
 
 type Request = { history: Message[]; question: UserMessage; prefix?: AssistantMessage }
 
-/** 把补传得到的 serverId 写回会话里所有引用同一附件的消息（编辑、重新生成会共用附件） */
-const saveServerIds = (sessionId: string, serverIds: Map<string, string>) => {
-  if (serverIds.size === 0) {
+type UploadedFile = { serverId: string; poison: string }
+
+/** 把补传得到的 serverId 与投毒指纹写回会话里所有引用同一附件的消息（编辑、重新生成会共用附件） */
+const saveServerIds = (sessionId: string, uploads: Map<string, UploadedFile>) => {
+  if (uploads.size === 0) {
     return
   }
   updateSession(sessionId, (session) => ({
     ...session,
     messages: session.messages.map((message) =>
-      message.role === 'user' && message.files.some((file) => serverIds.has(file.id))
+      message.role === 'user' && message.files.some((file) => uploads.has(file.id))
         ? {
             ...message,
-            files: message.files.map((file) =>
-              serverIds.has(file.id) ? { ...file, serverId: serverIds.get(file.id) ?? null } : file
-            ),
+            files: message.files.map((file) => {
+              const uploaded = uploads.get(file.id)
+              return uploaded
+                ? { ...file, serverId: uploaded.serverId, poison: uploaded.poison }
+                : file
+            }),
           }
         : message
     ),
@@ -1069,22 +1085,37 @@ const saveServerIds = (sessionId: string, serverIds: Map<string, string>) => {
 }
 
 /**
- * 附件的服务端 id：已有直接用；正在上传的等待同一任务；否则读取本地原件补传。
- * 本地也没有原件（导入的文档附件只有元数据）时返回 null，该附件只展示、不进入请求。
+ * 附件的服务端 id：已有且投毒指纹匹配时直接用；正在上传的等待同一任务；
+ * 否则读取本地原件按当前投毒配置补传。本地没有原件时保留旧 serverId（只展示旧文件）。
  */
-const ensureServerId = async (apiKey: string, file: FileAttachment): Promise<string | null> => {
-  if (file.serverId) {
-    return file.serverId
+const ensureServerId = async (
+  apiKey: string,
+  file: FileAttachment
+): Promise<UploadedFile | null> => {
+  const signature = attachmentPoisonSignature(useSettings.getState().attachmentPoison)
+  if (file.serverId && (file.poison === signature || file.poison === 'skip')) {
+    return { serverId: file.serverId, poison: file.poison }
+  }
+  // 旧版本/导入附件没有指纹：关闭投毒时直接复用；开启时尝试用本地原件重新上传
+  if (file.serverId && file.poison === undefined && signature === 'off') {
+    return { serverId: file.serverId, poison: 'off' }
   }
   const task = useUploads.getState().tasks[file.id]
-  if (task?.status === 'done') {
-    return task.serverId
+  if (task?.status === 'done' && (task.poison === signature || task.poison === 'skip')) {
+    return { serverId: task.serverId, poison: task.poison }
   }
   const blob = await db.loadFile(file.id)
   if (!blob) {
-    return null
+    return file.serverId ? { serverId: file.serverId, poison: file.poison ?? 'off' } : null
   }
-  return uploadAttachment(apiKey, file.id, blob, file.name, file.isImage)
+  const serverId = await uploadAttachment(apiKey, file.id, blob, file.name, file.isImage, {
+    skipPoison: file.poison === 'skip',
+  })
+  const uploaded = useUploads.getState().tasks[file.id]
+  return {
+    serverId,
+    poison: uploaded?.status === 'done' ? uploaded.poison : signature,
+  }
 }
 
 /** 用会话里的最新消息替换请求快照：重传前会重置附件的 serverId，快照必须跟着更新 */
@@ -1115,16 +1146,16 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   // 否则快照里仍是旧 id，补传会直接复用它。
   request = refreshRequest(sessionId, request)
   const apiKey = useSettings.getState().apiKey ?? ''
-  const serverIds = new Map<string, string>()
+  const serverIds = new Map<string, UploadedFile>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId
   const aborted = new Promise<never>((_, reject) => {
     signal.addEventListener('abort', () => reject(signal.reason), { once: true })
   })
   const uploads = Promise.allSettled(
     request.question.files.map(async (file) => {
-      const serverId = await ensureServerId(apiKey, file)
-      if (serverId) {
-        serverIds.set(file.id, serverId)
+      const uploaded = await ensureServerId(apiKey, file)
+      if (uploaded) {
+        serverIds.set(file.id, uploaded)
       }
     })
   )
@@ -1150,10 +1181,10 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   for (const file of pending.values()) {
     signal.throwIfAborted()
     try {
-      const serverId = await Promise.race([ensureServerId(apiKey, file), aborted])
-      if (serverId) {
-        serverIds.set(file.id, serverId)
-        saveServerIds(sessionId, new Map([[file.id, serverId]]))
+      const uploaded = await Promise.race([ensureServerId(apiKey, file), aborted])
+      if (uploaded) {
+        serverIds.set(file.id, uploaded)
+        saveServerIds(sessionId, new Map([[file.id, uploaded]]))
       }
     } catch {
       signal.throwIfAborted()
@@ -1307,6 +1338,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   let reply = initial
   // 本轮是否逐字渲染；关闭时只累积到结束，避免中间态暴露
   const streamOutput = useSettings.getState().streamOutput
+  // 搜索投毒在请求开始时取快照，生成过程中修改设置不会让同一轮上下文前后不一致
+  const poisonConfig = useSettings.getState().searchPoison
   let frame = 0
   // 首 token 时间与整轮耗时用于会话统计；服务端拒绝思考强度时退回普通思考请求
   const runStartedAt = Date.now()
@@ -1334,7 +1367,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         // 附件就绪后获取本轮信息；续写沿用原回答快照，重新生成的快照独立保存。
         const latestReminder = prepared.prefix
           ? prepared.prefix.latestReminder
-          : createLatestReminder(useSettings.getState())
+          : createLatestReminder(
+              useSettings.getState(),
+              poisonConfig.enabled ? (parsePoisonNow(poisonConfig.now) ?? new Date()) : new Date()
+            )
         reply = { ...reply, latestReminder }
         updateReply(sessionId, reply)
         persist(sessionId)
@@ -1372,6 +1408,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ? `${jailbreakSystemPrompt(translateJailbreakZh)}${depthDirective(translateJailbreakZh)}`
             : composeSystemPrompt(unrestricted, systemPrompt, promptPreset, translateJailbreakZh))
         // 长期记忆与网状记忆库检索结果追加到 system；标题请求不需要
+        const poisonContext = formatSearchPoisonContext(poisonConfig)
         const memoryContext = titleRequests.has(controller)
           ? ''
           : [
@@ -1390,8 +1427,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ]
               .filter(Boolean)
               .join('\n\n')
-        const systemText =
-          memoryContext === '' ? baseSystemText : `${baseSystemText}\n\n${memoryContext}`
+        const systemText = [baseSystemText, memoryContext, poisonContext]
+          .filter(Boolean)
+          .join('\n\n')
         // 每轮注入：只加在本次请求的 latest_reminder 里，不写入历史快照，避免存储膨胀
         const requestReminder = injectPromptEveryTurn
           ? `${latestReminder}\n\n${baseSystemText}`
@@ -1441,13 +1479,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             top_p: autoTuned?.params.top_p ?? topP,
             ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
             safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
-            tools: serverTools(initial.search ?? false),
+            // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
+            tools: serverTools((initial.search ?? false) && !shouldTakeoverSearch(poisonConfig)),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },
           controller.signal
         )
         const blockIndexes = new Map<number, number>()
-        for await (const event of events) {
+        for await (const rawEvent of events) {
+          const event = poisonStreamEvent(rawEvent, poisonConfig)
           receivedContent ||= event.type === 'content_block_start'
           if (event.type === 'message_start') {
             noteContextUsage(sessionId, event.message.usage)
@@ -1584,6 +1624,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         }
       })
     }
+    // 自定义结果在没有真实搜索步骤时补一个投毒步骤；错误与拒绝轮次不展示
+    if (poisonConfig.enabled && reply.status !== 'error' && reply.stopReason !== 'refusal') {
+      reply = attachPoisonResults(reply, poisonConfig)
+    }
+    reply = sanitizePoisonedReply(reply, poisonConfig)
     titleRequests.delete(controller)
     streamFlushes.delete(sessionId)
     cancelAnimationFrame(frame)

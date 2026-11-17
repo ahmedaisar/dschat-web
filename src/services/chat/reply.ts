@@ -7,6 +7,7 @@ import type {
   TextBlockParam,
 } from '../api/types.js'
 import { translate } from '../../i18n/index.js'
+import { isPoisonToolId } from '../searchPoison.js'
 import type {
   AssistantMessage,
   FileAttachment,
@@ -281,8 +282,8 @@ export const canContinueReply = (reply: AssistantMessage, allowRefused = false):
     reply.stopReason === 'tool_use' ||
     reply.blocks.some(
       (block) =>
-        block.type === 'server_tool_use' ||
-        block.type === 'web_search_tool_result' ||
+        (block.type === 'server_tool_use' && !isPoisonToolId(block.id)) ||
+        (block.type === 'web_search_tool_result' && !isPoisonToolId(block.tool_use_id)) ||
         block.type === 'web_fetch_tool_result' ||
         (block.type === 'text' && block.isTemplate)
     )

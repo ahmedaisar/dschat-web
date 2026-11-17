@@ -2,6 +2,16 @@ import { create } from 'zustand'
 import type { TtsVoice } from './api/speech.js'
 import type { ChatModel } from './api/types.js'
 import { normalizeLocation, type UserLocation } from './location.js'
+import {
+  defaultAttachmentPoison,
+  normalizeAttachmentPoison,
+  type AttachmentPoisonConfig,
+} from './attachmentPoison.js'
+import {
+  defaultSearchPoison,
+  normalizeSearchPoison,
+  type SearchPoisonConfig,
+} from './searchPoison.js'
 import type { AutoTuneStrategy } from './unrestricted/autotune.js'
 import type { ObfuscationTechnique } from './unrestricted/parseltongue.js'
 import type { PromptPreset } from './unrestricted/prompts.js'
@@ -53,6 +63,10 @@ type Settings = {
   memoryBankTagWeight: number
   memoryBankVectorWeight: number
   memoryBankEdgeWeight: number
+  /** 搜索投毒：改写时间、接管搜索并替换/过滤结果 */
+  searchPoison: SearchPoisonConfig
+  /** 附件投毒：上传前往附件里写入文本 */
+  attachmentPoison: AttachmentPoisonConfig
   /** 每日 Token / 费用提醒 */
   dailyLimitEnabled: boolean
   dailyTokenLimit: number
@@ -134,6 +148,8 @@ const KEYS = {
   variantRaceBudget: 'chat-demo:variant-race-budget',
   variantRaceConfirmDismissed: 'chat-demo:variant-race-confirm-dismissed',
   search: 'chat-demo:search',
+  searchPoison: 'chat-demo:search-poison',
+  attachmentPoison: 'chat-demo:attachment-poison',
   temperature: 'chat-demo:temperature',
   topP: 'chat-demo:top-p',
   maxTokens: 'chat-demo:max-tokens',
@@ -199,8 +215,8 @@ const initialLocation = (): UserLocation | null => {
     if (!location) {
       return null
     }
-    // 空间站 / 月球 / 火星等特殊位置不受浏览器语言和行政区校验影响
-    if (location.place) {
+    // 自定义位置与空间站 / 月球 / 火星等特殊位置不受浏览器语言和行政区校验影响
+    if (location.custom || location.place) {
       return location
     }
     return isChineseBrowser()
@@ -292,7 +308,23 @@ const initialSystemPrompt = (): string | null => {
   return saved !== null && saved.trim() !== '' ? saved : null
 }
 
-/** 最大输出 Token：未设置或不是正整数时为 null，表示使用服务端默认值 */
+/** 搜索投毒配置：JSON 解析失败或格式不对时回到默认值 */
+const initialSearchPoison = (): SearchPoisonConfig => {
+  try {
+    return normalizeSearchPoison(JSON.parse(read(KEYS.searchPoison) ?? 'null'))
+  } catch {
+    return defaultSearchPoison()
+  }
+}
+
+const initialAttachmentPoison = (): AttachmentPoisonConfig => {
+  try {
+    return normalizeAttachmentPoison(JSON.parse(read(KEYS.attachmentPoison) ?? 'null'))
+  } catch {
+    return defaultAttachmentPoison()
+  }
+}
+
 const initialMaxTokens = (): number | null => {
   const raw = read(KEYS.maxTokens)
   if (raw === null) {
@@ -375,6 +407,8 @@ export const useSettings = create<Settings>(() => ({
   variantRaceBudget: initialNumber(KEYS.variantRaceBudget, 1, 0.01, 1000),
   variantRaceConfirmDismissed: read(KEYS.variantRaceConfirmDismissed) === 'true',
   search: read(KEYS.search) === 'true',
+  searchPoison: initialSearchPoison(),
+  attachmentPoison: initialAttachmentPoison(),
   temperature: initialNumber(KEYS.temperature, 1, 0, 2),
   topP: initialNumber(KEYS.topP, 1, 0.01, 1),
   maxTokens: initialMaxTokens(),
@@ -456,6 +490,23 @@ export const setReasoningEffort = (value: number) => {
 export const setSearch = (search: boolean) => {
   write(KEYS.search, String(search))
   useSettings.setState({ search })
+}
+
+/** 合并式更新搜索投毒配置；数组字段整体替换，写入前统一做边界校验 */
+export const setSearchPoison = (patch: Partial<SearchPoisonConfig>) => {
+  const next = normalizeSearchPoison({ ...useSettings.getState().searchPoison, ...patch })
+  write(KEYS.searchPoison, JSON.stringify(next))
+  useSettings.setState({ searchPoison: next })
+}
+
+/** 合并式更新附件投毒配置；methods 去重、content 截断，写入前统一校验 */
+export const setAttachmentPoison = (patch: Partial<AttachmentPoisonConfig>) => {
+  const next = normalizeAttachmentPoison({
+    ...useSettings.getState().attachmentPoison,
+    ...patch,
+  })
+  write(KEYS.attachmentPoison, JSON.stringify(next))
+  useSettings.setState({ attachmentPoison: next })
 }
 
 export const setTemperature = (temperature: number) => {
@@ -717,6 +768,8 @@ export const resetSettings = () => {
     variantRaceBudget: 1,
     variantRaceConfirmDismissed: false,
     search: false,
+    searchPoison: defaultSearchPoison(),
+    attachmentPoison: defaultAttachmentPoison(),
     temperature: 1,
     topP: 1,
     maxTokens: null,
