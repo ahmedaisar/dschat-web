@@ -580,8 +580,6 @@ const AboutSetting = () => {
     },
     { label: 'aboutDemoLabel', href: 'https://chat-unrestricted.fur0.com/' },
     { label: 'aboutUpstreamLabel', href: 'https://github.com/deepseek-ai/chat-demo' },
-    { label: 'aboutOperitLabel', href: 'https://github.com/AAswordman/Operit' },
-    { label: 'aboutDeepChatLabel', href: 'https://github.com/YanJiuWeiYuanHui/DeepChat' },
   ]
   return (
     <div className={styles.about}>
@@ -619,6 +617,7 @@ const ChangelogSetting = () => {
         'changelogV256Dimension',
         'changelogV256Stats',
         'changelogV256Reset',
+        'changelogV256Credits',
       ],
     },
     {
@@ -762,6 +761,16 @@ const ChangelogSetting = () => {
       label: 'creditLibertasLabel',
       note: 'creditLibertasNote',
       href: 'https://github.com/elder-plinius/L1B3RT4S',
+    },
+    {
+      label: 'creditOperitLabel',
+      note: 'creditOperitNote',
+      href: 'https://github.com/AAswordman/Operit',
+    },
+    {
+      label: 'creditDeepChatLabel',
+      note: 'creditDeepChatNote',
+      href: 'https://github.com/YanJiuWeiYuanHui/DeepChat',
     },
   ]
   return (

@@ -134,8 +134,6 @@ export const en = {
     'A static DeepSeek chat front end with unrestricted mode, custom system prompts, editable replies, and a EasyJailbreak lab powered by a local MCP backend.',
   aboutRepositoryLabel: 'GitHub repository',
   aboutDemoLabel: 'Live demo',
-  aboutOperitLabel: 'Credits: Operit',
-  aboutDeepChatLabel: 'Credits: DeepChat',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
   changelogV256Title: 'v2.5.6 · 2026-11',
@@ -148,6 +146,8 @@ export const en = {
     'The memory graph shows vector-dimension usage and estimated footprint; search debug adds dimension, query tokens and top score',
   changelogV256Stats:
     'Chat statistics and the context ring now show memory nodes / edges / dimension / last injected hits',
+  changelogV256Credits:
+    'Moved the About-page credits to the bottom of the changelog and added Operit / DeepChat',
   changelogV256Reset:
     'Restore defaults now covers memory retrieval and daily alerts while keeping saved memory data',
   changelogV255Title: 'v2.5.5 · 2026-11',
@@ -213,6 +213,11 @@ export const en = {
     'Reference implementation for the thinking slider, context ring and session statistics.',
   creditDshUnrestrictedLabel: 'dsh-unrestricted',
   creditDshUnrestrictedNote: 'Upstream reference for jailbreak prompts and experiment settings.',
+  creditOperitLabel: 'Operit',
+  creditOperitNote:
+    'Reference for the memory graph, vector dimensions, retrieval weights and search debug.',
+  creditDeepChatLabel: 'DeepChat',
+  creditDeepChatNote: 'Reference for long-term memory and daily token / cost alerts.',
   creditLibertasLabel: 'L1B3RT4S',
   creditLibertasNote: 'Upstream source for GODMODE, Hall of Fame prompts and jailbreak combos.',
   changelogV24Title: 'v2.4.0 · 2026-11',
