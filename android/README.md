@@ -12,11 +12,17 @@
 `android/deepseek-unrestricted-2.6.2.apk`，versionCode 262，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`975c9b88b18b648dad7a9fd1ec97653ba34f748178ca945de069d16cb4b3fa2b`（7.2 MB）。
+SHA-256：`4f12d2de274319972c8f713373f1b3476ea56ad5ffc64ad5028d969ea6b77de4`（7.2 MB）。
 
 ## 构建
 
-需要：
+仓库根目录的 `构建APK.sh` 会自动读取 `package.json` 版本、构建 Web、调用本目录脚本并输出根目录 APK：
+
+```sh
+KS_PASS=<keystore-password> ./构建APK.sh
+```
+
+手动构建需要：
 
 - Android SDK platform 34、build-tools 34.0.0；
 - JDK 17（JDK 27 下 d8 8.2 会内部崩溃）；

@@ -53,7 +53,7 @@
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
 - **解除限制与提示词**：解除限制模式、默认破限文档 / GODMODE 预设、每轮静默注入系统提示词、实验性中文翻译；
-- **自定义思维链**：预先写好推理步骤，关闭深度思考时直接注入 system，开启时作为实验性引导；
+- **自定义思维链**：预先写好推理步骤，关闭深度思考时直接注入 system 并在回复上方显示，开启时作为实验性引导；
 - **高级引擎**：思考强度 0–4 档、输入扰动（33 种技术，可单技术或按档位生成变体）、AutoTune 自动调参、STM 输出整形、一键自动越狱（被拒绝自动换组合重试）；
 - **越狱实验台**：本地 MCP + EasyJailbreak 攻击器，多路提示词赛跑、变体赛跑（预算上限 + 开跑确认）、结果导入导出；
 - **会话能力**：回复改写、防撤回、分支到新对话（原对话不受影响）、长对话压缩（压力触发自动压缩 + 手动压缩）；
@@ -113,7 +113,7 @@
 | 通用设置   | 主题、语言、朗读音色、位置、每日用量与提醒                                                            |
 | **模型**   | 当前模型、流式输出、温度、Top P、最大输出 Token、防撤回、自动压缩长对话、跳过安全审核、拒绝后继续生成 |
 | **提示词** | 解除限制模式、每轮注入系统提示词、自定义系统提示词、组装流水线说明、实际下发全文预览                  |
-| **思维链** | 自定义思维链开关、步骤编辑、示例 / 清空、注入预览，以及深度思考关闭 / 开启时的两种说明                 |
+| **思维链** | 设置页 / 输入栏卡片双入口：开关、步骤编辑、示例 / 清空、注入预览；关闭深度思考时回复上方显示注入内容     |
 | **高级**   | 系统提示词预设、中文越狱提示词、输入扰动、自动越狱、自动调参、输出整形                                |
 | **搜索投毒** | 自定义当前时间与知识截止、接管联网搜索、关键字 / 正则替换、黑名单、强制自定义结果、白名单          |
 | **记忆**   | 长期记忆、自动提炼、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                        |
@@ -436,13 +436,16 @@ Persona（官方身份分块）
 
 | 深度思考 | 注入内容 | 行为 | 稳定性 |
 | --- | --- | --- | --- |
-| 关闭（0 档） | `[自定义思维链]` | 模型在内部按步骤作答；服务端没有独立 thinking 通道，界面只显示最终回答 | 常规能力 |
+| 关闭（0 档） | `[自定义思维链]` | 模型在内部按步骤作答；回复上方显示「已注入思维链」卡片，随后显示最终回答 | 常规能力 |
 | 开启（1-4 档） | `[自定义思维链 · 实验性]` | 作为服务端思考的引导；服务端可能忽略、调整或重写这些步骤 | 实验性 |
 
+- 输入栏重新排版：第一排为模型 / 自动越狱 / 深度思考 / 扰动，第二排单独放思维链与智能搜索；手机端仍是一行横向滚动；
+- 输入栏「思维链」按钮改为卡片入口，与设置页共用同一份配置：可直接开关、编辑、填入示例、清空，或点「打开设置」查看完整说明与 system 预览；
+- **关闭深度思考时，回复上方会显示「已注入思维链」卡片**（默认展开、可折叠），内容是这一轮实际写入 system 的步骤，不再只显示最终回答；它不是服务端返回的 thinking，而是用户预设的推理步骤；
+- 开启深度思考时不重复显示该卡片，服务端 thinking 照常展示；思维链仍作为实验性引导注入；
+- 每条回复保存本轮注入快照：续写沿用原快照，重新生成读取当前设置，避免中途修改设置导致同一轮前后不一致；
 - 思维链放在 Persona / 破限规则之后、长期记忆与搜索上下文之前；首轮请求同时带标题生成，也会注入，否则新会话第一条回复不会生效；
 - 正文上限 4000 字符；只保存在本机 `chat-demo:custom-cot` 与 `chat-demo:custom-cot-enabled`，每轮都会增加输入 token；
-- 设置页提供「填入示例」「清空」与「预览注入 system 的内容」；输入栏新增「思维链」按钮，启用时高亮，点击直接打开该分组；
-- 关闭开关会保留正文，方便下次再开；恢复默认设置会清空正文并关闭；
 - 只修改 `system`，不改消息结构：流式 / 非流式、续写、重新生成、标题生成、附件、搜索投毒与历史导入导出都保持兼容。
 
 ---
@@ -463,7 +466,7 @@ Persona（官方身份分块）
 | 导出拒绝回复         | `CONTENT_FILTER` + 模板 | 同原版（保留内容时按正常结束）                         | 同默认                     |
 | 其他原版功能         | —                       | 搜索、附件、分支、导入导出、朗读、主题、双语等全部保留 | 同默认                     |
 | 联网搜索             | 服务端执行              | 默认保留；搜索投毒可接管或改写展示                      | 同默认                     |
-| 自定义思维链         | 无此设置                | 默认关；启用后作为 system 分块注入                      | 同默认                     |
+| 自定义思维链         | 无此设置                | 默认关；启用后注入 system，关闭深度思考时回复上方显示「已注入思维链」 | 同默认                     |
 
 ---
 
@@ -541,7 +544,7 @@ Persona（官方身份分块）
 
 （`title` 只在这条会话还没有标题时出现，`thinking` 跟随输入框的深度思考开关，`max_tokens` 仅在设置后出现。）
 
-开启自定义思维链后，`system` 在 Persona / 破限规则与记忆、搜索上下文之间追加 `[自定义思维链]` 分块；深度思考开启时换成 `[自定义思维链 · 实验性]`。首轮同时带 `title` 也会注入，其余字段与消息结构不变。
+开启自定义思维链后，`system` 在 Persona / 破限规则与记忆、搜索上下文之间追加 `[自定义思维链]` 分块；深度思考开启时换成 `[自定义思维链 · 实验性]`。首轮同时带 `title` 也会注入，其余字段与消息结构不变。关闭深度思考时，客户端在回复上方额外渲染「已注入思维链」卡片；该卡片不进入请求，也不写入 `blocks`。
 
 开启搜索投毒并接管时，`tools` 只剩 `deepseek_read_url`，`system` 末尾追加 `[LOCAL SEARCH LAYER]` 搜索上下文，`latest_reminder` 使用自定义日期与位置；关闭接管或没有自定义结果时仍保持上面的真实搜索请求。
 
@@ -570,7 +573,9 @@ Persona（官方身份分块）
 | 文件                                                                                               | 作用                                                                                                                   |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | 系统提示词组装流水线：Persona + 破限规则分块，支持自定义覆盖                                                           |
-| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | 自定义思维链归一化与 system 分块生成（直接 / 实验性两种文案）                                                          |
+| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | 自定义思维链归一化、注入快照与 system 分块生成（直接 / 实验性两种文案）                                                |
+| [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)       | 输入栏「思维链」卡片：开关、编辑、示例 / 清空、打开设置                                                                 |
+| [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)               | 回复上方的「已注入思维链」折叠卡片                                                                                     |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、自定义思维链注入、回复结束时的防撤回处理、续写守卫                  |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
@@ -608,7 +613,7 @@ Persona（官方身份分块）
 | [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                         | 变体赛跑界面与开跑确认                                                                                                 |
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                 | 方块开关组件                                                                                                           |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)               | 回复编辑器（思维链 / 正文）                                                                                            |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | 编辑入口、「继续生成」按钮、拒绝回复的展示分支                                                                         |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | 编辑入口、「继续生成」按钮、「已注入思维链」展示与拒绝回复分支                                                         |
 | [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                               | 破限规则文本，构建时内联                                                                                               |
 | [`mcp-server/`](mcp-server/README.md)                                                              | 本地 EasyJailbreak MCP 后端                                                                                            |
 | [`src/components/lab/`](src/components/lab/LabView.tsx)                                            | 越狱实验台页面                                                                                                         |
@@ -668,7 +673,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.2 / 262），依次构建 Web、APK 并签名：
+  ```sh
+  KS_PASS=... ./构建APK.sh
+  ```
+  也可以手动执行：
   ```sh
   export ANDROID_HOME=$HOME/android-sdk
   export JAVA_HOME=/path/to/jdk-17
@@ -713,9 +722,10 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 29. **图片文字覆盖会重新编码**：GIF / 动图会变成静态图，GIF / BMP 等可能转为 PNG；文件尾附加对 ZIP 类 Office 文件自动跳过。
 30. **APK 内的 Python 后端不会执行**：EasyJailbreak / torch 依赖无法放进普通 WebView APK；后端源码只随包附带，实验台必须连接电脑或服务器上的 MCP 服务。
 31. **APK 是 WebView 壳**：文件下载等浏览器能力取决于系统 WebView；本地服务固定占用 18765 端口，被占用时应用会显示启动失败提示。
-32. **自定义思维链是提示词引导，不是真正的 reasoning 通道**：关闭深度思考时不会显示单独的推理过程，模型也可能不完全遵守；每轮都会增加输入 token，正文上限 4000 字符。
-33. **开启深度思考时自定义思维链是实验性**：服务端 thinking 优先，可能忽略或重写这些步骤，不保证与直接注入同样效果。
+32. **自定义思维链是提示词引导，不是真正的 reasoning 通道**：关闭深度思考时，回复上方卡片展示的是你预设的步骤，不是模型实时推理；模型也可能不完全遵守；每轮都会增加输入 token，正文上限 4000 字符。
+33. **开启深度思考时自定义思维链是实验性**：服务端 thinking 优先，可能忽略或重写这些步骤，不保证与直接注入同样效果；此时不重复显示「已注入思维链」卡片，以服务端 thinking 为准。
 34. **自定义思维链只作用于聊天请求**：多路赛跑、变体赛跑、长对话压缩、记忆提炼等独立调用使用各自的系统提示词，不读取该设置；聊天首轮同时生成标题，仍会注入。
+35. **「已注入思维链」卡片只保存在本机会话**：历史导出包不含该展示字段，重新导入后不显示；续写沿用原回复快照，重新生成使用当前设置。
 
 ---
 

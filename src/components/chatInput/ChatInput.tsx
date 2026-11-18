@@ -1,7 +1,6 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import {
-  IconCustomCotOutline16,
   IconDataOutline16,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
@@ -27,7 +26,7 @@ import {
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
-import { ensureApiKey, openSettings } from '../settings/settingsDialogState.js'
+import { ensureApiKey } from '../settings/settingsDialogState.js'
 import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
@@ -36,11 +35,11 @@ import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { ParseltongueButton } from './ParseltonguePanel.js'
+import { CustomCotButton } from './CustomCotPanel.js'
 import { ModelPicker } from './ModelPicker.js'
 import { ThinkingSlider } from './ThinkingSlider.js'
 import { ContextRing } from './ContextRing.js'
 import { Spectrum } from './Spectrum.js'
-import { isCustomCotActive } from '../../services/chat/customCot.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ChatInput.module.css'
 
@@ -63,9 +62,6 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
-  const customCotEnabled = useSettings((state) => state.customCotEnabled)
-  const customCot = useSettings((state) => state.customCot)
-  const customCotActive = isCustomCotActive(customCotEnabled, customCot)
   const attachmentPoisonEnabled = useSettings((state) => state.attachmentPoison.enabled)
   const attachmentPoisonSidecar = useSettings((state) =>
     state.attachmentPoison.methods.includes('sidecar')
@@ -217,7 +213,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         </div>
       </div>
       <div className={styles.functionRow}>
-        {/* 思考强度 / 智能搜索 / 输入扰动，tooltip 在按钮上方 */}
+        {/* 第一排：模型 / 自动越狱 / 思考强度 / 扰动；第二排：思维链 / 智能搜索 */}
         <div className={styles.toggles}>
           <ModelPicker />
           <span className={styles.toolbarDivider} aria-hidden />
@@ -234,24 +230,21 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             </button>
           </Tooltip>
           <ThinkingSlider />
-          <Tooltip
-            content={t(
-              customCotActive ? 'settingsCustomCotToolbarActive' : 'settingsCustomCotToolbar'
-            )}
-          >
-            <button
-              type="button"
-              className={clsx(styles.toggle, customCotActive && styles.selected)}
-              aria-label={t(
-                customCotActive ? 'settingsCustomCotToolbarActive' : 'settingsCustomCotToolbar'
-              )}
-              aria-haspopup="dialog"
-              onClick={() => openSettings('cot')}
-            >
-              <IconCustomCotOutline16 />
-              <span className={styles.toggleLabel}>{t('settingsCustomCotShort')}</span>
-            </button>
+          <Tooltip content={t('parseltongueToggleTooltip')}>
+            <ParseltongueButton
+              text={text}
+              triggerClassName={styles.toggle}
+              selectedClassName={styles.selected}
+              labelClassName={styles.toggleLabel}
+            />
           </Tooltip>
+          {/* 桌面端在此换行：思维链与智能搜索单独占第二排；手机端仍是一行横向滚动 */}
+          <span className={styles.toolbarBreak} aria-hidden />
+          <CustomCotButton
+            triggerClassName={styles.toggle}
+            selectedClassName={styles.selected}
+            labelClassName={styles.toggleLabel}
+          />
           <Tooltip content={t('deactivatedSearchTooltip')}>
             <button
               type="button"
@@ -263,14 +256,6 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
-          </Tooltip>
-          <Tooltip content={t('parseltongueToggleTooltip')}>
-            <ParseltongueButton
-              text={text}
-              triggerClassName={styles.toggle}
-              selectedClassName={styles.selected}
-              labelClassName={styles.toggleLabel}
-            />
           </Tooltip>
         </div>
         <div className={styles.right}>

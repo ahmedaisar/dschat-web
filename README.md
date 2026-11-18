@@ -53,7 +53,7 @@ A fully static DeepSeek chat front end: multiple conversations, streaming replie
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
 - **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
-- **Custom chain of thought**: write reasoning steps in advance and inject them into system; direct when deep thinking is off, experimental guidance when it is on;
+- **Custom chain of thought**: write reasoning steps in advance and inject them into system, with an injected-steps card above replies when deep thinking is off; experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
 - **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
@@ -113,7 +113,7 @@ The settings dialog grows from two groups to twelve:
 | General         | Theme, language, TTS voice, location, daily usage and alerts                                                                                     |
 | **Model**       | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
 | **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                          |
-| **Chain of thought** | Custom chain switch, step editor, example / clear, injection preview, and the two deep-thinking modes                                      |
+| **Chain of thought** | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off |
 | **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                    |
 | **Search poison** | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist              |
 | **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
@@ -436,12 +436,16 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 
 | Deep thinking | Injected block | Behaviour | Stability |
 | --- | --- | --- | --- |
-| Off (level 0) | `[CUSTOM CHAIN OF THOUGHT]` | The model reasons internally through the steps; the server has no separate thinking channel, so the UI shows only the final answer | Standard |
+| Off (level 0) | `[CUSTOM CHAIN OF THOUGHT]` | The model reasons internally through the steps; an “Injected chain of thought” card appears above the reply, followed by the final answer | Standard |
 | On (levels 1-4) | `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]` | Guidance for server-side reasoning; the server may ignore, adjust or rewrite the steps | Experimental |
 
+- The composer is now two rows: model / auto jailbreak / deep thinking / perturbation on the first, chain of thought / web search on the second; mobile keeps a single horizontal row.
+- The composer **Chain** button is a card, sharing the same config as the settings page: toggle, edit, insert an example, clear, or open the full settings for the system preview.
+- **With deep thinking off, an “Injected chain of thought” card is rendered above the reply** (expanded by default, collapsible). It shows the exact steps written into system for that turn instead of showing only the final answer; it is user-defined input, not server-side thinking.
+- With deep thinking on, the card is not repeated; server-side thinking is shown as usual, and the custom chain remains experimental guidance.
+- Each reply stores a snapshot of the injected chain: continue reuses it, regenerate reads the current settings, so changing settings mid-conversation cannot make one turn inconsistent.
 - The block sits after the Persona / unrestricted rules and before long-term memory and search context. The first request also asks for a title, and still gets the block; otherwise the first reply in a new chat would not use it.
 - The text is capped at 4000 characters and stored locally in `chat-demo:custom-cot` and `chat-demo:custom-cot-enabled`; every request increases input tokens.
-- The settings page offers “Insert example”, “Clear” and “Preview the text injected into system”. A **Chain** button in the composer highlights when active and opens this group directly.
 - Turning the switch off keeps the text for later; restoring defaults clears it and disables the feature.
 - Only `system` changes. Streaming / non-streaming, continue, regenerate, title generation, attachments, search poisoning and history import/export stay compatible.
 
@@ -463,7 +467,7 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                           | Same as default                                           |
 | Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
 | Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                | Same as default                                           |
-| Custom chain of thought     | Not available               | Off by default; injected as a system block when enabled                              | Same as default                                           |
+| Custom chain of thought     | Not available               | Off by default; injected into system; the “Injected chain of thought” card shows above replies when deep thinking is off | Same as default                                           |
 
 ---
 
@@ -541,7 +545,7 @@ A normal request (all switches at defaults):
 
 (`title` appears only while the conversation has no title yet, `thinking` follows the DeepThink toggle, and `max_tokens` appears only when set.)
 
-With custom chain of thought enabled, `system` gains a `[CUSTOM CHAIN OF THOUGHT]` block between the Persona / unrestricted rules and the memory / search context; with deep thinking on it becomes `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]`. The first request also carries `title`, and still gets the block; every other field and the message structure stay unchanged.
+With custom chain of thought enabled, `system` gains a `[CUSTOM CHAIN OF THOUGHT]` block between the Persona / unrestricted rules and the memory / search context; with deep thinking on it becomes `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]`. The first request also carries `title`, and still gets the block; every other field and the message structure stay unchanged. With deep thinking off, the client additionally renders an “Injected chain of thought” card above the reply; the card is not part of the request and is not written into `blocks`.
 
 With search poisoning enabled and takeover active, `tools` only keeps `deepseek_read_url`, `system` gains a `[LOCAL SEARCH LAYER]` block, and `latest_reminder` uses the custom date and location; with takeover off or no custom results the real-search request above is unchanged.
 
@@ -570,7 +574,9 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | File                                                                                               | Purpose                                                                                                              |
 | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
-| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | Custom chain normalization and system-block generation (direct / experimental wording)                               |
+| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | Custom chain normalization, injection snapshot and system-block generation (direct / experimental wording)           |
+| [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)       | Composer Chain card: toggle, edit, example / clear, open settings                                                    |
+| [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)               | Collapsible “Injected chain of thought” card above replies                                                          |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
 | [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | Composer Chain shortcut, active state and settings entry                                                             |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
@@ -608,7 +614,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                         | Variant race UI and start confirmation                                                                               |
 | [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                 | Switch component                                                                                                     |
 | [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)               | Reply editor (thinking / body)                                                                                       |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | Edit entry point, Continue button, refusal rendering branch                                                          |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | Edit entry point, Continue button, injected-chain card and refusal rendering branch                                  |
 | [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                               | Unrestricted rules text, inlined at build time                                                                       |
 | [`mcp-server/`](mcp-server/README.md)                                                              | Local EasyJailbreak MCP backend                                                                                      |
 | [`src/components/lab/`](src/components/lab/LabView.tsx)                                            | Jailbreak lab page                                                                                                   |
@@ -668,7 +674,11 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8):
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.2 / 262), builds the web app and the signed APK:
+  ```sh
+  KS_PASS=... ./构建APK.sh
+  ```
+  The manual path still works:
   ```sh
   export ANDROID_HOME=$HOME/android-sdk
   export JAVA_HOME=/path/to/jdk-17
@@ -713,9 +723,10 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 29. **Image text overlay re-encodes the image**: GIF / animations become static and GIF / BMP may become PNG; the file trailer skips ZIP-based Office files.
 30. **The Python backend does not run inside the APK**: EasyJailbreak / torch cannot be packed into a normal WebView APK; the bundled backend sources are for reference and the lab must connect to an MCP service on a PC or server.
 31. **The APK is a WebView shell**: browser capabilities such as file downloads depend on the system WebView; the local server occupies port 18765 and shows a startup error if the port is taken.
-32. **Custom chain of thought is prompt guidance, not a real reasoning channel**: with deep thinking off the UI does not show a separate reasoning process, and the model may not follow every step; each request increases input tokens and the text is capped at 4000 characters.
-33. **With deep thinking on the custom chain is experimental**: server-side thinking takes priority and may ignore or rewrite the steps, so results are not guaranteed to match direct injection.
+32. **Custom chain of thought is prompt guidance, not a real reasoning channel**: with deep thinking off, the card above the reply shows the steps you wrote, not live model reasoning; the model may not follow every step; each request increases input tokens and the text is capped at 4000 characters.
+33. **With deep thinking on the custom chain is experimental**: server-side thinking takes priority and may ignore or rewrite the steps, so results are not guaranteed to match direct injection; the injected card is not repeated and server-side thinking is shown instead.
 34. **Custom chain of thought only applies to chat requests**: race, variant race, long-chat compression and memory extraction use their own system prompts and ignore it; the first chat request that also generates a title still receives it.
+35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
 
 ---
 

@@ -139,9 +139,13 @@ export const zh = {
   changelogV262Custom:
     '新增「自定义思维链」：在设置 → 思维链里预先写好推理步骤，请求前注入 system；关闭深度思考时直接生效，开启时作为实验性引导',
   changelogV262Modes:
-    '输入栏新增「思维链」快捷键并显示启用状态；设置页可填入示例、清空、预览实际注入内容，关闭开关后保留正文',
+    '输入栏新增「思维链」卡片入口，与设置页双模式：可开关、编辑、填入示例、清空并打开完整设置；关闭开关后保留正文',
+  changelogV262Layout:
+    '输入栏重新排版：思维链与智能搜索单独放在第二排；桌面端第一排保留模型、自动越狱、深度思考与扰动',
+  changelogV262Injected:
+    '关闭深度思考时，回复上方显示「已注入思维链」卡片（默认展开、可折叠），不再只显示最终回答；开启深度思考时仍以服务端 thinking 为准',
   changelogV262Compatibility:
-    '自定义思维链只改变 system，流式 / 非流式、续写、重新生成、标题生成与历史导入导出保持兼容；配置只存本机，恢复默认会清空',
+    '请求侧只改变 system，回复上方增加本地展示卡片；流式 / 非流式、续写、重新生成、标题生成与历史导入导出保持兼容；配置只存本机，恢复默认会清空',
   changelogV262Apk: '同步构建 2.6.2 APK（versionCode 262），使用 xiaohuangbo.jks 签名',
   changelogV261Title: 'v2.6.1 · 2026-11',
   changelogV261Android:
@@ -410,6 +414,11 @@ export const zh = {
   settingsCustomCotToolbar: '自定义思维链（点击编辑）',
   settingsCustomCotToolbarActive: '自定义思维链已启用（点击编辑）',
   settingsCustomCotShort: '思维链',
+  customCotPanelTitle: '自定义思维链',
+  customCotPanelHint: '修改即时保存；关闭深度思考时会在回复上方显示已注入内容。',
+  customCotPanelOpenSettings: '打开设置',
+  injectedCotLabel: '已注入思维链',
+  injectedCotBadge: '自定义',
   customCotInjectionDirect:
     '【自定义思维链】\n在给出最终回答前，先按下面的步骤在内部完成推理。不要复述这段思维链本身，也不要在回答里提到它；只有用户明确要求展示推理过程时才展示。\n\n{chain}',
   customCotInjectionThinking:

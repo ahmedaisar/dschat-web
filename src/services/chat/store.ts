@@ -17,7 +17,7 @@ import {
   shouldTakeoverSearch,
 } from '../searchPoison.js'
 import { composeSystemPrompt } from './systemPrompt.js'
-import { formatCustomCotContext } from './customCot.js'
+import { customCotSnapshot, formatCustomCotContext } from './customCot.js'
 import { noteContextUsage } from './contextUsage.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
@@ -311,13 +311,15 @@ export const bindChatPersistence = () => {
 
 /** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search。 */
 const createReply = (): AssistantMessage => {
-  const { thinking, search, model } = useSettings.getState()
+  const { thinking, search, model, customCotEnabled, customCot } = useSettings.getState()
   return {
     id: createId(),
     role: 'assistant',
     createdAt: Date.now(),
     model,
     thinking,
+    // 快照本轮注入的思维链，之后续写 / 展示都以它为准，不受设置改动影响
+    customCot: customCotSnapshot(customCotEnabled, customCot),
     search,
     prefix: true,
     status: 'pending',
@@ -1011,12 +1013,14 @@ export const continueReply = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const { thinking, search } = useSettings.getState()
+  const { thinking, search, customCotEnabled, customCot } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
     // 未记录请求配置的回复，续写时使用默认模型和当前开关。
     model: previous.model ?? MODEL,
     thinking: previous.thinking ?? thinking,
+    // 续写沿用原回复注入过的思维链；旧回复没有快照时才用当前设置。
+    customCot: previous.customCot ?? customCotSnapshot(customCotEnabled, customCot),
     search: previous.search ?? search,
     status: 'pending',
     stopReason: undefined,
@@ -1051,7 +1055,13 @@ export const retryUpload = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const reply: AssistantMessage = { ...previous, status: 'pending', error: undefined }
+  const { customCotEnabled, customCot } = useSettings.getState()
+  const reply: AssistantMessage = {
+    ...previous,
+    status: 'pending',
+    error: undefined,
+    customCot: previous.customCot ?? customCotSnapshot(customCotEnabled, customCot),
+  }
   updateReply(sessionId, reply)
   persist(sessionId)
   void streamReply(sessionId, reply, { history: path.slice(0, index - 1), question })
@@ -1387,8 +1397,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           autoTune,
           autoTuneStrategy,
           reasoningEffort,
-          customCotEnabled,
-          customCot,
           autoJailbreak,
           injectPromptEveryTurn,
           translateJailbreakZh,
@@ -1434,7 +1442,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           baseSystemText,
           // 自定义思维链放在角色 / 破限规则之后、记忆与搜索上下文之前；
           // 首轮同时携带标题生成请求，也必须带上，否则新会话的第一条回复不会生效。
-          customCotEnabled ? formatCustomCotContext(customCot, initial.thinking ?? false) : '',
+          // 使用回复创建时的快照，续写 / 重新生成不会因中途改设置而前后不一致。
+          initial.customCot
+            ? formatCustomCotContext(initial.customCot, initial.thinking ?? false)
+            : '',
           memoryContext,
           poisonContext,
         ]

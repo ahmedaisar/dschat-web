@@ -692,6 +692,8 @@ const ChangelogSetting = () => {
       items: [
         'changelogV262Custom',
         'changelogV262Modes',
+        'changelogV262Layout',
+        'changelogV262Injected',
         'changelogV262Compatibility',
         'changelogV262Apk',
       ],

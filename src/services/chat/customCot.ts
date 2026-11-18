@@ -21,6 +21,12 @@ export const normalizeCustomCot = (text: string): string =>
 export const isCustomCotActive = (enabled: boolean, text: string): boolean =>
   enabled && normalizeCustomCot(text) !== ''
 
+/** 创建回复时保存本轮注入的思维链快照；关闭或空白时为 undefined */
+export const customCotSnapshot = (enabled: boolean, text: string): string | undefined => {
+  const chain = enabled ? normalizeCustomCot(text) : ''
+  return chain === '' ? undefined : chain
+}
+
 /**
  * 生成注入 system 的分块。thinking 取本轮回复创建时的快照，而不是当前开关，
  * 避免生成过程中拖动思考强度导致同一轮前后文案不一致。

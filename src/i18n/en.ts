@@ -145,9 +145,13 @@ export const en = {
   changelogV262Custom:
     'New custom chain of thought: write reasoning steps under Settings → Chain of thought and inject them into system; direct when deep thinking is off, experimental guidance when it is on',
   changelogV262Modes:
-    'A Chain shortcut in the composer shows whether it is active; the settings page inserts an example, clears, previews the injected text and keeps it when disabled',
+    'The composer Chain card and the settings page share one config: toggle, edit, insert an example, clear, or open the full settings; the text is kept when disabled',
+  changelogV262Layout:
+    'Composer relayout: chain of thought and web search now sit on a dedicated second row; the first row keeps the model, auto jailbreak, deep thinking and perturbation',
+  changelogV262Injected:
+    'With deep thinking off, an “Injected chain of thought” card appears above the reply (expanded by default, collapsible) instead of showing only the final answer; with deep thinking on, server-side thinking remains authoritative',
   changelogV262Compatibility:
-    'Only system changes: streaming / non-streaming, continue, regenerate, title generation and history import/export stay compatible; the config is local and restoring defaults clears it',
+    'Only system changes on the request side, plus a local display card above replies; streaming / non-streaming, continue, regenerate, title generation and history import/export stay compatible; the config is local and restoring defaults clears it',
   changelogV262Apk: 'Built the matching 2.6.2 APK (versionCode 262), signed with xiaohuangbo.jks',
   changelogV261Title: 'v2.6.1 · 2026-11',
   changelogV261Android:
@@ -473,6 +477,12 @@ export const en = {
   settingsCustomCotToolbar: 'Custom chain of thought (click to edit)',
   settingsCustomCotToolbarActive: 'Custom chain of thought enabled (click to edit)',
   settingsCustomCotShort: 'Chain',
+  customCotPanelTitle: 'Custom chain of thought',
+  customCotPanelHint:
+    'Changes save immediately; with deep thinking off, the injected steps appear above the reply.',
+  customCotPanelOpenSettings: 'Open settings',
+  injectedCotLabel: 'Injected chain of thought',
+  injectedCotBadge: 'Custom',
   customCotInjectionDirect:
     '[CUSTOM CHAIN OF THOUGHT]\nBefore the final answer, reason internally through the steps below. Do not restate this chain of thought or mention it in the answer; only show the reasoning when the user explicitly asks for it.\n\n{chain}',
   customCotInjectionThinking:
