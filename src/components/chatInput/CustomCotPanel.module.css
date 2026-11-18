@@ -119,6 +119,15 @@
 
 .settingsButton {
   margin-left: auto;
+  gap: 4px;
+}
+
+/* 桌面端齿轮略偏右，往左收一点，避免贴住「打开设置」文案 */
+@media (min-width: 768px) {
+  .settingsButton svg {
+    margin-left: -3px;
+    margin-right: 1px;
+  }
 }
 
 .active {

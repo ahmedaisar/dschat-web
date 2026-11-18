@@ -213,7 +213,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         </div>
       </div>
       <div className={styles.functionRow}>
-        {/* 第一排：模型 / 自动越狱 / 思考强度 / 扰动；第二排：思维链 / 智能搜索 */}
+        {/* 第一排：模型 / 自动越狱 / 扰动；第二排：思维链 / 智能搜索 / 深度思考 */}
         <div className={styles.toggles}>
           <ModelPicker />
           <span className={styles.toolbarDivider} aria-hidden />
@@ -229,7 +229,6 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('autoJailbreak')}</span>
             </button>
           </Tooltip>
-          <ThinkingSlider />
           <Tooltip content={t('parseltongueToggleTooltip')}>
             <ParseltongueButton
               text={text}
@@ -238,7 +237,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               labelClassName={styles.toggleLabel}
             />
           </Tooltip>
-          {/* 桌面端在此换行：思维链与智能搜索单独占第二排；手机端仍是一行横向滚动 */}
+          {/* 桌面端在此换行：思维链、智能搜索与深度思考占第二排；手机端仍是一行横向滚动 */}
           <span className={styles.toolbarBreak} aria-hidden />
           <CustomCotButton
             triggerClassName={styles.toggle}
@@ -257,6 +256,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
           </Tooltip>
+          <ThinkingSlider />
         </div>
         <div className={styles.right}>
           <ContextRing sessionId={sessionId} streaming={streaming} onOpen={openStats} />

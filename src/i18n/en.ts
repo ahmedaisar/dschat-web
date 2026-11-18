@@ -147,7 +147,7 @@ export const en = {
   changelogV262Modes:
     'The composer Chain card and the settings page share one config: toggle, edit, insert an example, clear, or open the full settings; the text is kept when disabled',
   changelogV262Layout:
-    'Composer relayout: chain of thought and web search now sit on a dedicated second row; the first row keeps the model, auto jailbreak, deep thinking and perturbation',
+    'Composer relayout: model, auto jailbreak and perturbation stay on the first row; chain of thought, web search and deep thinking share the second row',
   changelogV262Injected:
     'With deep thinking off, an “Injected chain of thought” card appears above the reply (expanded by default, collapsible) instead of showing only the final answer; with deep thinking on, server-side thinking remains authoritative',
   changelogV262Compatibility:
