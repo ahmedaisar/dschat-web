@@ -8,17 +8,19 @@
 
 .usageHead {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
   color: var(--dsw-alias-label-caption);
   font-size: 11px;
   line-height: 17px;
 }
 
 .usageNumbers {
+  max-width: 100%;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .bar {
@@ -280,13 +282,32 @@
 
 .storageStats {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
   color: var(--dsw-alias-label-caption);
   font-size: 11px;
   line-height: 18px;
   font-variant-numeric: tabular-nums;
+}
+
+.storageFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  min-width: 0;
+
+  & > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.storageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .persistError {

@@ -257,46 +257,54 @@ export const WorkspaceSetting = () => {
           {t(mode === 'opfs' ? 'workspaceModeOpfsDesc' : 'workspaceModeLocalDesc')}
         </div>
         <div className={styles.storageStats}>
-          <span>
-            {t('workspacePersistState')}：
-            {storage === null
-              ? '—'
-              : !storage.supported
-                ? t('workspacePersistUnsupported')
-                : storage.persisted
-                  ? t('workspacePersistGranted')
-                  : t('workspacePersistNotGranted')}
-          </span>
-          {storage?.usage !== null && storage?.usage !== undefined ? (
+          <div className={styles.storageFacts}>
             <span>
-              {t('workspaceStorageUsage', {
-                usage: formatBytes(storage.usage),
-                quota: formatBytes(storage.quota ?? 0),
-              })}
+              {t('workspacePersistState')}：
+              {storage === null
+                ? '—'
+                : !storage.supported
+                  ? t('workspacePersistUnsupported')
+                  : storage.persisted
+                    ? t('workspacePersistGranted')
+                    : t('workspacePersistNotGranted')}
             </span>
-          ) : null}
-          <button type="button" className={styles.linkButton} onClick={() => void refreshStorage()}>
-            {t('workspaceStorageRefresh')}
-          </button>
-          <Button
-            size="s"
-            variant="outlined"
-            disabled={storageBusy || !storage?.supported || storage?.persisted}
-            onClick={() => {
-              setStorageBusy(true)
-              void requestPersistentStorage()
-                .then(async (granted) => {
-                  await refreshStorage()
-                  showToast({
-                    key: granted ? 'workspacePersistGrantedToast' : 'workspacePersistDeniedToast',
-                    type: granted ? undefined : 'error',
+            {storage?.usage !== null && storage?.usage !== undefined ? (
+              <span>
+                {t('workspaceStorageUsage', {
+                  usage: formatBytes(storage.usage),
+                  quota: formatBytes(storage.quota ?? 0),
+                })}
+              </span>
+            ) : null}
+          </div>
+          <div className={styles.storageActions}>
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => void refreshStorage()}
+            >
+              {t('workspaceStorageRefresh')}
+            </button>
+            <Button
+              size="s"
+              variant="outlined"
+              disabled={storageBusy || !storage?.supported || storage?.persisted}
+              onClick={() => {
+                setStorageBusy(true)
+                void requestPersistentStorage()
+                  .then(async (granted) => {
+                    await refreshStorage()
+                    showToast({
+                      key: granted ? 'workspacePersistGrantedToast' : 'workspacePersistDeniedToast',
+                      type: granted ? undefined : 'error',
+                    })
                   })
-                })
-                .finally(() => setStorageBusy(false))
-            }}
-          >
-            {t('workspacePersistRequest')}
-          </Button>
+                  .finally(() => setStorageBusy(false))
+              }}
+            >
+              {t('workspacePersistRequest')}
+            </Button>
+          </div>
         </div>
         {persistError ? (
           <div className={styles.persistError}>

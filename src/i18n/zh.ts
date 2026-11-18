@@ -146,6 +146,8 @@ export const zh = {
     '工作区可申请持久化存储权限，并展示是否已获授权、已用空间与配额，降低浏览器自动清理数据的风险',
   changelogV267AnyFiles:
     '工作区不再限制格式：图片、PDF、压缩包等任意文件都能导入导出，单个下载按原始字节保存；新增 ZIP 整包导出 / 导入，旧版 JSON 备份仍可导入',
+  changelogV267UsageFix:
+    '修复工作区用量与持久化状态在长文案 / 放大字号下被裁切、重叠的问题：用量改成上下两行，存储状态与按钮各占一行，长数字自动换行',
   changelogV267Apk: '同步构建 2.6.7 APK（versionCode 267），使用 xiaohuangbo.jks 签名',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:

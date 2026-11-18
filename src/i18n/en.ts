@@ -152,6 +152,8 @@ export const en = {
     'The workspace can request persistent storage and shows whether it was granted, plus used space and quota, reducing the risk of automatic eviction',
   changelogV267AnyFiles:
     'The workspace no longer restricts formats: images, PDFs, archives and any other file can be imported and exported, single downloads keep the original bytes, and ZIP archives can round-trip everything; legacy JSON backups still import',
+  changelogV267UsageFix:
+    'Fixed clipped and overlapping workspace usage / persistent-storage text under long labels or enlarged font sizes: usage now stacks on two lines and storage status and actions each get their own row',
   changelogV267Apk: 'Built the matching 2.6.7 APK (versionCode 267), signed with xiaohuangbo.jks',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:

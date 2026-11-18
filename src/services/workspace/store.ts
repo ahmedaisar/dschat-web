@@ -166,21 +166,37 @@ const base64ToBytes = (base64: string): Uint8Array<ArrayBuffer> => {
   return bytes
 }
 
+/** 明确按文本处理的 MIME；其余二进制类型不尝试 UTF-8 解码 */
+const isTextMime = (mime: string): boolean =>
+  mime.startsWith('text/') ||
+  mime === 'image/svg+xml' ||
+  mime === 'application/json' ||
+  mime === 'application/ld+json' ||
+  mime === 'application/xml' ||
+  mime === 'application/javascript' ||
+  mime === 'application/x-javascript' ||
+  mime.endsWith('+json') ||
+  mime.endsWith('+xml')
+
 /** 把任意文件内容转成可持久化的文本 / base64 形态 */
 export const fileToContent = (
   bytes: Uint8Array,
   mime: string
 ): { encoding: FileEncoding; content: string; size: number } => {
-  // 明显的二进制特征：NUL 字节或非法 UTF-8，直接按 base64 存
+  // 明显的二进制特征：NUL 字节、图片 / 音视频 / 字体 / 压缩包等类型
   const head = bytes.subarray(0, 4096)
-  let binary = false
-  for (const byte of head) {
-    if (byte === 0) {
-      binary = true
-      break
+  let binary = head.includes(0)
+  if (!binary && !isTextMime(mime)) {
+    // 没有 NUL 也不一定是文本：控制字符占比高就按二进制处理
+    let control = 0
+    for (const byte of head) {
+      if (byte < 0x09 || (byte > 0x0d && byte < 0x20)) {
+        control += 1
+      }
     }
+    binary = control > Math.max(8, head.length * 0.02)
   }
-  if (!binary && !mime.startsWith('image/') && !mime.startsWith('application/')) {
+  if (!binary) {
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
       return { encoding: 'text', content: text, size: bytes.length }
