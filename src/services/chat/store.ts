@@ -25,6 +25,7 @@ import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.j
 import { estimatePages, noteRunTiming } from './sessionStats.js'
 import { enabledAgentTools } from '../agent/agentToolSettings.js'
 import { createToolCall, runAgentToolCall, toolResultForModel } from '../agent/runTool.js'
+import { modePolicy, modeSystemNote } from './mode.js'
 import type { ChatToolCall } from '../agent/types.js'
 import { autoCompressNeeded, compressSession } from './compression.js'
 import { extractMemoriesFromTurn, formatSavedMemories } from './savedMemory.js'
@@ -134,7 +135,7 @@ const requestTools = (search: boolean, allowAgentTools: boolean): CreateMessageR
   return tools
 }
 
-/** 一轮里客户端工具往返的最大次数，防止模型来回调用停不下来 */
+/** 一轮里客户端工具往返的默认上限；PTC / 创造模式由 mode.ts 放宽 */
 const MAX_TOOL_ROUNDS = 4
 
 /**
@@ -1477,6 +1478,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ]
               .filter(Boolean)
               .join('\n\n')
+        const mode = modePolicy()
         const systemText = [
           baseSystemText,
           // 自定义思维链放在角色 / 破限规则之后、记忆与搜索上下文之前；
@@ -1487,6 +1489,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             : '',
           memoryContext,
           poisonContext,
+          // 当前模式的能力说明：让模型知道这轮能用什么，别在仅聊天模式里硬调工具
+          modeSystemNote(mode.mode),
         ]
           .filter(Boolean)
           .join('\n\n')
@@ -1613,7 +1617,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         if (
           reply.stopReason === 'tool_use' &&
           toolSlots.size > 0 &&
-          toolRounds < MAX_TOOL_ROUNDS &&
+          toolRounds < Math.max(MAX_TOOL_ROUNDS, mode.maxRounds) &&
           !controller.signal.aborted
         ) {
           toolRounds += 1
@@ -1631,8 +1635,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           reply = { ...reply, toolCalls: [...(reply.toolCalls ?? []), ...calls] }
           updateReply(sessionId, reply)
           const locale = useSettings.getState().locale
-          const results: ChatToolCall[] = []
-          for (const call of calls) {
+          // PTC / 创造模式允许一轮里并发跑多个工具；结果顺序与 calls 一致，tool_result 不会错位
+          const runOne = async (call: ChatToolCall): Promise<ChatToolCall> => {
             const finished = await runAgentToolCall(call, {
               signal: controller.signal,
               locale,
@@ -1646,7 +1650,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                 updateReply(sessionId, reply)
               },
             })
-            results.push(finished)
             reply = {
               ...reply,
               toolCalls: (reply.toolCalls ?? []).map((item) =>
@@ -1655,7 +1658,17 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             }
             updateReply(sessionId, reply)
             persist(sessionId)
+            return finished
           }
+          const results: ChatToolCall[] = mode.parallel
+            ? await Promise.all(calls.map(runOne))
+            : await (async () => {
+                const done: ChatToolCall[] = []
+                for (const call of calls) {
+                  done.push(await runOne(call))
+                }
+                return done
+              })()
           // 本轮用量先入账，最后一轮由 finally 统一记；否则工具往返的中间轮会漏记
           if (reply.usage && !titleRequests.has(controller)) {
             noteDailyUsage(reply.model ?? MODEL, reply.usage)

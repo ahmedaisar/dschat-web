@@ -17,6 +17,7 @@ import {
   IconChartOutline16,
   IconRobotOutline16,
   IconSettingsOutline16,
+  IconTerminalOutline16,
   IconThinkOutline16,
   IconUploadOutline14,
 } from '../base/icons.js'
@@ -103,6 +104,7 @@ import { ParamControl } from './ParamControls.js'
 import { StatsSettings } from './StatsSettings.js'
 import { AgentToolsSetting } from './AgentToolsSetting.js'
 import { WorkspaceSetting } from './WorkspaceSetting.js'
+import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -160,6 +162,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'workspace',
     label: 'settingDialogAsideWorkspaceOptionLabel',
     icon: <IconBrowseOutline16 />,
+  },
+  {
+    value: 'nanovm',
+    label: 'settingDialogAsideNanoVMOptionLabel',
+    icon: <IconTerminalOutline16 />,
   },
   { value: 'stats', label: 'settingDialogAsideStatsOptionLabel', icon: <IconChartOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
@@ -247,6 +254,8 @@ const SettingsContent = () => {
             <AgentToolsSetting />
           ) : section === 'workspace' ? (
             <WorkspaceSetting />
+          ) : section === 'nanovm' ? (
+            <NanoVMConsole />
           ) : section === 'stats' ? (
             <StatsSettings />
           ) : section === 'about' ? (
@@ -710,6 +719,20 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV268Title',
+      items: [
+        'changelogV268Shell',
+        'changelogV268Tools',
+        'changelogV268Console',
+        'changelogV268Agent',
+        'changelogV268Memory',
+        'changelogV268Keyboard',
+        'changelogV268Reset',
+        'changelogV268Modes',
+        'changelogV268Apk',
+      ],
+    },
     {
       title: 'changelogV267Title',
       items: [

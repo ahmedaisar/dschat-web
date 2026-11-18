@@ -1,0 +1,176 @@
+/* 聊天模式：沿用输入栏 chip 的胶囊样式，菜单弹在上方，和模型选择同款卡片 */
+.trigger {
+  order: 0;
+}
+
+/*
+ * 手机上：模式胶囊排到第一位，并且始终显示模式名。
+ * ChatInput 在 <768 把 .toggle 压成 34px 圆钮、<400 又隐藏 .toggleLabel，
+ * 这里用双类名（0,2,0）盖掉那两条规则，只影响模式胶囊，其它 chip 保持圆钮。
+ */
+@media not all and (min-width: 768px) {
+  .trigger.trigger {
+    order: -1;
+    width: auto;
+    max-width: 100%;
+    padding: 0 8px;
+    gap: 3px;
+    border-radius: 18px;
+  }
+
+  .label.label {
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 320 这种最窄的屏：再收一点内边距和字号，保证整颗胶囊完整可见 */
+@media not all and (min-width: 360px) {
+  .trigger.trigger {
+    padding: 0 6px;
+    gap: 2px;
+  }
+
+  .label.label {
+    font-size: 12px;
+  }
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  margin-left: -1px;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 0.2s ease;
+}
+
+.open .arrow {
+  transform: rotate(180deg);
+}
+
+.panel {
+  position: fixed;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 380px;
+  max-width: calc(100vw - 16px);
+  padding: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
+  background: var(--dsw-specific-menu);
+  box-shadow:
+    0 12px 40px rgba(20, 24, 45, 0.16),
+    0 2px 8px rgba(20, 24, 45, 0.08);
+  backdrop-filter: blur(18px);
+  animation: panelIn 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 6px 6px;
+}
+
+.title {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.current {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background-color: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 10.5px;
+  line-height: 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+
+  & > svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--dsw-alias-brand-text);
+  }
+}
+
+.active {
+  background-color: var(--dsw-alias-button-ghost-active-fill);
+}
+
+.optionMain {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optionName {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.optionHint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}
+
+/* 开关没打开时的补充说明：只提示、不禁用 */
+.optionOff {
+  color: var(--dsw-alias-label-caption);
+  font-size: 10.5px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+@media not all and (min-width: 768px) {
+  .panel {
+    width: 320px;
+  }
+}

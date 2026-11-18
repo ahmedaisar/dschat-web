@@ -37,6 +37,7 @@ import { VoiceButton } from './VoiceButton.js'
 import { ParseltongueButton } from './ParseltonguePanel.js'
 import { CustomCotButton } from './CustomCotPanel.js'
 import { ModelPicker } from './ModelPicker.js'
+import { ModePicker } from './ModePicker.js'
 import { ThinkingSlider } from './ThinkingSlider.js'
 import { ContextRing } from './ContextRing.js'
 import { Spectrum } from './Spectrum.js'
@@ -237,8 +238,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               labelClassName={styles.toggleLabel}
             />
           </Tooltip>
-          {/* 桌面端在此换行：思维链、智能搜索与深度思考占第二排；手机端仍是一行横向滚动 */}
+          {/* 桌面端在此换行：模式、思维链、智能搜索与深度思考占第二排；手机端仍是一行横向滚动 */}
           <span className={styles.toolbarBreak} aria-hidden />
+          <ModePicker
+            triggerClassName={styles.toggle}
+            selectedClassName={styles.selected}
+            labelClassName={styles.toggleLabel}
+          />
           <CustomCotButton
             triggerClassName={styles.toggle}
             selectedClassName={styles.selected}

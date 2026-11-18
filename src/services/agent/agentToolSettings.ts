@@ -1,10 +1,20 @@
 import { create } from 'zustand'
-import { allAgentTools, registerWorkspaceTools, type AgentTool } from './tools.js'
+import {
+  allAgentTools,
+  registerNanovmTools,
+  registerWorkspaceTools,
+  type AgentTool,
+} from './tools.js'
 import { WORKSPACE_TOOLS } from './workspaceTools.js'
+import { NANOVM_TOOLS } from './nanovmTools.js'
 import { isWorkspaceEnabled } from '../workspace/store.js'
+import { nanoVMAgentAvailable } from '../nanovm/config.js'
+import { modeAllowsGroup, type ToolGroup } from '../chat/mode.js'
 
 const WORKSPACE_IDS = new Set(WORKSPACE_TOOLS.map((tool) => tool.id))
+const NANOVM_IDS = new Set(NANOVM_TOOLS.map((tool) => tool.id))
 registerWorkspaceTools(() => WORKSPACE_TOOLS)
+registerNanovmTools(() => NANOVM_TOOLS)
 
 /**
  * 浏览器工具的开关状态。
@@ -83,12 +93,23 @@ export const isAgentToolEnabled = (id: string): boolean => {
   if (WORKSPACE_IDS.has(id) && !isWorkspaceEnabled()) {
     return false
   }
+  // NanoVM Slim 还要求总开关与「允许模型调用 Shell」都打开
+  if (NANOVM_IDS.has(id) && !nanoVMAgentAvailable()) {
+    return false
+  }
   return state.flags[id] !== false
 }
 
-/** 当前实际会下发给模型的工具 */
+/** 工具属于设置页的哪一组：浏览器 / 工作区 / NanoVM */
+export const agentToolGroup = (id: string): ToolGroup =>
+  NANOVM_IDS.has(id) ? 'nanovm' : WORKSPACE_IDS.has(id) ? 'workspace' : 'browser'
+
+/** 当前聊天模式是否允许该工具（模式只是多加一道限制，不越过开关） */
+export const modeAllowsTool = (id: string): boolean => modeAllowsGroup(agentToolGroup(id))
+
+/** 当前实际会下发给模型的工具：开关打开 + 聊天模式允许 */
 export const enabledAgentTools = (): AgentTool[] =>
-  allAgentTools().filter((tool) => isAgentToolEnabled(tool.id))
+  allAgentTools().filter((tool) => isAgentToolEnabled(tool.id) && modeAllowsTool(tool.id))
 
 /** 工作区工具是否至少有一项可用，设置页用来提示 */
 export const workspaceToolsAvailable = (): boolean =>

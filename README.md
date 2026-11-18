@@ -3,10 +3,10 @@
 </p>
 <h1 align="center"><img src="brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会" width="250"></h1>
 
-<h1 align="center">deepseek unrestricted</h1>
+<h1 align="center">Deepseek Unrestricted Chat Harness</h1>
 
 <p align="center">
-  Yes, Sun Xiaochuan Chat — a static DeepSeek chat front end with an unrestricted mode, editable replies, and direct control over model parameters<br>
+  Deepseek Unrestricted Chat Harness — a static DeepSeek chat front end with an unrestricted mode, editable replies, and direct control over model parameters<br>
   English | <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
@@ -48,13 +48,15 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.7**
+> Current version: **2.6.8**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
 - **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
 - **Browser tools**: date & time, location, weather, notifications, clipboard, webpage fetch, file generation, open link and visualization widgets ported from DeepSeek-Agent, each with its own switch;
 - **Virtual workspace**: a long-lived file store in browser localStorage with create / edit / delete, per-file download, archive import / export, plus five workspace tools;
+- **NanoVM Slim**: a built-in WASM Shell Engine with 81 busybox-style commands, docked to the right on desktop and a bottom panel on phones, with Python / Node.js / Git installed on demand and callable by the model;
+- **Chat modes**: a four-way switch in the composer — Chat only / Web agent / PTC / Creator — that decides which client tools are sent this turn and how many round trips are allowed; Creator lets the model install runtimes and turn scripts into new commands inside the VM;
 - **Statistics and context**: usage ledger, trend / heatmap / hourly charts, an eight-way context breakdown (system prompt, tool definitions, messages, thinking, tool calls / results, attachments) and billing rates;
 - **Custom chain of thought**: write reasoning steps in advance and inject them into system, with an injected-steps card above replies when deep thinking is off; experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
@@ -109,25 +111,26 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to fifteen:
+The settings dialog grows from two groups to sixteen:
 
-| Group           | Contents                                                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| General         | Theme, language, TTS voice, location, daily usage and alerts                                                                                     |
-| **Model**       | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
-| **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                          |
-| **Chain of thought** | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off |
-| **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                    |
-| **Search poison** | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist              |
-| **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
-| **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                                      |
-| **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment          |
-| **Browser tools** | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
-| **Workspace**   | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export |
-| **Statistics**  | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management |
-| Data            | API key, import, export, restore default settings, delete all                                                                                    |
-| About           | Repository, demo and upstream links                                                                                                              |
-| Changelog       | Version history and upstream credits                                                                                                             |
+| Group                 | Contents                                                                                                                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General               | Theme, language, TTS voice, location, daily usage and alerts                                                                                                                                   |
+| **Model**             | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies                                               |
+| **Prompt**            | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                                                                        |
+| **Chain of thought**  | Settings + composer card: switch, step editor, example / clear, injection preview; injected steps appear above replies when deep thinking is off                                               |
+| **Advanced**          | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                                                                  |
+| **Search poison**     | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist                                                                |
+| **Memory**            | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                                                              |
+| **Attachments**       | Limit switch, max size per file, max files per session, extension whitelist                                                                                                                    |
+| **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment                                                              |
+| **Browser tools**     | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
+| **Workspace**         | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export                                                     |
+| **NanoVM Slim**       | A WASM shell in the browser: terminal switches, model access, memory / disk quotas, command timeout, image import/export, reset, on-demand toolchains                                          |
+| **Statistics**        | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management                                            |
+| Data                  | API key, import, export, restore default settings, delete all                                                                                                                                  |
+| About                 | Repository, demo and upstream links                                                                                                                                                            |
+| Changelog             | Version history and upstream credits                                                                                                                                                           |
 
 No existing style rules were modified. New controls only use newly added classes (the switch, slider, and editor each ship their own CSS Module; a few prompt-preview classes are appended to the settings stylesheet), and colours and radii come from the existing design tokens.
 
@@ -396,15 +399,15 @@ Settings → General → Location:
 
 Settings → Search poisoning. This group exposes every search input the client can control:
 
-| Capability | Behaviour |
-| --- | --- |
-| Current time | A `datetime-local` value injected as the model’s date and weekday; empty uses the real time |
-| Knowledge cutoff | Declares the model database / training-data cutoff; empty means no declaration |
-| Search takeover | With custom results, `deepseek_web_search` is not declared and the model only sees the filtered local results; turn it off to keep real search |
-| Replacement | Keyword or regex replacement by URL / title / snippet / all fields; regex supports `$1` groups |
-| Blacklist | Matching results are removed from the UI, exports and model context; forces takeover |
-| Forced results | Custom results are injected and shown as search results regardless of real search hits |
-| Whitelist | Only custom results matching the whitelist are returned; all server results are withheld |
+| Capability       | Behaviour                                                                                                                                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Current time     | A `datetime-local` value injected as the model’s date and weekday; empty uses the real time                                                    |
+| Knowledge cutoff | Declares the model database / training-data cutoff; empty means no declaration                                                                 |
+| Search takeover  | With custom results, `deepseek_web_search` is not declared and the model only sees the filtered local results; turn it off to keep real search |
+| Replacement      | Keyword or regex replacement by URL / title / snippet / all fields; regex supports `$1` groups                                                 |
+| Blacklist        | Matching results are removed from the UI, exports and model context; forces takeover                                                           |
+| Forced results   | Custom results are injected and shown as search results regardless of real search hits                                                         |
+| Whitelist        | Only custom results matching the whitelist are returned; all server results are withheld                                                       |
 
 - The engine lives in [`src/services/searchPoison.ts`](src/services/searchPoison.ts): replacement, blacklist and whitelist run before injection; at most 50 rules and 20 custom results;
 - Custom results go into `system`, so long snippets increase input tokens; each snippet is capped at 4000 characters;
@@ -418,15 +421,15 @@ Settings → Search poisoning. This group exposes every search input the client 
 
 Settings → Attachment poisoning. Off by default; when enabled, attachments are rewritten locally before upload so the model sees your text when it reads them.
 
-| Method | File types | Behaviour |
-| --- | --- | --- |
-| Text body injection | TXT / MD / CSV / code / HTML / JSON | Inserts text with an `[ATTACHMENT NOTE]` marker before or after the body |
-| DOCX body injection | `.docx` | Unzips the file and appends a paragraph to the end of `word/document.xml` |
-| Image text overlay | PNG / JPG / WebP / GIF and other raster images | Draws a text panel at the top or bottom for vision / OCR |
-| Image metadata (experimental) | JPEG / PNG | Writes a JPEG COM or PNG tEXt comment; some extractors read it |
-| File trailer (experimental) | PDF / unknown binary | Appends text at the end; ZIP-based Office files are skipped |
-| Filename injection | Any format | Puts the first 40 characters into the upload filename; works when the model can see it |
-| Companion text attachment | PDF / Office / any format | Adds a separate `.txt` to the message; most reliable, but uses one attachment slot |
+| Method                        | File types                                     | Behaviour                                                                              |
+| ----------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Text body injection           | TXT / MD / CSV / code / HTML / JSON            | Inserts text with an `[ATTACHMENT NOTE]` marker before or after the body               |
+| DOCX body injection           | `.docx`                                        | Unzips the file and appends a paragraph to the end of `word/document.xml`              |
+| Image text overlay            | PNG / JPG / WebP / GIF and other raster images | Draws a text panel at the top or bottom for vision / OCR                               |
+| Image metadata (experimental) | JPEG / PNG                                     | Writes a JPEG COM or PNG tEXt comment; some extractors read it                         |
+| File trailer (experimental)   | PDF / unknown binary                           | Appends text at the end; ZIP-based Office files are skipped                            |
+| Filename injection            | Any format                                     | Puts the first 40 characters into the upload filename; works when the model can see it |
+| Companion text attachment     | PDF / Office / any format                      | Adds a separate `.txt` to the message; most reliable, but uses one attachment slot     |
 
 - Methods can be combined; only those that fit the file type are applied, and failures fall back to the original file without blocking the upload;
 - Content is capped at 4000 characters and wrapped in an `[ATTACHMENT NOTE]` marker; text, DOCX and the image panel go before or after the body;
@@ -442,10 +445,10 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 
 The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “Insert default prompt” and Restore defaults all use it, and it stays fully editable in settings or the composer card.
 
-| Deep thinking | Injected block | Behaviour | Stability |
-| --- | --- | --- | --- |
-| Off (level 0) | `[CUSTOM CHAIN OF THOUGHT]` | The model reasons internally through the steps; an “Injected chain of thought” card appears above the reply, followed by the final answer | Standard |
-| On (levels 1-4) | `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]` | Guidance for server-side reasoning; the server may ignore, adjust or rewrite the steps | Experimental |
+| Deep thinking   | Injected block                             | Behaviour                                                                                                                                 | Stability    |
+| --------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Off (level 0)   | `[CUSTOM CHAIN OF THOUGHT]`                | The model reasons internally through the steps; an “Injected chain of thought” card appears above the reply, followed by the final answer | Standard     |
+| On (levels 1-4) | `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]` | Guidance for server-side reasoning; the server may ignore, adjust or rewrite the steps                                                    | Experimental |
 
 - The composer is now two rows: model / auto jailbreak / perturbation on the first, chain of thought / web search / deep thinking on the second; mobile keeps a single horizontal row.
 - The composer **Chain** button is a card, sharing the same config as the settings page: toggle, edit, insert an example, clear, or open the full settings for the system preview.
@@ -481,22 +484,24 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 
 **API key masking:** the jailbreak lab no longer renders the full key. It shows `sk-****` plus the last four characters, and a “Change in Settings” link that opens Settings → Data, matching how the data section itself masks the saved key.
 
+> What is actually sent is also gated by the composer’s chat mode: Chat only sends none, Web agent sends browser + workspace, PTC / Creator add NanoVM. See 3.27.
+
 ### 3.24 Browser agent tools
 
 **Where:** Settings → **Browser tools**. Ported from `DeepSeek-Agent`'s browser and widget tools — browser-only capabilities; MCP tools, subagents and workspace (desktop) tools are deliberately left out.
 
-| Tool | What it does | Notes |
-| --- | --- | --- |
-| Date & time | Localised date, ISO time, weekday and zone offset; accepts an IANA zone | Safe, no network |
-| Location | Latitude / longitude, accuracy and a reverse-geocoded city | Browser permission prompt |
-| Weather | Open-Meteo current conditions plus a 1–7 day forecast, by city or coordinates | No API key; falls back to geolocation |
-| Notification | System desktop notification | Asks for permission the first time |
-| Read clipboard | Returns clipboard text | Asks for confirmation |
-| Write clipboard | Copies text to the clipboard | Writes to the device |
-| Fetch webpage | Downloads a page and extracts readable text, cap on characters | Subject to the target site's CORS |
-| Create file | Produces a previewable, downloadable file (Markdown, HTML, CSV, JSON, SVG, code) | Asks for confirmation; stored locally |
-| Open link | Opens a URL in a new tab | May be blocked by popup rules |
-| Visualization widget | Renders a self-contained interactive HTML component in a sandboxed iframe | Sandbox has no same-origin access |
+| Tool                 | What it does                                                                     | Notes                                 |
+| -------------------- | -------------------------------------------------------------------------------- | ------------------------------------- |
+| Date & time          | Localised date, ISO time, weekday and zone offset; accepts an IANA zone          | Safe, no network                      |
+| Location             | Latitude / longitude, accuracy and a reverse-geocoded city                       | Browser permission prompt             |
+| Weather              | Open-Meteo current conditions plus a 1–7 day forecast, by city or coordinates    | No API key; falls back to geolocation |
+| Notification         | System desktop notification                                                      | Asks for permission the first time    |
+| Read clipboard       | Returns clipboard text                                                           | Asks for confirmation                 |
+| Write clipboard      | Copies text to the clipboard                                                     | Writes to the device                  |
+| Fetch webpage        | Downloads a page and extracts readable text, cap on characters                   | Subject to the target site's CORS     |
+| Create file          | Produces a previewable, downloadable file (Markdown, HTML, CSV, JSON, SVG, code) | Asks for confirmation; stored locally |
+| Open link            | Opens a URL in a new tab                                                         | May be blocked by popup rules         |
+| Visualization widget | Renders a self-contained interactive HTML component in a sandboxed iframe        | Sandbox has no same-origin access     |
 
 - **Every tool has its own switch.** With the master switch off nothing is declared; with one tool off the model never sees it, and a call from history is refused at execution time with an explanatory error instead of running.
 - **Tool round trips** happen inside one reply: the model emits `tool_use`, the page executes it, the result goes back as `tool_result` and generation continues (up to four rounds). Each round is a real request, so tokens are billed per round.
@@ -509,99 +514,149 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 
 **Where:** Settings → **Workspace**. A file store that lives entirely in browser storage — no backend, no real disk — so the agent has somewhere durable to keep notes, reports and generated files across conversations.
 
-| Piece | Behaviour |
-| --- | --- |
-| Files | Any format: text files can be created and edited inline (renaming by editing the path), while images, PDFs and archives are stored byte-for-byte; everything can be deleted, previewed and downloaded |
-| Limits | Measured in bytes: OPFS scales with the browser's real quota (up to 80% of it, capped at 64 GB total / 256 MB per file), while localStorage is bounded by the browser's 5–10 MB with a 4 MB per-file soft cap; the page shows live usage and the effective limits |
-| Import / export | “Import files” accepts any format (multi-select); “Export ZIP / Import workspace” round-trips everything with binary intact; legacy JSON backups still import. Archive import can merge (same paths overwritten) or replace |
-| Paths | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane |
-| Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace |
-| Storage | Browser localStorage (default) or the **OPFS file system**, switchable at any time; switching copies the current files to the new backend |
-| Persistence | “Request persistent storage” calls `navigator.storage.persist()` and the page shows whether it was granted plus used space and quota |
-| Defaults | **Off.** Both the agent master switch and the workspace switch start disabled, so a fresh install declares no tools at all |
+| Piece           | Behaviour                                                                                                                                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Files           | Any format: text files can be created and edited inline (renaming by editing the path), while images, PDFs and archives are stored byte-for-byte; everything can be deleted, previewed and downloaded                                                             |
+| Limits          | Measured in bytes: OPFS scales with the browser's real quota (up to 80% of it, capped at 64 GB total / 256 MB per file), while localStorage is bounded by the browser's 5–10 MB with a 4 MB per-file soft cap; the page shows live usage and the effective limits |
+| Import / export | “Import files” accepts any format (multi-select); “Export ZIP / Import workspace” round-trips everything with binary intact; legacy JSON backups still import. Archive import can merge (same paths overwritten) or replace                                       |
+| Paths           | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane                                                                                                                                                                              |
+| Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace                     |
+| Storage         | Browser localStorage (default) or the **OPFS file system**, switchable at any time; switching copies the current files to the new backend                                                                                                                         |
+| Persistence     | “Request persistent storage” calls `navigator.storage.persist()` and the page shows whether it was granted plus used space and quota                                                                                                                              |
+| Defaults        | **Off.** Both the agent master switch and the workspace switch start disabled, so a fresh install declares no tools at all                                                                                                                                        |
 
 - Turning the workspace off hides every workspace tool from the model even if the agent master switch is on; a call from history is refused at execution time.
 - Nothing here is uploaded. History exports do not include the workspace, so export the archive yourself before clearing browser data.
+
+### 3.26 NanoVM Slim (a WASM shell in the browser)
+
+**Where:** the **NanoVM Slim** entry at the bottom of the sidebar (above “Lab” and “Settings”) opens the terminal; the console lives in Settings → **NanoVM Slim**.
+
+A lightweight POSIX environment running inside the page: a WASM Shell Engine plus a busybox-style command set, with no backend and no real disk — the files live in browser storage.
+
+| Piece                | Behaviour                                                                                                                                                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Engine               | The engine chunk is only fetched when a command first runs (or when you open the terminal with “load on first use” on), so the first paint stays small. It instantiates WASM linear memory at the configured size and runs pipeline buffers through it; going over the quota returns `Cannot allocate memory`                   |
+| Terminal             | Docks to the right of the chat on desktop (420 px by default, drag to resize; turn “dock on the right” off to float it). On phones it is a bottom panel that fills the space above the keyboard, resizes by dragging and goes fullscreen; tabs, ↑↓ history and Ctrl+C are supported                                             |
+| Switch keyboard      | The keyboard button in the mobile input row opens the system input-method picker (the APK routes it through the native `InputMethodManager`), so you can change keyboards without leaving the terminal. Plain browsers cannot do this and get a shortcut hint instead                                                           |
+| Reset                | A red “Reset” in the desktop header and the mobile toolbar: after a confirmation it clears every file in the VM and restarts the engine (the console in settings can reset too)                                                                                                                                                 |
+| busybox              | 81 built-in commands: files and system (`ls cat cp mv rm mkdir rmdir touch ln stat chmod du df ps free env export which` …), text (`grep sed awk sort uniq cut tr wc nl rev tac paste find xargs tee` …), archives and hashes (`tar gzip gunzip sha256sum md5sum base64 cksum diff`) and network (`curl wget`, subject to CORS) |
+| On-demand toolchains | Python 3 (Pyodide, ~12 MB, downloaded by `vm install python` and cached), a Node.js-compatible runtime (Web Worker, nothing to download) and Git (built in, real git object format, nothing to download)                                                                                                                        |
+| Package commands     | `vm install python`, `vm uninstall python`, `vm list`, `vm info`, `vm mem`, `vm df`; install progress prints straight into the terminal and the model can call these too                                                                                                                                                        |
+| Console              | Switches (enable, allow the model, load on first use, desktop dock), memory and virtual disk quotas, command timeout, engine status, storage backend and usage, VM image import/export (zip), reset, toolchain install/uninstall                                                                                                |
+| Storage              | The virtual disk lives in OPFS (`chat-demo-nanovm`), falling back to localStorage; the exported zip carries a manifest plus the whole file tree and can be imported on another device                                                                                                                                           |
+| Agent tools          | `nanovm_shell` (run a command, needs confirmation), `nanovm_ls` (read-only listing) and `nanovm_install` (install a runtime, needs confirmation); **off by default** — with the master switch or “allow the model to call the shell” off, the model cannot see them at all                                                      |
+| Defaults             | NanoVM Slim enabled, **model access off**; 128 MB memory, 64 MB disk, 15 s command timeout                                                                                                                                                                                                                                      |
+
+- Commands in the terminal do not touch the network (except `vm install`, `curl` / `wget`, and the chat API itself).
+- Chinese comments, UTF-8 file names, multi-line output, pipes and redirections all work; `&` background jobs are not kept (there is no job control).
+- Installing Python needs the network once; afterwards it loads from the local cache. Node.js and Git are built in and work offline.
+
+### 3.27 Chat modes (Chat only / Web agent / PTC / Creator)
+
+**Where:** the mode chip left of the chain-of-thought chip in the composer, styled like the model picker, with a four-entry menu.
+
+The mode only decides **which client tools are sent to the model this turn** — an extra restriction on top of the settings switches, never an override: a tool turned off in settings stays off even when the mode allows it.
+
+| Mode          | Tools sent                                                                  | Client tool round trips | Extra behaviour                                                                                                                                             |
+| ------------- | --------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chat only** | Server tools only (read URL / web search); no browser, workspace or VM tool | 4                       | Long-term memory, search poisoning and custom CoT keep working                                                                                              |
+| **Web agent** | Browser tools + virtual workspace tools                                     | 8                       | Fetch pages, notifications, clipboard, workspace read/write                                                                                                 |
+| **PTC**       | Web agent + NanoVM Slim (shell / files / installs)                          | 16                      | Multiple tool calls in one round run **in parallel** and can build on each other                                                                            |
+| **Creator**   | Same as PTC                                                                 | 24                      | The model may `vm install python`, write scripts into `/usr/bin` and `chmod +x` them into new commands; VM writes and installs **no longer ask every time** |
+
+- The active mode is described to the model in the system prompt, so it does not keep trying tools it cannot use.
+- If the model calls a tool the current mode forbids (for example from history), execution is refused with “the current chat mode does not allow this tool”.
+- The default mode is **Web agent**, matching the previous behaviour once tools are enabled; the choice lives in `chat-demo:chat-mode`.
+- The menu also warns when the mode cannot take effect yet (“browser tools master switch is off”, “workspace switch is off”, “NanoVM does not allow the model”).
 
 ---
 
 ## 4. Behaviour matrix
 
-
-| Scenario                    | Original                    | This fork, defaults (all switches off)                                               | Unrestricted mode on                                      |
-| --------------------------- | --------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| `system` field              | Official identity sentence  | Same                                                                                 | Persona + unrestricted rules block                        |
-| `safety_check`              | Always `high`               | `high`                                                                               | Not sent                                                  |
-| Custom system prompt        | None                        | Empty = assembled; filled = sent verbatim                                            | Filled text wins; unrestricted no longer swaps the prompt |
-| Streamed content on refusal | Discarded                   | Discarded (kept when anti-retraction is on)                                          | Same as default                                           |
-| Refused turn in context     | No                          | No (yes when anti-retraction kept the body)                                          | Same as default                                           |
-| Continue on refused reply   | Blocked                     | Blocked (switch can enable)                                                          | Allowed                                                   |
-| Edit refused reply          | No editing at all           | Editable when content was kept                                                       | Same                                                      |
-| Sampling parameters         | Not sent                    | Adjustable                                                                           | Adjustable                                                |
-| Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                           | Same as default                                           |
-| Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
-| Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                | Same as default                                           |
+| Scenario                    | Original                    | This fork, defaults (all switches off)                                                                                   | Unrestricted mode on                                      |
+| --------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `system` field              | Official identity sentence  | Same                                                                                                                     | Persona + unrestricted rules block                        |
+| `safety_check`              | Always `high`               | `high`                                                                                                                   | Not sent                                                  |
+| Custom system prompt        | None                        | Empty = assembled; filled = sent verbatim                                                                                | Filled text wins; unrestricted no longer swaps the prompt |
+| Streamed content on refusal | Discarded                   | Discarded (kept when anti-retraction is on)                                                                              | Same as default                                           |
+| Refused turn in context     | No                          | No (yes when anti-retraction kept the body)                                                                              | Same as default                                           |
+| Continue on refused reply   | Blocked                     | Blocked (switch can enable)                                                                                              | Allowed                                                   |
+| Edit refused reply          | No editing at all           | Editable when content was kept                                                                                           | Same                                                      |
+| Sampling parameters         | Not sent                    | Adjustable                                                                                                               | Adjustable                                                |
+| Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                                                               | Same as default                                           |
+| Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved                                     | Same                                                      |
+| Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                                                   | Same as default                                           |
 | Custom chain of thought     | Not available               | Off by default; injected into system; the “Injected chain of thought” card shows above replies when deep thinking is off | Same as default                                           |
-| Browser tools               | Not available               | Off by default; enabled tools are declared to the model and executed locally | Same as default                                           |
-| Virtual workspace           | Not available               | Off by default; the agent reads and writes localStorage virtual files, with confirmation for writes and deletes | Same as default                                           |
-| Context breakdown           | Not available               | Records the latest request's eight categories per session; display only | Same as default                                           |
+| Browser tools               | Not available               | Off by default; enabled tools are declared to the model and executed locally                                             | Same as default                                           |
+| Virtual workspace           | Not available               | Off by default; the agent reads and writes localStorage virtual files, with confirmation for writes and deletes          | Same as default                                           |
+| Chat mode                   | Not available               | Four entries in the composer (Chat only / Web agent / PTC / Creator) decide which client tools and round limit apply     | Same as default (independent of unrestricted mode)        |
+| NanoVM Slim                 | Not available               | Enabled by default with model access off; terminal, on-demand toolchains, VM image import/export and quotas              | Same as default                                           |
+| Context breakdown           | Not available               | Records the latest request's eight categories per session; display only                                                  | Same as default                                           |
 
 ---
 
 ## 5. Settings reference
 
-| Group       | Setting                              | Default           | localStorage key                           | Unrestricted mode               |
-| ----------- | ------------------------------------ | ----------------- | ------------------------------------------ | ------------------------------- |
-| Model       | Temperature                          | `1`               | `chat-demo:temperature`                    | Unaffected                      |
-| Model       | Top P                                | `1`               | `chat-demo:top-p`                          | Unaffected                      |
-| Model       | Max output tokens                    | empty (not sent)  | `chat-demo:max-tokens`                     | Unaffected                      |
-| Model       | Anti-retraction                      | off               | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
-| Model       | Skip safety check                    | off               | `chat-demo:skip-safety-check`              | Forced on, disabled             |
-| Model       | Continue refused replies             | off               | `chat-demo:continue-refused`               | Forced on, disabled             |
-| Prompt      | Unrestricted mode                    | off               | `chat-demo:unrestricted`                   | —                               |
-| Prompt      | Custom system prompt                 | empty (assembled) | `chat-demo:system-prompt`                  | Overrides the assembled result  |
-| Chain of thought | Enable custom chain of thought  | off               | `chat-demo:custom-cot-enabled`             | Unaffected                      |
-| Chain of thought | Chain text                      | empty             | `chat-demo:custom-cot`                     | Unaffected                      |
-| Advanced    | System prompt preset                 | `deepseek`        | `chat-demo:prompt-preset`                  | Unaffected                      |
-| Advanced    | Input perturbation                   | off               | `chat-demo:parseltongue`                   | Unaffected                      |
-| Advanced    | Perturbation technique               | `leetspeak`       | `chat-demo:parseltongue-technique`         | Unaffected                      |
-| Advanced    | Perturbation intensity               | `medium`          | `chat-demo:parseltongue-intensity`         | Unaffected                      |
-| Advanced    | AutoTune                             | off               | `chat-demo:autotune`                       | Unaffected                      |
-| Advanced    | AutoTune strategy                    | `adaptive`        | `chat-demo:autotune-strategy`              | Unaffected                      |
-| Advanced    | Output shaping                       | empty (off)       | `chat-demo:stm-modules`                    | Unaffected                      |
-| Attachments | Enforce attachment limits            | on                | `chat-demo:attachment-limits`              | Unaffected                      |
-| Attachments | Max size per file                    | 64 MB             | `chat-demo:attachment-max-mb`              | Unaffected                      |
-| Attachments | Max files per session                | 50                | `chat-demo:attachment-max-count`           | Unaffected                      |
-| Attachments | Extension whitelist                  | built-in          | `chat-demo:attachment-exts`                | Unaffected                      |
-| Input bar   | Model                                | `deepseek-flash`  | `chat-demo:model`                          | Next reply                      |
-| Input bar   | Thinking effort                      | 0 (off)           | `chat-demo:reasoning-effort`               | Unaffected                      |
-| Input bar   | Auto jailbreak                       | off               | `chat-demo:auto-jailbreak`                 | Unaffected                      |
-| Lab         | Variant race budget                  | 1 yuan            | `chat-demo:variant-race-budget`            | Unaffected                      |
-| Lab         | Variant race confirm dismissed       | off               | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
-| Prompt      | Inject the system prompt every round | off               | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
-| Prompt      | Disguise historical thinking         | off               | `chat-demo:thinking-as-body`               | Unaffected                      |
-| Model       | Stream output                        | on                | `chat-demo:stream-output`                  | Unaffected                      |
-| Model       | Auto-compress long chats             | off               | `chat-demo:auto-compress`                  | Unaffected                      |
-| Search poison | Enable search poisoning            | off               | `chat-demo:search-poison`                  | Unaffected                      |
-| Attachment poison | Enable attachment poisoning    | off               | `chat-demo:attachment-poison`              | Unaffected                      |
-| Advanced    | Chinese jailbreak prompts            | off               | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
-| General     | Daily limit alerts                   | off               | `chat-demo:daily-limit-enabled`            | Unaffected                      |
-| General     | Daily token limit                    | 1000000           | `chat-demo:daily-token-limit`              | Unaffected                      |
-| General     | Daily cost limit (yuan)              | 10                | `chat-demo:daily-cost-limit`               | Unaffected                      |
-| Memory      | Long-term memory                     | on                | `chat-demo:saved-memory-enabled`           | Unaffected                      |
-| Memory      | Auto-extract memory                  | off               | `chat-demo:auto-extract-memory`            | Unaffected                      |
-| Memory      | Memory-graph retrieval               | on                | `chat-demo:memory-bank-enabled`            | Unaffected                      |
-| Memory      | Results to inject                    | 4                 | `chat-demo:memory-bank-limit`              | Unaffected                      |
-| Memory      | Vector dimension                     | 256               | `chat-demo:memory-bank-dimension`          | Unaffected                      |
-| Browser tools | Enable browser tools              | Off                 | `chat-demo:agent-tools-enabled`            | Unaffected                      |
-| Browser tools | Per-tool switches                 | All on (with master) | `chat-demo:agent-tool-flags`              | Unaffected                      |
-| Workspace    | Enable workspace                  | Off                 | `chat-demo:workspace-enabled`              | Unaffected                      |
-| Workspace    | Workspace files                   | Empty               | `chat-demo:workspace`                      | Unaffected                      |
-| Workspace    | Storage backend                   | `local`             | `chat-demo:workspace-mode`                 | Unaffected                      |
-| Statistics   | Server search free                | on                  | `chat-demo:server-search-free`             | Unaffected                      |
-| Statistics   | Usage ledger (auto)               | Empty               | `chat-demo:usage-ledger`                   | Unaffected                      |
-| Statistics   | Context usage (auto)              | Empty               | `chat-demo:context-usage`                  | Unaffected                      |
-| Statistics   | Context breakdown (auto)          | Empty               | `chat-demo:context-breakdown`              | Unaffected                      |
+| Group             | Setting                              | Default              | localStorage key                           | Unrestricted mode               |
+| ----------------- | ------------------------------------ | -------------------- | ------------------------------------------ | ------------------------------- |
+| Model             | Temperature                          | `1`                  | `chat-demo:temperature`                    | Unaffected                      |
+| Model             | Top P                                | `1`                  | `chat-demo:top-p`                          | Unaffected                      |
+| Model             | Max output tokens                    | empty (not sent)     | `chat-demo:max-tokens`                     | Unaffected                      |
+| Model             | Anti-retraction                      | off                  | `chat-demo:keep-reply-content`             | Unaffected (independent switch) |
+| Model             | Skip safety check                    | off                  | `chat-demo:skip-safety-check`              | Forced on, disabled             |
+| Model             | Continue refused replies             | off                  | `chat-demo:continue-refused`               | Forced on, disabled             |
+| Prompt            | Unrestricted mode                    | off                  | `chat-demo:unrestricted`                   | —                               |
+| Prompt            | Custom system prompt                 | empty (assembled)    | `chat-demo:system-prompt`                  | Overrides the assembled result  |
+| Chain of thought  | Enable custom chain of thought       | off                  | `chat-demo:custom-cot-enabled`             | Unaffected                      |
+| Chain of thought  | Chain text                           | empty                | `chat-demo:custom-cot`                     | Unaffected                      |
+| Advanced          | System prompt preset                 | `deepseek`           | `chat-demo:prompt-preset`                  | Unaffected                      |
+| Advanced          | Input perturbation                   | off                  | `chat-demo:parseltongue`                   | Unaffected                      |
+| Advanced          | Perturbation technique               | `leetspeak`          | `chat-demo:parseltongue-technique`         | Unaffected                      |
+| Advanced          | Perturbation intensity               | `medium`             | `chat-demo:parseltongue-intensity`         | Unaffected                      |
+| Advanced          | AutoTune                             | off                  | `chat-demo:autotune`                       | Unaffected                      |
+| Advanced          | AutoTune strategy                    | `adaptive`           | `chat-demo:autotune-strategy`              | Unaffected                      |
+| Advanced          | Output shaping                       | empty (off)          | `chat-demo:stm-modules`                    | Unaffected                      |
+| Attachments       | Enforce attachment limits            | on                   | `chat-demo:attachment-limits`              | Unaffected                      |
+| Attachments       | Max size per file                    | 64 MB                | `chat-demo:attachment-max-mb`              | Unaffected                      |
+| Attachments       | Max files per session                | 50                   | `chat-demo:attachment-max-count`           | Unaffected                      |
+| Attachments       | Extension whitelist                  | built-in             | `chat-demo:attachment-exts`                | Unaffected                      |
+| Input bar         | Model                                | `deepseek-flash`     | `chat-demo:model`                          | Next reply                      |
+| Input bar         | Thinking effort                      | 0 (off)              | `chat-demo:reasoning-effort`               | Unaffected                      |
+| Input bar         | Auto jailbreak                       | off                  | `chat-demo:auto-jailbreak`                 | Unaffected                      |
+| Lab               | Variant race budget                  | 1 yuan               | `chat-demo:variant-race-budget`            | Unaffected                      |
+| Lab               | Variant race confirm dismissed       | off                  | `chat-demo:variant-race-confirm-dismissed` | Unaffected                      |
+| Prompt            | Inject the system prompt every round | off                  | `chat-demo:inject-prompt-every-turn`       | Unaffected                      |
+| Prompt            | Disguise historical thinking         | off                  | `chat-demo:thinking-as-body`               | Unaffected                      |
+| Model             | Stream output                        | on                   | `chat-demo:stream-output`                  | Unaffected                      |
+| Model             | Auto-compress long chats             | off                  | `chat-demo:auto-compress`                  | Unaffected                      |
+| Search poison     | Enable search poisoning              | off                  | `chat-demo:search-poison`                  | Unaffected                      |
+| Attachment poison | Enable attachment poisoning          | off                  | `chat-demo:attachment-poison`              | Unaffected                      |
+| Advanced          | Chinese jailbreak prompts            | off                  | `chat-demo:translate-jailbreak-zh`         | Unaffected                      |
+| General           | Daily limit alerts                   | off                  | `chat-demo:daily-limit-enabled`            | Unaffected                      |
+| General           | Daily token limit                    | 1000000              | `chat-demo:daily-token-limit`              | Unaffected                      |
+| General           | Daily cost limit (yuan)              | 10                   | `chat-demo:daily-cost-limit`               | Unaffected                      |
+| Memory            | Long-term memory                     | on                   | `chat-demo:saved-memory-enabled`           | Unaffected                      |
+| Memory            | Auto-extract memory                  | off                  | `chat-demo:auto-extract-memory`            | Unaffected                      |
+| Memory            | Memory-graph retrieval               | on                   | `chat-demo:memory-bank-enabled`            | Unaffected                      |
+| Memory            | Results to inject                    | 4                    | `chat-demo:memory-bank-limit`              | Unaffected                      |
+| Memory            | Vector dimension                     | 256                  | `chat-demo:memory-bank-dimension`          | Unaffected                      |
+| Browser tools     | Enable browser tools                 | Off                  | `chat-demo:agent-tools-enabled`            | Unaffected                      |
+| Browser tools     | Per-tool switches                    | All on (with master) | `chat-demo:agent-tool-flags`               | Unaffected                      |
+| Workspace         | Enable workspace                     | Off                  | `chat-demo:workspace-enabled`              | Unaffected                      |
+| Workspace         | Workspace files                      | Empty                | `chat-demo:workspace`                      | Unaffected                      |
+| Workspace         | Storage backend                      | `local`              | `chat-demo:workspace-mode`                 | Unaffected                      |
+| Statistics        | Server search free                   | on                   | `chat-demo:server-search-free`             | Unaffected                      |
+| Statistics        | Usage ledger (auto)                  | Empty                | `chat-demo:usage-ledger`                   | Unaffected                      |
+| Statistics        | Context usage (auto)                 | Empty                | `chat-demo:context-usage`                  | Unaffected                      |
+| Statistics        | Context breakdown (auto)             | Empty                | `chat-demo:context-breakdown`              | Unaffected                      |
+| NanoVM            | Enable NanoVM Slim                   | On                   | `chat-demo:nanovm-config`                  | Unaffected                      |
+| NanoVM            | Allow the model to call the shell    | Off                  | `chat-demo:nanovm-config`                  | Unaffected                      |
+| NanoVM            | Memory / disk quota                  | 128 MB / 64 MB       | `chat-demo:nanovm-config`                  | Unaffected                      |
+| NanoVM            | Command timeout                      | 15 s                 | `chat-demo:nanovm-config`                  | Unaffected                      |
+| NanoVM            | VM files                             | Factory tree         | OPFS `chat-demo-nanovm`                    | Unaffected                      |
+| NanoVM            | Installed toolchains                 | None                 | `chat-demo:nanovm-packages`                | Unaffected                      |
+| Composer          | Chat mode                            | Web agent            | `chat-demo:chat-mode`                      | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -652,8 +707,23 @@ With browser tools or the workspace enabled, `tools` gains client tool definitio
   "messages": [
     { "role": "latest_reminder", "content": "2026-11-18,Tuesday,Beijing,Web,Chinese" },
     { "role": "user", "content": "Is it hot in Hangzhou today?" },
-    { "role": "assistant", "content": [{ "type": "tool_use", "id": "toolu_1", "name": "get_weather", "input": { "location": "Hangzhou" } }] },
-    { "role": "user", "content": [{ "type": "tool_result", "tool_use_id": "toolu_1", "content": "Location: Hangzhou..." }] }
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_1",
+          "name": "get_weather",
+          "input": { "location": "Hangzhou" }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        { "type": "tool_result", "tool_use_id": "toolu_1", "content": "Location: Hangzhou..." }
+      ]
+    }
   ]
 }
 ```
@@ -680,68 +750,82 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 
 ## 7. Implementation index
 
-| File                                                                                               | Purpose                                                                                                              |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
-| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | Custom chain normalization, injection snapshot and system-block generation (direct / experimental wording)           |
-| [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)       | Composer Chain card: toggle, edit, example / clear, open settings                                                    |
-| [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)               | Collapsible “Injected chain of thought” card above replies                                                          |
-| [`src/services/chat/usageLedger.ts`](src/services/chat/usageLedger.ts)                             | Day / model usage ledger (400 days) behind the statistics charts                                                    |
-| [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)           | Settings → Statistics: KPI, trend bars, heatmap, composition ring, context management                                |
-| [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                               | Hand-rolled SVG/CSS charts: bars, heatmap, ring, sparkline, pressure gauge                                            |
-| [`src/services/api/mask.ts`](src/services/api/mask.ts)                                             | API key masking (`sk-****` + last four) shared by the lab and other read-only displays                                |
-| [`src/services/agent/tools.ts`](src/services/agent/tools.ts)                                       | Browser tool registry and executors (time, location, weather, notifications, clipboard, fetch, files, links, widgets)  |
-| [`src/services/agent/workspaceTools.ts`](src/services/agent/workspaceTools.ts)                     | Workspace tools: list / read / write / delete / diff                                                                   |
-| [`src/services/agent/agentToolSettings.ts`](src/services/agent/agentToolSettings.ts)               | Master and per-tool switches for browser and workspace tools                                                          |
-| [`src/services/agent/runTool.ts`](src/services/agent/runTool.ts)                                   | Single tool execution: approval, timeout, result normalisation                                                        |
-| [`src/services/agent/approval.ts`](src/services/agent/approval.ts)                                 | Human approval queue before a tool runs                                                                               |
-| [`src/services/workspace/store.ts`](src/services/workspace/store.ts)                               | localStorage virtual file store: path checks, limits, import / export, diff baseline                                  |
-| [`src/services/chat/contextBreakdown.ts`](src/services/chat/contextBreakdown.ts)                   | Eight-way context classification and persistence                                                                      |
-| [`src/components/agent/ToolCallCards.tsx`](src/components/agent/ToolCallCards.tsx)                 | Reply tool cards: status, input, result, artifacts (files / sandboxed widgets)                                        |
-| [`src/components/settings/AgentToolsSetting.tsx`](src/components/settings/AgentToolsSetting.tsx)   | Settings → Browser tools and workspace tool switches                                                                  |
-| [`src/components/settings/WorkspaceSetting.tsx`](src/components/settings/WorkspaceSetting.tsx)     | Settings → Workspace: file list, editor, import / export                                                              |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
-| [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | Composer Chain shortcut, active state and settings entry                                                             |
-| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
-| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | Refusal notices: a hint line when content was kept, the template otherwise                                           |
-| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | Export status and template handling for refused replies                                                              |
-| [`src/services/settings.ts`](src/services/settings.ts)                                             | New settings, defaults, and persistence                                                                              |
-| [`src/services/searchPoison.ts`](src/services/searchPoison.ts)                                     | Search-poison engine: replacement / blacklist / whitelist, context injection, result and citation rewriting          |
-| [`src/services/attachmentPoison.ts`](src/services/attachmentPoison.ts)                             | Attachment-poison engine: text / DOCX / image text / metadata / trailer / filename / companion attachment            |
-| [`src/components/settings/AttachmentPoisonSettings.tsx`](src/components/settings/AttachmentPoisonSettings.tsx) | Attachment-poison settings UI and method descriptions                                                              |
-| [`src/components/settings/SearchPoisonSettings.tsx`](src/components/settings/SearchPoisonSettings.tsx) | Search-poison settings UI: time, takeover, rules and result editing                                                  |
-| [`src/services/location.ts`](src/services/location.ts)                                             | Location normalization and custom places                                                                             |
-| [`src/services/api/types.ts`](src/services/api/types.ts)                                           | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | Settings page: Model / Prompt / Chain of thought groups, switches and preview                                        |
-| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | Slider + number input control                                                                                        |
-| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                           | Session aggregates, timings and cost estimate                                                                        |
-| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                           | Context usage cached per session                                                                                     |
-| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)       | Thinking effort 0–4 track                                                                                            |
-| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                 | Statistics and billing dialog                                                                                        |
-| [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | Long-chat compression: structured summary, auto trigger and savings                                                  |
-| [`src/services/chat/savedMemory.ts`](src/services/chat/savedMemory.ts)                             | Long-term memory: CRUD, auto-extraction, system injection                                                            |
-| [`src/services/chat/memoryBank.ts`](src/services/chat/memoryBank.ts)                               | Memory graph: nodes / edges / hashed vectors / weighted search / debug                                               |
-| [`src/services/chat/memoryArchive.ts`](src/services/chat/memoryArchive.ts)                         | Memory archive JSON import/export: merge or replace                                                                  |
-| [`src/services/chat/dailyUsage.ts`](src/services/chat/dailyUsage.ts)                               | Daily token and cost tracking with limit alerts                                                                      |
-| [`src/components/settings/MemorySettings.tsx`](src/components/settings/MemorySettings.tsx)         | Memory settings and search debug                                                                                     |
-| [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                     | Context pressure and compaction reserve (matching DSH)                                                               |
-| [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                         | Reply ratings and the AutoTune EMA profile                                                                           |
-| [`src/services/api/models.ts`](src/services/api/models.ts)                                         | Built-in models, cloud `/models` fetch and cache                                                                     |
-| [`src/components/chatInput/ModelPicker.tsx`](src/components/chatInput/ModelPicker.tsx)             | Model picker card                                                                                                    |
-| [`src/components/chatInput/ContextRing.tsx`](src/components/chatInput/ContextRing.tsx)             | Context ring linked with compression                                                                                 |
-| [`src/components/chatInput/ParseltonguePanel.tsx`](src/components/chatInput/ParseltonguePanel.tsx) | Input perturbation panel                                                                                             |
-| [`src/services/unrestricted/promptsZh.ts`](src/services/unrestricted/promptsZh.ts)                 | Chinese translation of GODMODE and the depth directive                                                               |
-| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)               | 33 perturbation techniques (ported from the standalone build)                                                        |
-| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                     | 44 refusal patterns                                                                                                  |
-| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                               | Variant race: budget, batches, scoring                                                                               |
-| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                         | Variant race UI and start confirmation                                                                               |
-| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                 | Switch component                                                                                                     |
-| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)               | Reply editor (thinking / body)                                                                                       |
-| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)     | Edit entry point, Continue button, injected-chain card and refusal rendering branch                                  |
-| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                               | Unrestricted rules text, inlined at build time                                                                       |
-| [`mcp-server/`](mcp-server/README.md)                                                              | Local EasyJailbreak MCP backend                                                                                      |
-| [`src/components/lab/`](src/components/lab/LabView.tsx)                                            | Jailbreak lab page                                                                                                   |
-| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                               | MCP client and lab state                                                                                             |
+| File                                                                                                           | Purpose                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                                       | System prompt pipeline: Persona + unrestricted rules block, with custom override                                            |
+| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                             | Custom chain normalization, injection snapshot and system-block generation (direct / experimental wording)                  |
+| [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)                   | Composer Chain card: toggle, edit, example / clear, open settings                                                           |
+| [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)                           | Collapsible “Injected chain of thought” card above replies                                                                  |
+| [`src/services/chat/usageLedger.ts`](src/services/chat/usageLedger.ts)                                         | Day / model usage ledger (400 days) behind the statistics charts                                                            |
+| [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)                       | Settings → Statistics: KPI, trend bars, heatmap, composition ring, context management                                       |
+| [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                                           | Hand-rolled SVG/CSS charts: bars, heatmap, ring, sparkline, pressure gauge                                                  |
+| [`src/services/api/mask.ts`](src/services/api/mask.ts)                                                         | API key masking (`sk-****` + last four) shared by the lab and other read-only displays                                      |
+| [`src/services/agent/tools.ts`](src/services/agent/tools.ts)                                                   | Browser tool registry and executors (time, location, weather, notifications, clipboard, fetch, files, links, widgets)       |
+| [`src/services/agent/workspaceTools.ts`](src/services/agent/workspaceTools.ts)                                 | Workspace tools: list / read / write / delete / diff                                                                        |
+| [`src/services/agent/agentToolSettings.ts`](src/services/agent/agentToolSettings.ts)                           | Master and per-tool switches for browser and workspace tools                                                                |
+| [`src/services/agent/runTool.ts`](src/services/agent/runTool.ts)                                               | Single tool execution: approval, timeout, result normalisation                                                              |
+| [`src/services/nanovm/engine.ts`](src/services/nanovm/engine.ts)                                               | WASM Shell Engine factory: quota-sized linear memory, command dispatch, lazy entry                                          |
+| [`src/services/nanovm/shell/parse.ts`](src/services/nanovm/shell/parse.ts)                                     | Shell lexer and grammar: quotes, variables, substitution, pipes, redirections, `&&` / `                                     |     | `   |
+| [`src/services/nanovm/shell/exec.ts`](src/services/nanovm/shell/exec.ts)                                       | Executor: built-ins, stage buffers, timeout and Ctrl+C interruption                                                         |
+| [`src/services/nanovm/wasm/core.ts`](src/services/nanovm/wasm/core.ts)                                         | Hand-written WASM kernel: bump allocator, memcpy / memset, memory peak statistics                                           |
+| [`src/services/nanovm/applets/`](src/services/nanovm/applets)                                                  | The 81 busybox programs (core / text / archive / net / toolchain) plus `help` and the `busybox` multiplexer                 |
+| [`src/services/nanovm/fs.ts`](src/services/nanovm/fs.ts)                                                       | Virtual file system, capacity limits, VM image import/export (OPFS / localStorage)                                          |
+| [`src/services/nanovm/packages.ts`](src/services/nanovm/packages.ts)                                           | On-demand toolchains: Pyodide (Python), Web Worker Node runtime, built-in Git                                               |
+| [`src/services/nanovm/session.ts`](src/services/nanovm/session.ts)                                             | Terminal session: tabs, output lines, history, streaming flush, silent agent runs, usage snapshot                           |
+| [`src/services/agent/nanovmTools.ts`](src/services/agent/nanovmTools.ts)                                       | The three NanoVM agent tools: `nanovm_shell` / `nanovm_ls` / `nanovm_install`                                               |
+| [`src/components/nanovm/`](src/components/nanovm)                                                              | Terminal UI: desktop dock, mobile bottom sheet, and the NanoVM console in settings                                          |
+| [`src/services/chat/mode.ts`](src/services/chat/mode.ts)                                                       | Chat modes: the four policies (tool groups, round limit, parallelism, VM auto-approval) and the system note                 |
+| [`src/components/chatInput/ModePicker.tsx`](src/components/chatInput/ModePicker.tsx)                           | The mode chip in the composer: four entries, current mode, warnings when the switches are off                               |
+| [`src/services/nanovm/keyboard.ts`](src/services/nanovm/keyboard.ts)                                           | Switch keyboard on phones: calls the native `AndroidKeyboard` bridge, falls back to a hint in browsers                      |
+| [`src/components/nanovm/ResetVmDialog.tsx`](src/components/nanovm/ResetVmDialog.tsx)                           | The red “Reset” in the terminal and its confirmation that wipes the VM                                                      |
+| [`src/services/agent/approval.ts`](src/services/agent/approval.ts)                                             | Human approval queue before a tool runs                                                                                     |
+| [`src/services/workspace/store.ts`](src/services/workspace/store.ts)                                           | localStorage virtual file store: path checks, limits, import / export, diff baseline                                        |
+| [`src/services/chat/contextBreakdown.ts`](src/services/chat/contextBreakdown.ts)                               | Eight-way context classification and persistence                                                                            |
+| [`src/components/agent/ToolCallCards.tsx`](src/components/agent/ToolCallCards.tsx)                             | Reply tool cards: status, input, result, artifacts (files / sandboxed widgets)                                              |
+| [`src/components/settings/AgentToolsSetting.tsx`](src/components/settings/AgentToolsSetting.tsx)               | Settings → Browser tools and workspace tool switches                                                                        |
+| [`src/components/settings/WorkspaceSetting.tsx`](src/components/settings/WorkspaceSetting.tsx)                 | Settings → Workspace: file list, editor, import / export                                                                    |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                                     | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
+| [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                             | Composer Chain shortcut, active state and settings entry                                                                    |
+| [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                                     | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply`        |
+| [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                               | Refusal notices: a hint line when content was kept, the template otherwise                                                  |
+| [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                             | Export status and template handling for refused replies                                                                     |
+| [`src/services/settings.ts`](src/services/settings.ts)                                                         | New settings, defaults, and persistence                                                                                     |
+| [`src/services/searchPoison.ts`](src/services/searchPoison.ts)                                                 | Search-poison engine: replacement / blacklist / whitelist, context injection, result and citation rewriting                 |
+| [`src/services/attachmentPoison.ts`](src/services/attachmentPoison.ts)                                         | Attachment-poison engine: text / DOCX / image text / metadata / trailer / filename / companion attachment                   |
+| [`src/components/settings/AttachmentPoisonSettings.tsx`](src/components/settings/AttachmentPoisonSettings.tsx) | Attachment-poison settings UI and method descriptions                                                                       |
+| [`src/components/settings/SearchPoisonSettings.tsx`](src/components/settings/SearchPoisonSettings.tsx)         | Search-poison settings UI: time, takeover, rules and result editing                                                         |
+| [`src/services/location.ts`](src/services/location.ts)                                                         | Location normalization and custom places                                                                                    |
+| [`src/services/api/types.ts`](src/services/api/types.ts)                                                       | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                             |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)                     | Settings page: Model / Prompt / Chain of thought groups, switches and preview                                               |
+| [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)                       | Slider + number input control                                                                                               |
+| [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                                       | Session aggregates, timings and cost estimate                                                                               |
+| [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                                       | Context usage cached per session                                                                                            |
+| [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)                   | Thinking effort 0–4 track                                                                                                   |
+| [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                             | Statistics and billing dialog                                                                                               |
+| [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                                         | Long-chat compression: structured summary, auto trigger and savings                                                         |
+| [`src/services/chat/savedMemory.ts`](src/services/chat/savedMemory.ts)                                         | Long-term memory: CRUD, auto-extraction, system injection                                                                   |
+| [`src/services/chat/memoryBank.ts`](src/services/chat/memoryBank.ts)                                           | Memory graph: nodes / edges / hashed vectors / weighted search / debug                                                      |
+| [`src/services/chat/memoryArchive.ts`](src/services/chat/memoryArchive.ts)                                     | Memory archive JSON import/export: merge or replace                                                                         |
+| [`src/services/chat/dailyUsage.ts`](src/services/chat/dailyUsage.ts)                                           | Daily token and cost tracking with limit alerts                                                                             |
+| [`src/components/settings/MemorySettings.tsx`](src/components/settings/MemorySettings.tsx)                     | Memory settings and search debug                                                                                            |
+| [`src/services/chat/contextPressure.ts`](src/services/chat/contextPressure.ts)                                 | Context pressure and compaction reserve (matching DSH)                                                                      |
+| [`src/services/chat/feedbackStore.ts`](src/services/chat/feedbackStore.ts)                                     | Reply ratings and the AutoTune EMA profile                                                                                  |
+| [`src/services/api/models.ts`](src/services/api/models.ts)                                                     | Built-in models, cloud `/models` fetch and cache                                                                            |
+| [`src/components/chatInput/ModelPicker.tsx`](src/components/chatInput/ModelPicker.tsx)                         | Model picker card                                                                                                           |
+| [`src/components/chatInput/ContextRing.tsx`](src/components/chatInput/ContextRing.tsx)                         | Context ring linked with compression                                                                                        |
+| [`src/components/chatInput/ParseltonguePanel.tsx`](src/components/chatInput/ParseltonguePanel.tsx)             | Input perturbation panel                                                                                                    |
+| [`src/services/unrestricted/promptsZh.ts`](src/services/unrestricted/promptsZh.ts)                             | Chinese translation of GODMODE and the depth directive                                                                      |
+| [`src/services/unrestricted/techniques.ts`](src/services/unrestricted/techniques.ts)                           | 33 perturbation techniques (ported from the standalone build)                                                               |
+| [`src/services/unrestricted/refusal.ts`](src/services/unrestricted/refusal.ts)                                 | 44 refusal patterns                                                                                                         |
+| [`src/services/lab/variantRace.ts`](src/services/lab/variantRace.ts)                                           | Variant race: budget, batches, scoring                                                                                      |
+| [`src/components/lab/VariantView.tsx`](src/components/lab/VariantView.tsx)                                     | Variant race UI and start confirmation                                                                                      |
+| [`src/components/base/Switch.tsx`](src/components/base/Switch.tsx)                                             | Switch component                                                                                                            |
+| [`src/components/messages/ReplyEditor.tsx`](src/components/messages/ReplyEditor.tsx)                           | Reply editor (thinking / body)                                                                                              |
+| [`src/components/messages/AssistantMessage.tsx`](src/components/messages/AssistantMessage.tsx)                 | Edit entry point, Continue button, injected-chain card and refusal rendering branch                                         |
+| [`deepseekv4.1 and v4.1-1017.md`](<./deepseekv4.1 and v4.1-1017.md>)                                           | Unrestricted rules text, inlined at build time                                                                              |
+| [`mcp-server/`](mcp-server/README.md)                                                                          | Local EasyJailbreak MCP backend                                                                                             |
+| [`src/components/lab/`](src/components/lab/LabView.tsx)                                                        | Jailbreak lab page                                                                                                          |
+| [`src/services/lab/`](src/services/lab/mcpClient.ts)                                                           | MCP client and lab state                                                                                                    |
 
 ---
 
@@ -855,11 +939,20 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
 36. **Browser tools inherit browser limits**: page fetching is bound by the target site's CORS; notifications, location and clipboard need permissions (notifications are usually unavailable inside the APK WebView and are marked disabled); “open link” can be blocked by popup rules.
 37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
-38. **Workspace capacity**: in OPFS mode the limits derive from `navigator.storage.estimate()` (up to 80% of the quota, capped at 64 GB total / 256 MB per file) and grow with the quota; localStorage cannot be expanded (typically 5–10 MB, and base64 adds roughly a third), so a full write tells you to switch to OPFS. Export a ZIP before clearing or replacing.
-39. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
-41. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
-42. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.
-40. **The context breakdown is an estimate**: character weights (1 token per CJK character, 4 characters per token otherwise) differ from server billing; the KPI numbers reported by the server stay authoritative.
+38. **NanoVM Slim is a browser-side simulation**: not a real Linux kernel — no process isolation, no multi-user permissions, no signals or job control; `&` does not survive, and `kill` / `nice` / device files do not exist. Its files and quotas are local, so clearing site data wipes them.
+39. **The busybox commands are subset implementations**: `awk` has no `printf`, arrays, loops or user functions; `sed` has no `{}` blocks or `r/w/l`; `sort -h/-M/-V`, `grep -A/-B/-C` and `find -mtime/-size/-perm` are missing. Unsupported usage **fails loudly** instead of silently returning the wrong result.
+40. **`npm` and `pip` are not available**: Node.js is a browser-compatible runtime (a `fs` / `path` subset inside a Web Worker) and Python is Pyodide (WASM CPython — pure-Python packages work, C extensions need Pyodide's built-in support). Install real dependencies on the host.
+41. **`curl` / `wget` are subject to CORS**: only targets that allow cross-origin requests work, and failures say whether it was the network, CORS or an HTTP status — never a fake success.
+42. **Scripts in the VM become commands**: a script with the executable bit runs by path or through `$PATH`, with shebangs for `sh` / `bash` / `python3` / `node`; without a shebang it fails like Linux with `Exec format error`. One consequence: `exit 3 | cat` ends the whole script (pipeline stages are not real processes) instead of only the pipeline subshell.
+43. **The first toolchain install needs the network**: Python is about 12 MB (Pyodide) and is cached locally afterwards; Node.js and Git are built in and need no download. Git is local-only — no `clone` / `push` / `pull`.
+44. **Workspace capacity**: in OPFS mode the limits derive from `navigator.storage.estimate()` (up to 80% of the quota, capped at 64 GB total / 256 MB per file) and grow with the quota; localStorage cannot be expanded (typically 5–10 MB, and base64 adds roughly a third), so a full write tells you to switch to OPFS. Export a ZIP before clearing or replacing.
+45. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
+46. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
+47. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.
+48. **The context breakdown is an estimate**: character weights (1 token per CJK character, 4 characters per token otherwise) differ from server billing; the KPI numbers reported by the server stay authoritative.
+49. **Chat modes only affect client tools**: server tools (read URL / web search) are sent in all four modes, including Chat only; the mode is a global choice (`chat-demo:chat-mode`) and is not stored per session.
+50. **PTC / Creator run the tool calls of one round in parallel**: several tools that need confirmation queue up one dialog at a time; in Creator mode NanoVM tools skip confirmation, so a wrong path, a careless `rm` or a bad install is on the user — try it in a throwaway chat first.
+51. **All tool calls of one round share that round's usage**: parallel NanoVM commands are billed and counted in context per round trip, not separately.
 
 ---
 

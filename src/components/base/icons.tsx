@@ -591,3 +591,78 @@ export const IconToastError16 = () => (
     />
   </svg>
 )
+
+export const IconTerminalOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="1.75"
+      y="2.75"
+      width="12.5"
+      height="10.5"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <path
+      d="M4.6 6.2 6.8 8 4.6 9.8M8.4 10.2h3"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+/** 键盘 + 上下双箭头：切换输入法（手机端调起系统输入法选择器） */
+export const IconKeyboardSwitch16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="1.4"
+      y="3.9"
+      width="9.2"
+      height="8.2"
+      rx="1.7"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <path
+      d="M3.4 6.2h.01M5.3 6.2h.01M7.2 6.2h.01M9 6.2h.01M3.4 8.2h.01M5.3 8.2h.01M7.2 8.2h.01M9 8.2h.01M4.4 10.2h3.2"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+    <path
+      d="M13.1 3.9v8.2M13.1 3.9l-1.2 1.3M13.1 3.9l1.2 1.3M13.1 12.1l-1.2-1.3M13.1 12.1l1.2-1.3"
+      stroke="currentColor"
+      strokeWidth="1.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+/** 三层堆叠：聊天模式（仅聊天 / 网页 / PTC / 创造） */
+export const IconModeLayers16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8 1.9 14.1 5.2 8 8.5 1.9 5.2 8 1.9Z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2.6 7.9 8 10.8 13.4 7.9"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2.6 10.9 8 13.8 13.4 10.9"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)

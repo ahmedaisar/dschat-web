@@ -1,4 +1,5 @@
-import { isAgentToolEnabled } from './agentToolSettings.js'
+import { agentToolGroup, isAgentToolEnabled, modeAllowsTool } from './agentToolSettings.js'
+import { modePolicy } from '../chat/mode.js'
 import { requestToolApproval } from './approval.js'
 import { agentToolById, type ToolContext } from './tools.js'
 import type { ChatToolCall } from './types.js'
@@ -48,12 +49,25 @@ export const runAgentToolCall = async (
     }
   }
 
+  // 聊天模式也会拦一次：模型可能凭历史记忆调用上一轮还能用的工具
+  if (!modeAllowsTool(tool.id)) {
+    return {
+      ...call,
+      status: 'error',
+      content: `当前聊天模式不允许使用工具「${tool.label}」，请在输入栏切换模式后再试`,
+      endedAt: Date.now(),
+    }
+  }
+
   const input =
     typeof call.input === 'object' && call.input !== null
       ? (call.input as Record<string, unknown>)
       : {}
 
-  if (tool.requiresApproval) {
+  // 创造模式里虚拟机工具的确认交给模型自己把握，不再逐次弹窗
+  const autoApproved = modePolicy().autoApproveVm && agentToolGroup(tool.id) === 'nanovm'
+
+  if (tool.requiresApproval && !autoApproved) {
     onUpdate?.({ detail: '等待确认…' })
     const allowed = await requestToolApproval({
       id: call.id,

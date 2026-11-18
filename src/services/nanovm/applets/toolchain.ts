@@ -1,0 +1,366 @@
+import { useEngine } from '../boot.js'
+import { nanoVMConfig } from '../config.js'
+import {
+  TOOLCHAIN_IDS,
+  isToolchainId,
+  toolchainSizeMB,
+  uninstallToolchain,
+  usePackages,
+} from '../packages.js'
+import type { Applet, AppletContext, AppletResult, ToolchainIO, ToolchainId } from '../types.js'
+import { humanSize, needToolchain } from './helpers.js'
+
+/**
+ * 按需工具链命令：python3 / python / node / git / npm / pip / vm。
+ *
+ * 这一组命令本身很小，真正的运行时（Pyodide、Worker 沙箱、git 对象库）都在
+ * `packages.ts` 里按需加载。没安装时返回 127 + install 提示，UI 会显示「安装」按钮。
+ */
+
+const labelOf = (id: ToolchainId): string => usePackages.getState().states[id].label
+
+const nameOf = (id: ToolchainId): string => (id === 'python' ? 'python3' : id)
+
+/** 执行工具链并把输出缓冲成 AppletResult */
+const runToolchain = async (
+  ctx: AppletContext,
+  id: ToolchainId,
+  argv: string[]
+): Promise<AppletResult> => {
+  let stdout = ''
+  let stderr = ''
+  const io: ToolchainIO = {
+    stdin: ctx.stdin,
+    stdout: (text) => {
+      stdout += text
+    },
+    stderr: (text) => {
+      stderr += text
+    },
+    fs: ctx.fs,
+    cwd: ctx.cwd,
+    env: ctx.env,
+    signal: ctx.signal,
+  }
+  const result = await ctx.toolchains.run(id, argv, io)
+  if (result.error && !stderr.includes(result.error)) {
+    stderr += `${nameOf(id)}: ${result.error}\n`
+  }
+  return { code: result.code, stdout, stderr }
+}
+
+const pythonApplet = (name: 'python3' | 'python'): Applet => ({
+  name,
+  summary: 'Python 3 运行时（Pyodide 版 CPython），首次使用按需下载',
+  summaryEn: 'Python 3 runtime (Pyodide CPython), downloaded on first use',
+  usage: `${name} [-c "代码"] [脚本.py] [参数...]`,
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    if (!ctx.toolchains.installed('python')) {
+      return needToolchain('python', `${name}: 未安装 Python 运行时（约 12MB）\n`)
+    }
+    return runToolchain(ctx, 'python', ctx.argv.slice(1))
+  },
+})
+
+const nodeApplet: Applet = {
+  name: 'node',
+  summary: '浏览器内置的 Node.js 兼容运行时（Web Worker），无需下载',
+  summaryEn: 'Built-in Node.js-compatible runtime (Web Worker), no download',
+  usage: 'node [-v] [-e "代码"] [脚本.js] [参数...]',
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    if (!ctx.toolchains.installed('node')) {
+      return needToolchain(
+        'node',
+        'node: 未安装 Node.js 运行时，执行 vm install node 启用（无需下载）\n'
+      )
+    }
+    return runToolchain(ctx, 'node', ctx.argv.slice(1))
+  },
+}
+
+const gitApplet: Applet = {
+  name: 'git',
+  summary: '内置 git 实现（真 git 对象格式），无需下载',
+  summaryEn: 'Built-in git implementation with real object format, no download',
+  usage: 'git <子命令> [参数]（git help 看支持范围）',
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    if (!ctx.toolchains.installed('git')) {
+      return needToolchain('git', 'git: 未启用内置 Git，执行 vm install git 启用（无需下载）\n')
+    }
+    return runToolchain(ctx, 'git', ctx.argv.slice(1))
+  },
+}
+
+const npmApplet: Applet = {
+  name: 'npm',
+  summary: '不支持：NanoVM Slim 没有 npm',
+  summaryEn: 'Not supported: NanoVM Slim has no npm',
+  usage: 'npm',
+  run: (): AppletResult => ({
+    code: 127,
+    stderr: 'npm: NanoVM Slim 不支持 npm 安装，请用内置 git / python 运行时\n',
+  }),
+}
+
+const pipApplet: Applet = {
+  name: 'pip',
+  summary: '不支持：NanoVM Slim 没有 pip',
+  summaryEn: 'Not supported: NanoVM Slim has no pip',
+  usage: 'pip',
+  run: (): AppletResult => ({
+    code: 127,
+    stderr: 'pip: NanoVM Slim 不支持 pip 安装，只内置 Python 标准库\n',
+  }),
+}
+
+const VM_HELP = [
+  '用法：vm <子命令>',
+  '',
+  '  vm info            引擎版本、命令数、内存、磁盘与工具链状态',
+  '  vm mem             WASM 线性内存用量',
+  '  vm df              虚拟磁盘容量与使用率',
+  '  vm list            工具链安装状态',
+  '  vm install <id>    安装工具链（python / node / git）',
+  '  vm uninstall <id>  卸载工具链',
+  '  vm export          导出虚拟机镜像',
+  '  vm help            这份说明',
+  '',
+].join('\n')
+
+/**
+ * 字节数按量级显示：B / KB / MB。
+ * 小流量（几百 KB、几 KB）也必须有可读单位，不能被 toFixed(2) 抹成 0.00 MB；
+ * 只有真的拿不到数据（NaN / 负数）才显示破折号。
+ */
+const formatBytes = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return '—'
+  }
+  if (bytes < 1024) {
+    return `${Math.round(bytes)} B`
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+/** 「已用」类指标：0 明确标成空闲；只有取不到数据（NaN / 负数）才显示破折号 */
+const formatUsage = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return '—'
+  }
+  return bytes > 0 ? formatBytes(bytes) : '0 B（空闲）'
+}
+
+/** 磁盘用量保持 K/M 的紧凑写法，但 B 级别补上单位 */
+const formatDisk = (bytes: number): string => (bytes < 1024 ? `${bytes} B` : humanSize(bytes))
+
+/**
+ * 已注册的命令数。
+ * `applets/index.ts` 也 import 了本文件，静态 import 会构成循环依赖（lint 会报），
+ * 所以只能在 run() 里动态取；引擎信息里的 applets 作为兜底。
+ */
+const countApplets = async (fallback: number): Promise<number> => {
+  try {
+    const module = await import('./index.js')
+    return module.APPLET_LIST.length
+  } catch {
+    return fallback
+  }
+}
+
+const vmInfo = async (ctx: AppletContext): Promise<AppletResult> => {
+  const info = useEngine.getState().info
+  const memory = ctx.memory()
+  const usage = ctx.fs.usage()
+  const config = nanoVMConfig()
+  const applets = await countApplets(info?.applets ?? 0)
+  const toolchains = TOOLCHAIN_IDS.map((id) => {
+    const state = usePackages.getState().states[id]
+    return `${state.label} ${state.installed ? '✓' : '未安装'}`
+  }).join(' · ')
+  const totalMB = memory.totalMB > 0 ? memory.totalMB : config.memoryMB
+  const lines = [
+    `NanoVM Slim ${info?.version ?? '2.6.8'}`,
+    `引擎：${info?.wasm === false ? 'JS 兼容内核' : 'WASM Shell Engine'}（异步 chunk 懒加载）`,
+  ]
+  if (applets > 0) {
+    lines.push(`内置命令：${applets} 个`)
+  }
+  lines.push(
+    `WASM 内存：${totalMB} MB 配额，已用 ${formatUsage(memory.usedBytes)}，峰值 ${formatBytes(memory.peakBytes)}`,
+    `虚拟磁盘：${config.diskMB} MB 配额，已用 ${formatDisk(usage.bytes)}（${usage.files} 个文件 / ${usage.dirs} 个目录）`,
+    `工具链：${toolchains}`
+  )
+  if (info && info.bootMs > 0) {
+    lines.push(`启动耗时：${info.bootMs} ms`)
+  }
+  return { code: 0, stdout: `${lines.join('\n')}\n` }
+}
+
+const vmMem = (ctx: AppletContext): AppletResult => {
+  const memory = ctx.memory()
+  const totalMB = memory.totalMB > 0 ? memory.totalMB : nanoVMConfig().memoryMB
+  const lines = [
+    `WASM 内存内核：${memory.wasm ? '是（WebAssembly.Memory）' : '否（JS 回落内核）'}`,
+    `配额：${totalMB} MB`,
+    `已用：${formatUsage(memory.usedBytes)}`,
+    `峰值：${formatBytes(memory.peakBytes)}`,
+  ]
+  return { code: 0, stdout: `${lines.join('\n')}\n` }
+}
+
+const vmDf = (ctx: AppletContext): AppletResult => {
+  const usage = ctx.fs.usage()
+  const config = nanoVMConfig()
+  const capacity = config.diskMB * 1024 * 1024
+  const usedPercent = capacity > 0 ? Math.round((usage.bytes / capacity) * 100) : 0
+  const lines = [
+    '文件系统   容量      已用      可用      使用率   文件数',
+    [
+      'nanovm'.padEnd(10),
+      `${config.diskMB}M`.padEnd(9),
+      formatDisk(usage.bytes).padEnd(9),
+      formatDisk(Math.max(0, capacity - usage.bytes)).padEnd(9),
+      `${usedPercent}%`.padEnd(8),
+      String(usage.files),
+    ].join(' '),
+  ]
+  return { code: 0, stdout: `${lines.join('\n')}\n` }
+}
+
+const vmList = (): AppletResult => {
+  const lines = ['工具链   状态       版本               体积']
+  for (const id of TOOLCHAIN_IDS) {
+    const state = usePackages.getState().states[id]
+    const size = toolchainSizeMB(id) > 0 ? `${toolchainSizeMB(id)} MB` : '内置'
+    lines.push(
+      [
+        state.label.padEnd(8),
+        (state.installed ? '已安装' : '未安装').padEnd(8),
+        (state.version ?? '—').padEnd(18),
+        size,
+      ].join(' ')
+    )
+  }
+  lines.push('', `安装：vm install <${TOOLCHAIN_IDS.join('|')}>`)
+  return { code: 0, stdout: `${lines.join('\n')}\n` }
+}
+
+const progressText = (id: ToolchainId, percent: number): string => {
+  if (id === 'python') {
+    return `正在下载 Python 运行时… ${percent}%`
+  }
+  if (id === 'node') {
+    return `正在启用 Node.js 运行时… ${percent}%`
+  }
+  return `正在启用 Git… ${percent}%`
+}
+
+const vmInstall = async (ctx: AppletContext): Promise<AppletResult> => {
+  const target = ctx.argv[2]
+  if (!target) {
+    return { code: 1, stderr: `vm: 用法 vm install <${TOOLCHAIN_IDS.join('|')}>\n` }
+  }
+  if (!isToolchainId(target)) {
+    return {
+      code: 1,
+      stderr: `vm: 未知工具链 '${target}'，可选：${TOOLCHAIN_IDS.join('、')}\n`,
+    }
+  }
+  const label = labelOf(target)
+  const current = usePackages.getState().states[target]
+  if (current.installed) {
+    return {
+      code: 0,
+      stdout: `${label} 已安装${current.version ? `（${current.version}）` : ''}，无需重复安装\n`,
+    }
+  }
+  const lines: string[] = []
+  let last = -1
+  const onProgress = (progress: number) => {
+    const percent = Math.round(Math.min(1, Math.max(0, progress)) * 100)
+    if (percent >= last + 10 || percent === 100) {
+      last = percent
+      lines.push(progressText(target, percent))
+    }
+  }
+  const result = await ctx.toolchains.install(target, onProgress)
+  if (!result.ok) {
+    lines.push(`${label} 安装失败：${result.error ?? '未知错误'}`)
+    return { code: 1, stdout: `${lines.join('\n')}\n` }
+  }
+  const installed = usePackages.getState().states[target]
+  if (lines.length === 0) {
+    lines.push(progressText(target, 100))
+  }
+  const usage =
+    target === 'python' ? 'python3 script.py' : target === 'node' ? 'node script.js' : 'git status'
+  lines.push(`${label} 已就绪${installed.version ? `（${installed.version}）` : ''}，试试 ${usage}`)
+  return { code: 0, stdout: `${lines.join('\n')}\n` }
+}
+
+const vmUninstall = async (ctx: AppletContext): Promise<AppletResult> => {
+  const target = ctx.argv[2]
+  if (!target || !isToolchainId(target)) {
+    return {
+      code: 1,
+      stderr: `vm: 用法 vm uninstall <${TOOLCHAIN_IDS.join('|')}>\n`,
+    }
+  }
+  if (!ctx.toolchains.installed(target)) {
+    return { code: 0, stdout: `${labelOf(target)} 本来就没有安装\n` }
+  }
+  await uninstallToolchain(target)
+  return {
+    code: 0,
+    stdout: `已卸载 ${labelOf(target)}，运行 vm install ${target} 可以重新安装\n`,
+  }
+}
+
+const vmApplet: Applet = {
+  name: 'vm',
+  summary: '虚拟机管理：引擎信息、内存、磁盘与工具链按需安装',
+  summaryEn: 'VM management: engine info, memory, disk and on-demand toolchains',
+  usage: 'vm <info|mem|df|list|install|uninstall|export|help>',
+  run: async (ctx: AppletContext): Promise<AppletResult> => {
+    const subcommand = ctx.argv[1] ?? 'help'
+    switch (subcommand) {
+      case 'info':
+        return vmInfo(ctx)
+      case 'mem':
+        return vmMem(ctx)
+      case 'df':
+        return vmDf(ctx)
+      case 'list':
+        return vmList()
+      case 'install':
+        return vmInstall(ctx)
+      case 'uninstall':
+        return vmUninstall(ctx)
+      case 'export':
+        return {
+          code: 0,
+          stdout: '在 设置 → NanoVM Slim 控制台里导出镜像（vm 命令不支持直接导出）\n',
+        }
+      case 'help':
+      case '--help':
+      case '-h':
+        return { code: 0, stdout: VM_HELP }
+      default:
+        return { code: 1, stderr: `vm: 未知子命令 '${subcommand}'\n\n${VM_HELP}` }
+    }
+  },
+}
+
+/** 按需工具链命令；顺序即 help 里的展示顺序 */
+export const TOOLCHAIN_APPLETS: Applet[] = [
+  pythonApplet('python3'),
+  pythonApplet('python'),
+  nodeApplet,
+  gitApplet,
+  npmApplet,
+  pipApplet,
+  vmApplet,
+]

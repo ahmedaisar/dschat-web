@@ -832,19 +832,29 @@ export const AGENT_TOOLS: AgentTool[] = [
 export const AGENT_TOOL_IDS = AGENT_TOOLS.map((tool) => tool.id)
 
 /**
- * 工具注册表 = 浏览器工具 + 虚拟工作区工具。
- * 工作区工具在这里按 id 引入，避免两个模块互相 import 造成循环依赖。
+ * 工具注册表 = 浏览器工具 + 虚拟工作区工具 + NanoVM Slim 工具。
+ * 后两组由各自的设置模块注入，避免互相 import 造成循环依赖。
  */
-export const allAgentTools = (): AgentTool[] => [...AGENT_TOOLS, ...workspaceTools()]
+export const allAgentTools = (): AgentTool[] => [
+  ...AGENT_TOOLS,
+  ...workspaceTools(),
+  ...nanovmTools(),
+]
 
 export const agentToolById = (id: string): AgentTool | undefined =>
   allAgentTools().find((tool) => tool.id === id)
 
 /** 由 agentToolSettings 在初始化时注入，避免 tools.ts 依赖设置模块 */
 let workspaceTools: () => AgentTool[] = () => []
+let nanovmTools: () => AgentTool[] = () => []
 
 export const registerWorkspaceTools = (loader: () => AgentTool[]) => {
   workspaceTools = loader
+}
+
+/** 由 agentToolSettings 注入 NanoVM Slim 工具 */
+export const registerNanovmTools = (loader: () => AgentTool[]) => {
+  nanovmTools = loader
 }
 
 /** 该工具在本机是否可用（通知 / 剪贴板 / 定位依赖浏览器能力） */

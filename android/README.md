@@ -1,4 +1,4 @@
-# Android APK（DeepSeek Unrestricted 2.6.7）
+# Android APK（DeepSeek Unrestricted 2.6.8）
 
 这是纯原生 WebView 壳，不依赖 Capacitor / Cordova：
 
@@ -9,10 +9,10 @@
 
 ## 产物
 
-`android/deepseek-unrestricted-2.6.7.apk`，versionCode 267，使用
+`android/deepseek-unrestricted-2.6.8.apk`，versionCode 268，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`18f912979876f4e530233698bb551a548318790755c512e9ee0a1aa8a1dd9216`（7.2 MB）。
+SHA-256：`fbd0f79a81ab74bd97b1b45d8390bc7aecba0bf5d194fa64dbe660cbc292d25b`（7.3 MB）。
 
 ## 构建
 
