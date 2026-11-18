@@ -141,6 +141,16 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV267Title: 'v2.6.7 · 2026-11',
+  changelogV267Cot:
+    'The default custom chain of thought now ships the built-in thinking_prompt: a fresh install, “Insert default prompt” and Restore defaults all use it, and it stays editable in settings or the composer card',
+  changelogV267Billing:
+    'New “Server search and fetch are free” billing switch, on by default: per the official policy effective 2026-11-18 12:00 Beijing time, server-side search and page fetch triggered by model calls are no longer billed — only tokens are. Turn it off to estimate at the old rate',
+  changelogV267WorkspaceOpfs:
+    'The workspace now supports two storage backends: browser localStorage (default) and the OPFS file system, switchable at any time with the current files copied over; files survive refreshes and browser restarts',
+  changelogV267Persist:
+    'The workspace can request persistent storage and shows whether it was granted, plus used space and quota, reducing the risk of automatic eviction',
+  changelogV267Apk: 'Built the matching 2.6.7 APK (versionCode 267), signed with xiaohuangbo.jks',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:
     'New Workspace: a virtual, long-lived file store in browser localStorage — create, edit and delete files, download single files, and import / export the whole archive (merge or replace) for backup',
@@ -368,6 +378,27 @@ export const en = {
   settingDialogAsideStatsOptionLabel: 'Statistics',
   settingDialogAsideWorkspaceOptionLabel: 'Workspace',
   workspaceSectionTitle: 'Virtual file workspace',
+  workspaceStorageMode: 'Storage',
+  workspaceModeLocal: 'Browser storage',
+  workspaceModeOpfs: 'OPFS file system',
+  workspaceModeLocalDesc:
+    'Default: data lives in localStorage, reads and writes are synchronous and compatibility is best, but capacity is bounded (typically 5–10 MB).',
+  workspaceModeOpfsDesc:
+    'A real origin-private file system: separate from localStorage, larger, and it survives refreshes and browser restarts. Switching copies the current files over.',
+  workspaceModeSwitched: 'Storage switched; existing files were copied',
+  workspaceModeUnsupported: 'This browser does not support OPFS; staying on local storage',
+  workspaceModeFailed: 'Failed to switch storage',
+  workspacePersistState: 'Persistent storage',
+  workspacePersistGranted: 'granted (the browser will not evict it automatically)',
+  workspacePersistNotGranted: 'not granted (may be evicted when space runs low)',
+  workspacePersistUnsupported: 'unsupported',
+  workspacePersistRequest: 'Request persistent storage',
+  workspacePersistGrantedToast: 'Persistent storage granted',
+  workspacePersistDeniedToast: 'The browser did not grant persistent storage; try again later',
+  workspaceStorageUsage: '{usage} used / {quota} quota',
+  workspaceStorageRefresh: 'Refresh',
+  workspacePersistError: 'Storage write failed: {message}',
+  workspaceHydrating: 'Loading the OPFS workspace…',
   workspaceEnableLabel: 'Enable workspace',
   workspaceEnableDesc:
     'Build a virtual file store in browser storage: the agent can read and write it, and you can edit, import and export it. Off by default; only when on are workspace tools declared to the model. Data stays on this device and is not part of history exports.',
@@ -420,6 +451,12 @@ export const en = {
   contextCategory_toolCalls: 'Tool calls',
   contextCategory_toolResults: 'Tool results',
   contextCategory_files: 'Attachments',
+  billingSearchFreeLabel: 'Server search and fetch are free',
+  billingSearchFreeDesc:
+    'Since 2026-11-18 12:00 Beijing time, server-side search and page fetch triggered by model calls are no longer billed — only tokens are. Turn this off to estimate at the old rate (CNY 5 / 1000 calls).',
+  billingSearchFreeValue: 'Free (since 2026-11-18)',
+  billingSearchFreeNote:
+    'Estimated under the new policy: server search and page fetch are free, so cost comes only from tokens, document parsing and voice.',
   billingRatesTitle: 'Billing rates',
   billingRateModel: 'Rate ({model}, CNY / million tokens)',
   billingRateTokens: 'miss {miss} · hit {hit} · output {output}',
@@ -617,7 +654,7 @@ export const en = {
   settingsCustomCotPlaceholder:
     'For example:\n1. Restate the question and confirm the goal, constraints and deliverable.\n2. List known facts and uncertainties.\n3. Compare at least two approaches and pick the more reliable one.\n4. Derive step by step and check edge cases.\n5. Give the conclusion first, then the structured reasons.',
   settingsCustomCotCount: '{count} / {max} characters',
-  settingsCustomCotInsertExample: 'Insert example',
+  settingsCustomCotInsertExample: 'Insert default prompt',
   settingsCustomCotClear: 'Clear',
   settingsCustomCotExample:
     '1. Restate the question and confirm the goal, constraints and deliverable.\n2. List known facts and unknowns; flag possible factual errors or ambiguity.\n3. Compare at least two approaches and pick the more reliable one.\n4. Derive step by step and check key steps and edge cases.\n5. Give the conclusion first, then a structured rationale.',

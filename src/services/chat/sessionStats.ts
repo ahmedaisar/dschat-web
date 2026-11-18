@@ -349,10 +349,16 @@ export type CostBreakdown = {
 /** 估算一个会话的费用；每条回复按它自己的请求时间判断高峰 / 空闲 */
 export const estimateCost = (
   session: Session | null,
-  options: { holiday?: boolean; voiceDiscount?: boolean } = {}
+  options: {
+    holiday?: boolean
+    voiceDiscount?: boolean
+    /** 服务端搜索 / 抓取是否免费；默认按 2026-11-18 12:00 起的新政策免费 */
+    serverSearchFree?: boolean
+  } = {}
 ): CostBreakdown => {
   const holiday = options.holiday ?? false
   const discount = options.voiceDiscount ?? true
+  const searchFree = options.serverSearchFree ?? true
   const usage = {
     cacheHit: 0,
     cacheMiss: 0,
@@ -444,8 +450,9 @@ export const estimateCost = (
     return sum
   })()
   const outputCost = modelCost - cacheHitCost - cacheMissCost
-  const searchCost = usage.search * SEARCH_PER_CALL
-  const fetchCost = usage.fetch * SEARCH_PER_CALL
+  // 新政策：模型调用触发的服务端搜索与抓取不再计费，只保留次数用于展示
+  const searchCost = searchFree ? 0 : usage.search * SEARCH_PER_CALL
+  const fetchCost = searchFree ? 0 : usage.fetch * SEARCH_PER_CALL
   const parseCost = usage.pages * PARSE_PER_PAGE
   const voiceFactor = discount ? 0.5 : 1
   const ttsCost = usage.ttsChars * TTS_PER_CHAR * voiceFactor

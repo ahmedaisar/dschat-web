@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.5**
+> Current version: **2.6.7**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -440,6 +440,8 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 
 **Where:** Settings → **Chain of thought**. Off by default. When enabled, the reasoning steps you write are injected as a separate system block on every request, so the model follows your order instead of a vague “think step by step”.
 
+The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “Insert default prompt” and Restore defaults all use it, and it stays fully editable in settings or the composer card.
+
 | Deep thinking | Injected block | Behaviour | Stability |
 | --- | --- | --- | --- |
 | Off (level 0) | `[CUSTOM CHAIN OF THOUGHT]` | The model reasons internally through the steps; an “Injected chain of thought” card appears above the reply, followed by the final answer | Standard |
@@ -473,6 +475,7 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 - **Ledger v2**: per-day records now also carry an hourly histogram and a per-session breakdown. Older v1 ledgers are read with the missing fields defaulted, so upgrading never needs a migration script; corrupt JSON is treated as an empty ledger instead of crashing the page.
 - **Context breakdown**: the latest request of the session is split into system prompt, tool definitions, user messages, model replies, model thinking, tool calls, tool results and attachments, each with estimated tokens and share. Estimates use character weights, so server-reported numbers in the KPI band remain the authoritative ones.
 - **Billing rates**: the model's miss / hit / output prices (CNY per million tokens) plus search, document parsing, TTS and ASR unit prices, with the peak-hour doubling rule spelled out — handy when a bill looks unexpected.
+- **Free server search**: under the official policy effective 2026-11-18 12:00 Beijing time, server-side search and page fetch triggered by model calls are no longer billed — only tokens are. The switch defaults to on; turn it off to estimate at the old rate (CNY 5 / 1000 calls) when reconciling older bills.
 
 **The composer stats dialog** now also carries the per-session output trend (sparkline plus latest / average / longest), the last-7-days app-wide trend for comparison, the input composition ring, an auxiliary card (searches, fetches, parsed files and pages, TTS characters, ASR seconds), and a pressure gauge with remaining window and compaction threshold; its footer jumps straight into Settings → Statistics.
 
@@ -509,10 +512,12 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Piece | Behaviour |
 | --- | --- |
 | Files | Text only; create, edit, rename by editing the path, delete, and download a single file |
-| Limits | 200k characters per file, 1.5M in total, 200 files — surfaced as a live usage bar |
+| Limits | 200k characters per file, 1.5M in total, 200 files, surfaced as a live usage bar; localStorage mode is also bounded by the browser's ~5–10 MB, OPFS is roomier |
 | Import / export | The whole archive round-trips as a JSON file; import can merge (same paths overwritten) or replace everything |
 | Paths | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane |
 | Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace |
+| Storage | Browser localStorage (default) or the **OPFS file system**, switchable at any time; switching copies the current files to the new backend |
+| Persistence | “Request persistent storage” calls `navigator.storage.persist()` and the page shows whether it was granted plus used space and quota |
 | Defaults | **Off.** Both the agent master switch and the workspace switch start disabled, so a fresh install declares no tools at all |
 
 - Turning the workspace off hides every workspace tool from the model even if the agent master switch is on; a call from history is refused at execution time.
@@ -592,6 +597,8 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Browser tools | Per-tool switches                 | All on (with master) | `chat-demo:agent-tool-flags`              | Unaffected                      |
 | Workspace    | Enable workspace                  | Off                 | `chat-demo:workspace-enabled`              | Unaffected                      |
 | Workspace    | Workspace files                   | Empty               | `chat-demo:workspace`                      | Unaffected                      |
+| Workspace    | Storage backend                   | `local`             | `chat-demo:workspace-mode`                 | Unaffected                      |
+| Statistics   | Server search free                | on                  | `chat-demo:server-search-free`             | Unaffected                      |
 | Statistics   | Usage ledger (auto)               | Empty               | `chat-demo:usage-ledger`                   | Unaffected                      |
 | Statistics   | Context usage (auto)              | Empty               | `chat-demo:context-usage`                  | Unaffected                      |
 | Statistics   | Context breakdown (auto)          | Empty               | `chat-demo:context-breakdown`              | Unaffected                      |
@@ -745,7 +752,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 - Attachment-poison settings live only in localStorage; original attachments stay on this device, the processed copies are uploaded, and companion text attachments are sent as ordinary files.
 - Conversations and original attachments: IndexedDB, isolated per browser profile and site origin.
 - The only outbound traffic goes to the API origin you configured (default `https://api.deepseek.com`): `/models` for key validation, `/anthropic/v1/messages` for chat, `/anthropic/v1/files` for attachments, and the ASR / TTS endpoints for speech.
-- Browser tools / workspace: switches live in localStorage, workspace files in `chat-demo:workspace`, and tool results / artifacts go into IndexedDB with the reply.
+- Browser tools / workspace: switches live in localStorage; workspace files default to `chat-demo:workspace`, and in OPFS mode live under the origin-private `chat-demo-workspace/` directory (inaccessible to other sites); tool results / artifacts go into IndexedDB with the reply.
 - Statistics: `chat-demo:usage-ledger`, `chat-demo:context-usage` and `chat-demo:context-breakdown` store aggregate numbers only, never message text.
 - Tools reach third parties only where the capability requires it: Open-Meteo (weather), BigDataCloud (reverse geocoding), and whatever page the agent is told to fetch; everything else runs locally.
 - No analytics, no telemetry, no third-party scripts, no relay server.
@@ -789,11 +796,11 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.5.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.7.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.5 / 265), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.7 / 267), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -804,7 +811,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 265;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 267;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---
@@ -850,6 +857,8 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
 38. **The workspace stores text only**: 200k characters per file, 1.5M total, 200 files, all bounded by browser storage — export a backup before clearing or replacing.
 39. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
+41. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
+42. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.
 40. **The context breakdown is an estimate**: character weights (1 token per CJK character, 4 characters per token otherwise) differ from server billing; the KPI numbers reported by the server stay authoritative.
 
 ---

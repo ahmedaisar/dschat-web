@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { showToast } from '../base/toastState.js'
+import { Switch } from '../base/Switch.js'
 import { BarChart, Heatmap, RingChart, type BarColumn, type HeatCell } from '../stats/charts.js'
 import {
   LEDGER_KEEP_DAYS,
@@ -39,7 +40,7 @@ import {
 import type { TranslationKey } from '../../i18n/index.js'
 import { selectSession, useChatStore } from '../../services/chat/store.js'
 import { closeSettings } from './settingsDialogState.js'
-import { useSettings } from '../../services/settings.js'
+import { setServerSearchFree, useSettings } from '../../services/settings.js'
 import { modelLabel } from '../../services/api/models.js'
 import settingsStyles from './Settings.module.css'
 import styles from './StatsSettings.module.css'
@@ -111,6 +112,7 @@ export const StatsSettings = () => {
   const locale = useSettings((state) => state.locale)
   const model = useSettings((state) => state.model)
   const maxTokens = useSettings((state) => state.maxTokens)
+  const serverSearchFree = useSettings((state) => state.serverSearchFree)
   const days = useLedger((state) => state.days)
   const [rangeDays, setRangeDays] = useState(7)
   // 趋势图可以切换看点：token / 费用 / 请求数
@@ -518,6 +520,17 @@ export const StatsSettings = () => {
 
       <div className={settingsStyles.groupTitle}>{t('billingRatesTitle')}</div>
       <section className={styles.card}>
+        <div className={styles.billingSwitch}>
+          <div className={styles.billingSwitchText}>
+            <span className={styles.billingSwitchLabel}>{t('billingSearchFreeLabel')}</span>
+            <span className={styles.billingSwitchDesc}>{t('billingSearchFreeDesc')}</span>
+          </div>
+          <Switch
+            checked={serverSearchFree}
+            onChange={setServerSearchFree}
+            label={t('billingSearchFreeLabel')}
+          />
+        </div>
         <div className={styles.rateList}>
           <div className={styles.rateRow}>
             <span className={styles.rateName}>
@@ -534,7 +547,9 @@ export const StatsSettings = () => {
           <div className={styles.rateRow}>
             <span className={styles.rateName}>{t('statsKpiSearches')}</span>
             <span className={styles.rateValue}>
-              {t('billingRatePerCall', { price: rates.searchPerCall })}
+              {serverSearchFree
+                ? t('billingSearchFreeValue')
+                : t('billingRatePerCall', { price: rates.searchPerCall })}
             </span>
           </div>
           <div className={styles.rateRow}>

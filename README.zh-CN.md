@@ -48,7 +48,7 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.6.5**
+> 当前版本：**2.6.7**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
@@ -440,6 +440,8 @@ Persona（官方身份分块）
 
 设置 → **思维链**。默认关闭；打开后把预先写好的推理步骤作为独立 system 分块注入每次请求，让模型按你定义的顺序推理，而不是只靠一句「请逐步思考」。
 
+正文自带一份默认提示词（内置的 `thinking_prompt`）：首次使用、点「填入默认提示词」、恢复默认设置都会用它，仍可在设置页或输入栏卡片里自由改写。
+
 | 深度思考 | 注入内容 | 行为 | 稳定性 |
 | --- | --- | --- | --- |
 | 关闭（0 档） | `[自定义思维链]` | 模型在内部按步骤作答；回复上方显示「已注入思维链」卡片，随后显示最终回答 | 常规能力 |
@@ -472,6 +474,7 @@ Persona（官方身份分块）
 - **账本 v2**：每天记录里增加 24 小时直方图与会话维度拆分；旧版 v1 账本读取时按缺省值补齐，升级不需要迁移脚本；损坏的 JSON 当作空账本处理，不会带崩页面。
 - **上下文分类**：把当前会话最近一轮请求拆成系统提示词 / 工具定义 / 用户消息 / 模型回复 / 模型思考 / 工具调用 / 工具结果 / 附件，各自给出估算 token 与占比；估算按字符权重，准确用量仍以 KPI 区服务端上报的数字为准。
 - **计费口径**：按模型列出未命中 / 命中 / 输出的单价（元 / 百万 token），并摊开联网搜索、文档解析、语音合成与识别的单价，标注工作日高峰翻倍规则，账单对不上时可以直接对照。
+- **服务端搜索免费开关**：按官方新政策（北京时间 2026-11-18 12:00 起），模型调用触发的服务端搜索、网页抓取不再计费，只按 Token 计费；开关默认开启。关闭后按旧规则（5 元 / 1000 次）估算，便于对旧账单。
 
 **输入栏会话统计弹窗**新增本次会话输出趋势（迷你折线 + 最新 / 平均 / 最长）、用于横向对比的「最近 7 天用量」、输入构成环、附加用量卡（搜索 / 抓取 / 解析文件与页数 / 语音字符 / 语音秒数），以及带剩余窗口与压缩阈值的上下文压力表；底部可直接跳到设置 → 统计。
 
@@ -508,10 +511,12 @@ Persona（官方身份分块）
 | 组成 | 行为 |
 | --- | --- |
 | 文件 | 只支持文本：新建、编辑（改路径即重命名）、删除、单文件下载 |
-| 限制 | 单文件 20 万字符、总量 150 万字符、最多 200 个文件；设置页有实时占用条 |
+| 限制 | 单文件 20 万字符、总量 150 万字符、最多 200 个文件；设置页有实时占用条。localStorage 模式还受浏览器 5–10MB 限制，OPFS 模式容量更大 |
 | 导入 / 导出 | 整包以 JSON 往返；导入可选合并（同名覆盖）或覆盖全部 |
 | 路径 | 只允许相对路径，拒绝 `..`、绝对路径与盘符，避免出现奇怪的键名 |
 | 工作区工具 | `list_workspace`、`read_workspace_file`、`write_workspace_file`、`diff_workspace_file`、`delete_workspace_file`；写入与删除需要确认，diff 以文件进入工作区时的内容为基线 |
+| 存储方式 | 浏览器本地存储（localStorage，默认）或 **OPFS 真文件系统**，可在设置里随时切换，切换时把现有文件整体复制到新后端 |
+| 持久化 | 可点「申请持久化存储」调用 `navigator.storage.persist()`，并展示授权状态、已用空间与配额；降低浏览器在空间不足时清理数据的风险 |
 | 默认值 | **关闭**。Agent 主开关与工作区开关都从关闭开始，全新安装不会下发任何工具 |
 
 - 关掉工作区后，即使 Agent 主开关打开，模型也看不到任何工作区工具；若模型凭历史调用，执行阶段会直接拒绝。
@@ -591,6 +596,8 @@ Persona（官方身份分块）
 | 浏览器工具 | 单项工具开关   | 全开（随主开关） | `chat-demo:agent-tool-flags`         | 不受影响             |
 | 工作区 | 启用工作区         | 关               | `chat-demo:workspace-enabled`              | 不受影响             |
 | 工作区 | 工作区文件         | 空               | `chat-demo:workspace`                      | 不受影响             |
+| 工作区 | 存储方式           | `local`          | `chat-demo:workspace-mode`                 | 不受影响             |
+| 统计   | 服务端搜索免费     | 开               | `chat-demo:server-search-free`             | 不受影响             |
 | 统计   | 用量账本（自动）   | 空               | `chat-demo:usage-ledger`                   | 不受影响             |
 | 统计   | 上下文占用（自动） | 空               | `chat-demo:context-usage`                  | 不受影响             |
 | 统计   | 上下文分类（自动） | 空               | `chat-demo:context-breakdown`              | 不受影响             |
@@ -744,7 +751,7 @@ Persona（官方身份分块）
 - 附件投毒配置只存 localStorage；原始附件在本机，上传的是处理后的副本，伴随文本附件会作为普通文件随消息发送；
 - 会话与附件原件：IndexedDB，按浏览器用户配置与站点源隔离；
 - 出站请求只有你配置的 API 地址（默认 `https://api.deepseek.com`）：`/models` 校验 Key、`/anthropic/v1/messages` 对话、`/anthropic/v1/files` 附件、ASR / TTS 语音接口；
-- 浏览器工具 / 工作区：开关在 localStorage，工作区文件在 `chat-demo:workspace`，工具结果与产物随回复写入 IndexedDB；
+- 浏览器工具 / 工作区：开关在 localStorage；工作区文件默认在 `chat-demo:workspace`，切到 OPFS 后改存到站点私有的 `chat-demo-workspace/` 目录（浏览器分配、其它站点无法访问）；工具结果与产物随回复写入 IndexedDB；
 - 统计：`chat-demo:usage-ledger`、`chat-demo:context-usage`、`chat-demo:context-breakdown` 只存聚合数字，不含对话正文；
 - 工具会向第三方服务发起请求：Open-Meteo（天气）、BigDataCloud（逆地理）、你让 Agent 抓取的网页；其余工具都在本地完成；
 - 没有统计、没有埋点、没有第三方脚本、没有中转服务器；
@@ -788,11 +795,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.5.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.7.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.5 / 265），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.7 / 267），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -803,7 +810,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 265；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 267；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---
@@ -849,6 +856,8 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 37. **工具往返按轮计费**：一轮回复最多 4 次工具往返，每次都是真实请求，token 与费用按轮累加；关闭主开关后模型完全看不到工具。
 38. **工作区只存文本**：单文件 20 万字符、总量 150 万字符、最多 200 个文件，受浏览器 localStorage 容量限制；清空或覆盖导入前请先导出备份。
 39. **工作区不随历史导出**：历史导出包只含会话与图片，工作区与工具卡片都不在其中；换浏览器或清站点数据会丢失工作区。
+41. **OPFS 与持久化权限因浏览器而异**：老 WebView / 隐私模式可能不支持 OPFS，此时只能留在 localStorage；`navigator.storage.persist()` 也可能被拒绝，未获授权时浏览器仍可能在空间不足时清理数据，重要内容请导出备份。
+42. **切换存储方式会整体覆盖目标后端**：切到 OPFS 会先用当前内存里的文件覆盖 OPFS 目录，切回本地则覆盖 localStorage 副本；切换前建议先导出。
 40. **上下文分类是估算**：按字符权重计算（中文 1 字 1 token、其余 4 字符 1 token），与服务端计费口径可能有差异，准确用量以 KPI 区服务端上报数字为准。
 
 ---

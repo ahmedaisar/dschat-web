@@ -1,4 +1,12 @@
 import { create } from 'zustand'
+import {
+  opfsClear,
+  opfsDeleteFile,
+  opfsReadAll,
+  opfsSupported,
+  opfsWriteAll,
+  opfsWriteFile,
+} from './opfs.js'
 
 /**
  * 虚拟长期文件工作区：完全活在 localStorage 里的一个「文件系统」。
@@ -13,6 +21,10 @@ import { create } from 'zustand'
 
 const STORE_KEY = 'chat-demo:workspace'
 const ENABLED_KEY = 'chat-demo:workspace-enabled'
+const MODE_KEY = 'chat-demo:workspace-mode'
+
+/** 工作区底层存储：浏览器 localStorage 或 OPFS 真文件系统 */
+export type WorkspaceMode = 'local' | 'opfs'
 
 export const WORKSPACE_MAX_FILES = 200
 export const WORKSPACE_MAX_FILE_CHARS = 200_000
@@ -32,6 +44,12 @@ export type WorkspaceFile = {
 type WorkspaceState = {
   /** 工作区总开关；默认关闭 */
   enabled: boolean
+  /** 当前存储方式；默认 localStorage，可切换到 OPFS */
+  mode: WorkspaceMode
+  /** OPFS 模式下的异步加载是否完成 */
+  hydrated: boolean
+  /** 最近一次异步写盘失败的原因，设置页会提示 */
+  persistError: string | null
   files: Record<string, WorkspaceFile>
 }
 
@@ -146,10 +164,35 @@ const writeFiles = (files: Record<string, WorkspaceFile>) => {
   }
 }
 
+const readMode = (): WorkspaceMode =>
+  localStorage.getItem(MODE_KEY) === 'opfs' && opfsSupported() ? 'opfs' : 'local'
+
 export const useWorkspace = create<WorkspaceState>(() => ({
   enabled: localStorage.getItem(ENABLED_KEY) === 'true',
-  files: readFiles(),
+  mode: readMode(),
+  // localStorage 同步读完了；OPFS 需要异步 hydrate，先标记为已就绪再由 hydrateWorkspace 修正
+  hydrated: localStorage.getItem(MODE_KEY) !== 'opfs' || !opfsSupported(),
+  persistError: null,
+  files: localStorage.getItem(MODE_KEY) === 'opfs' && opfsSupported() ? {} : readFiles(),
 }))
+
+/** 串行执行 OPFS 写操作，避免并发 createWritable 互相覆盖 */
+let persistQueue: Promise<void> = Promise.resolve()
+
+const queuePersist = (task: () => Promise<void>) => {
+  persistQueue = persistQueue
+    .then(task)
+    .then(() => {
+      if (useWorkspace.getState().persistError) {
+        useWorkspace.setState({ persistError: null })
+      }
+    })
+    .catch((error: unknown) => {
+      useWorkspace.setState({
+        persistError: error instanceof Error ? error.message : String(error),
+      })
+    })
+}
 
 export const setWorkspaceEnabled = (enabled: boolean) => {
   try {
@@ -202,7 +245,11 @@ export const saveWorkspaceFile = (
   }
   const files = { ...current, [path]: file }
   useWorkspace.setState({ files })
-  writeFiles(files)
+  if (useWorkspace.getState().mode === 'opfs') {
+    queuePersist(() => opfsWriteFile(path, content))
+  } else {
+    writeFiles(files)
+  }
   return { ok: true, file, created: !existing }
 }
 
@@ -224,7 +271,11 @@ export const deleteWorkspaceFile = (inputPath: string): boolean => {
     Object.entries(useWorkspace.getState().files).filter(([key]) => key !== path)
   )
   useWorkspace.setState({ files: rest })
-  writeFiles(rest)
+  if (useWorkspace.getState().mode === 'opfs') {
+    queuePersist(() => opfsDeleteFile(path))
+  } else {
+    writeFiles(rest)
+  }
   return true
 }
 
@@ -318,14 +369,88 @@ export const importWorkspace = (text: string, mode: 'merge' | 'replace'): Import
     return { imported: 0, skipped, error: 'tooMany' }
   }
   useWorkspace.setState({ files: base })
-  writeFiles(base)
+  if (useWorkspace.getState().mode === 'opfs') {
+    queuePersist(() =>
+      opfsWriteAll(Object.fromEntries(Object.entries(base).map(([path, file]) => [path, file.content])))
+    )
+  } else {
+    writeFiles(base)
+  }
   return { imported, skipped }
 }
 
 export const clearWorkspace = () => {
   useWorkspace.setState({ files: {} })
-  writeFiles({})
+  if (useWorkspace.getState().mode === 'opfs') {
+    queuePersist(() => opfsClear())
+  } else {
+    writeFiles({})
+  }
 }
+
+/**
+ * 启动时加载 OPFS 工作区。localStorage 模式不需要异步动作。
+ * OPFS 里读到的文件把当前内容同时作为基线，diff 从加载后开始算。
+ */
+export const hydrateWorkspace = async (): Promise<void> => {
+  if (useWorkspace.getState().mode !== 'opfs' || !opfsSupported()) {
+    useWorkspace.setState({ hydrated: true })
+    return
+  }
+  try {
+    const raw = await opfsReadAll()
+    const now = Date.now()
+    const files: Record<string, WorkspaceFile> = {}
+    for (const [path, content] of Object.entries(raw)) {
+      const safePath = normalizeWorkspacePath(path)
+      if (!safePath) {
+        continue
+      }
+      files[safePath] = {
+        path: safePath,
+        content: content.slice(0, WORKSPACE_MAX_FILE_CHARS),
+        mime: mimeForPath(safePath),
+        createdAt: now,
+        updatedAt: now,
+        baseline: content,
+      }
+    }
+    useWorkspace.setState({ files, hydrated: true, persistError: null })
+  } catch (error) {
+    useWorkspace.setState({
+      hydrated: true,
+      persistError: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * 切换存储方式：把当前内存里的文件整体写到新后端，成功后写模式键。
+ * 切到 OPFS 时如果浏览器不支持，返回错误而不改模式。
+ */
+export const setWorkspaceMode = async (mode: WorkspaceMode): Promise<WorkspaceMode> => {
+  if (mode === 'opfs' && !opfsSupported()) {
+    return useWorkspace.getState().mode
+  }
+  const files = useWorkspace.getState().files
+  if (mode === 'opfs') {
+    await opfsWriteAll(
+      Object.fromEntries(Object.entries(files).map(([path, file]) => [path, file.content]))
+    )
+  } else {
+    writeFiles(files)
+  }
+  try {
+    localStorage.setItem(MODE_KEY, mode)
+  } catch {
+    // 隐私模式写不进去时至少本次会话生效
+  }
+  useWorkspace.setState({ mode, hydrated: true, persistError: null })
+  return mode
+}
+
+/** 当前是否使用 OPFS；设置页用来显示状态 */
+export const isOpfsMode = (): boolean => useWorkspace.getState().mode === 'opfs'
 
 /** 简单的按行 diff：返回新增 / 删除行数，供工具的「查看 diff」使用 */
 export type DiffSummary = { added: number; removed: number; lines: string[] }

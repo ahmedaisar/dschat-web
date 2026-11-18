@@ -135,6 +135,16 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV267Title: 'v2.6.7 · 2026-11',
+  changelogV267Cot:
+    '默认自定义思维链换成内置的 thinking_prompt：首次使用、填入默认提示词与恢复默认设置都会带上这段内容，仍可在设置页或输入栏卡片里改',
+  changelogV267Billing:
+    '计费新增「服务端搜索与抓取免费」开关，默认开启：按官方 2026-11-18 12:00 起的新政策，模型触发服务端搜索 / 网页抓取不再计费，只算 Token；可关掉按旧单价估算',
+  changelogV267WorkspaceOpfs:
+    '工作区新增两种存储方式：浏览器本地存储（默认）与 OPFS 真文件系统，可随时切换并整体复制现有文件；刷新、重启浏览器后文件仍在',
+  changelogV267Persist:
+    '工作区可申请持久化存储权限，并展示是否已获授权、已用空间与配额，降低浏览器自动清理数据的风险',
+  changelogV267Apk: '同步构建 2.6.7 APK（versionCode 267），使用 xiaohuangbo.jks 签名',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:
     '新增「工作区」：浏览器 localStorage 里的虚拟长期文件库，可新建 / 编辑 / 删除文件、单文件下载，并支持整包导入导出（合并或覆盖），导出的 JSON 可以留作备份',
@@ -312,6 +322,27 @@ export const zh = {
   settingDialogAsideStatsOptionLabel: '统计',
   settingDialogAsideWorkspaceOptionLabel: '工作区',
   workspaceSectionTitle: '虚拟文件工作区',
+  workspaceStorageMode: '存储方式',
+  workspaceModeLocal: '浏览器本地存储',
+  workspaceModeOpfs: 'OPFS 文件系统',
+  workspaceModeLocalDesc:
+    '默认方式：数据存在 localStorage，读写同步、兼容性最好，容量受浏览器限制（一般 5–10MB）。',
+  workspaceModeOpfsDesc:
+    '真正的网页文件系统（Origin Private File System）：独立于 localStorage，容量更大，刷新与重启浏览器后仍在；切换时会把当前文件整体复制过去。',
+  workspaceModeSwitched: '存储方式已切换，现有文件已复制',
+  workspaceModeUnsupported: '当前浏览器不支持 OPFS，仍使用本地存储',
+  workspaceModeFailed: '切换存储方式失败',
+  workspacePersistState: '持久化存储',
+  workspacePersistGranted: '已获授权（浏览器不会自动清理）',
+  workspacePersistNotGranted: '未获授权（存储不足时可能被清理）',
+  workspacePersistUnsupported: '浏览器不支持',
+  workspacePersistRequest: '申请持久化存储',
+  workspacePersistGrantedToast: '已获得持久化存储权限',
+  workspacePersistDeniedToast: '浏览器未授予持久化权限，可稍后重试',
+  workspaceStorageUsage: '已用 {usage} / 配额 {quota}',
+  workspaceStorageRefresh: '刷新',
+  workspacePersistError: '写入存储失败：{message}',
+  workspaceHydrating: '正在加载 OPFS 工作区…',
   workspaceEnableLabel: '启用工作区',
   workspaceEnableDesc:
     '在浏览器本地建一个虚拟文件库，Agent 可以读写、你可以直接编辑与导入导出；默认关闭，开启后工作区工具才会下发给模型。数据只存在本机，历史导出包里不含工作区。',
@@ -362,6 +393,12 @@ export const zh = {
   contextCategory_toolCalls: '工具调用',
   contextCategory_toolResults: '工具结果',
   contextCategory_files: '附件',
+  billingSearchFreeLabel: '服务端搜索与抓取免费',
+  billingSearchFreeDesc:
+    '自北京时间 2026-11-18 12:00 起，模型调用触发的服务端搜索、网页抓取不再计费，只按模型 Token 计费；关闭后按旧规则（5 元 / 1000 次）估算。',
+  billingSearchFreeValue: '免费（2026-11-18 起）',
+  billingSearchFreeNote:
+    '已按新政策估算：服务端搜索与网页抓取不计费，费用只来自模型 Token 与文档解析、语音。',
   billingRatesTitle: '计费口径',
   billingRateModel: '单价（{model}，元 / 百万 token）',
   billingRateTokens: '未命中 {miss} · 命中 {hit} · 输出 {output}',
@@ -551,7 +588,7 @@ export const zh = {
   settingsCustomCotPlaceholder:
     '例如：\n1. 先复述问题，确认目标、约束与需要交付的内容。\n2. 列出已知条件和不确定之处。\n3. 给出两种解法并比较，选择更可靠的一种。\n4. 逐步推导，最后自检边界条件。',
   settingsCustomCotCount: '{count} / {max} 字符',
-  settingsCustomCotInsertExample: '填入示例',
+  settingsCustomCotInsertExample: '填入默认提示词',
   settingsCustomCotClear: '清空',
   settingsCustomCotExample:
     '1. 先复述问题，确认目标、约束与需要交付的内容。\n2. 列出已知条件与未知信息，标出可能的事实错误或歧义。\n3. 给出至少两种解法，比较优缺点，选择最可靠的一种。\n4. 逐步推导，必要时自检关键步骤与边界条件。\n5. 先给结论，再给结构化的理由与步骤。',

@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
   WORKSPACE_MAX_FILES,
@@ -11,10 +11,18 @@ import {
   importWorkspace,
   saveWorkspaceFile,
   setWorkspaceEnabled,
+  setWorkspaceMode,
   useWorkspace,
+  type WorkspaceMode,
   workspaceUsage,
   type WorkspaceFile,
 } from '../../services/workspace/store.js'
+import {
+  opfsSupported,
+  readStorageStatus,
+  requestPersistentStorage,
+  type StorageStatus,
+} from '../../services/workspace/opfs.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { Switch } from '../base/Switch.js'
@@ -31,6 +39,21 @@ import styles from './WorkspaceSetting.module.css'
  * 也可以整包导出或导入，用来长期保存 Agent 的产出，不依赖任何后端。
  * 默认关闭，开启后工作区工具才会下发给模型。
  */
+
+/** 字节数按人类可读单位显示 */
+const formatBytes = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 B'
+  }
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let index = 0
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024
+    index += 1
+  }
+  return `${value >= 100 || index === 0 ? Math.round(value) : value.toFixed(1)} ${units[index]}`
+}
 
 const formatTime = (at: number, locale: string): string =>
   new Intl.DateTimeFormat(locale, {
@@ -56,6 +79,11 @@ export const WorkspaceSetting = () => {
   const isMobile = useIsMobile()
   const locale = useSettings((state) => state.locale)
   const enabled = useWorkspace((state) => state.enabled)
+  const mode = useWorkspace((state) => state.mode)
+  const hydrated = useWorkspace((state) => state.hydrated)
+  const persistError = useWorkspace((state) => state.persistError)
+  const [storage, setStorage] = useState<StorageStatus | null>(null)
+  const [storageBusy, setStorageBusy] = useState(false)
   const files = useWorkspace((state) => state.files)
   const usage = workspaceUsage()
   const fileList = Object.values(files).sort((a, b) => a.path.localeCompare(b.path))
@@ -65,6 +93,34 @@ export const WorkspaceSetting = () => {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [mergeMode, setMergeMode] = useState<'merge' | 'replace'>('merge')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const refreshStorage = async () => {
+    setStorage(await readStorageStatus())
+  }
+
+  useEffect(() => {
+    void refreshStorage()
+  }, [])
+
+  const switchMode = async (next: WorkspaceMode) => {
+    if (next === mode) {
+      return
+    }
+    setStorageBusy(true)
+    try {
+      const applied = await setWorkspaceMode(next)
+      if (applied !== next) {
+        showToast({ key: 'workspaceModeUnsupported', type: 'error' })
+      } else {
+        showToast({ key: 'workspaceModeSwitched' })
+        await refreshStorage()
+      }
+    } catch {
+      showToast({ key: 'workspaceModeFailed', type: 'error' })
+    } finally {
+      setStorageBusy(false)
+    }
+  }
 
   const startEdit = (file: WorkspaceFile) => {
     setDraft({ path: file.path, content: file.content, editing: true })
@@ -110,6 +166,92 @@ export const WorkspaceSetting = () => {
           onChange={setWorkspaceEnabled}
           label={t('workspaceEnableLabel')}
         />
+      </div>
+
+      <div className={styles.storage}>
+        <div className={styles.storageHead}>
+          <span className={styles.storageTitle}>{t('workspaceStorageMode')}</span>
+          <span className={styles.modeTabs} role="tablist" aria-label={t('workspaceStorageMode')}>
+            {(
+              [
+                { value: 'local', label: 'workspaceModeLocal' },
+                { value: 'opfs', label: 'workspaceModeOpfs' },
+              ] as const
+            ).map((item) => {
+              const unsupported = item.value === 'opfs' && !opfsSupported()
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === item.value}
+                  disabled={storageBusy || unsupported}
+                  className={clsx(
+                    styles.modeTab,
+                    mode === item.value && styles.modeTabActive,
+                    unsupported && styles.modeTabDisabled
+                  )}
+                  onClick={() => void switchMode(item.value)}
+                >
+                  {t(item.label)}
+                </button>
+              )
+            })}
+          </span>
+        </div>
+        <div className={styles.modeDesc}>
+          {t(mode === 'opfs' ? 'workspaceModeOpfsDesc' : 'workspaceModeLocalDesc')}
+        </div>
+        <div className={styles.storageStats}>
+          <span>
+            {t('workspacePersistState')}：
+            {storage === null
+              ? '—'
+              : !storage.supported
+                ? t('workspacePersistUnsupported')
+                : storage.persisted
+                  ? t('workspacePersistGranted')
+                  : t('workspacePersistNotGranted')}
+          </span>
+          {storage?.usage !== null && storage?.usage !== undefined ? (
+            <span>
+              {t('workspaceStorageUsage', {
+                usage: formatBytes(storage.usage),
+                quota: formatBytes(storage.quota ?? 0),
+              })}
+            </span>
+          ) : null}
+          <button type="button" className={styles.linkButton} onClick={() => void refreshStorage()}>
+            {t('workspaceStorageRefresh')}
+          </button>
+          <Button
+            size="s"
+            variant="outlined"
+            disabled={storageBusy || !storage?.supported || storage?.persisted}
+            onClick={() => {
+              setStorageBusy(true)
+              void requestPersistentStorage()
+                .then(async (granted) => {
+                  await refreshStorage()
+                  showToast({
+                    key: granted ? 'workspacePersistGrantedToast' : 'workspacePersistDeniedToast',
+                    type: granted ? undefined : 'error',
+                  })
+                })
+                .finally(() => setStorageBusy(false))
+            }}
+          >
+            {t('workspacePersistRequest')}
+          </Button>
+        </div>
+        {persistError ? (
+          <div className={styles.persistError}>
+            {t('workspacePersistError', { message: persistError })}
+          </div>
+        ) : null}
+        {mode === 'opfs' && !hydrated ? (
+          <div className={styles.hydrating}>{t('workspaceHydrating')}</div>
+        ) : null}
       </div>
 
       <div className={styles.usage}>

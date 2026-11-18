@@ -92,6 +92,7 @@ import type { PromptPreset } from '../../services/unrestricted/prompts.js'
 import { useFeedback } from '../../services/chat/feedbackStore.js'
 import { composeSystemPrompt } from '../../services/chat/systemPrompt.js'
 import { formatCustomCotContext } from '../../services/chat/customCot.js'
+import { DEFAULT_CUSTOM_COT } from '../../services/chat/defaultCot.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
@@ -710,6 +711,16 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV267Title',
+      items: [
+        'changelogV267Cot',
+        'changelogV267Billing',
+        'changelogV267WorkspaceOpfs',
+        'changelogV267Persist',
+        'changelogV267Apk',
+      ],
+    },
+    {
       title: 'changelogV265Title',
       items: [
         'changelogV265Workspace',
@@ -1291,7 +1302,7 @@ const CustomCotSetting = () => {
           <span className={styles.systemPromptHint}>
             {t('settingsCustomCotCount', { count: draft.length, max: CUSTOM_COT_MAX_CHARS })}
           </span>
-          <Button variant="outlined" size="s" onClick={() => commit(t('settingsCustomCotExample'))}>
+          <Button variant="outlined" size="s" onClick={() => commit(DEFAULT_CUSTOM_COT)}>
             {t('settingsCustomCotInsertExample')}
           </Button>
           <Button variant="outlined" size="s" disabled={draft === ''} onClick={() => commit('')}>

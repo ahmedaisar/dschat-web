@@ -80,6 +80,7 @@ const StatsContent = () => {
   const apiKey = useSettings((state) => state.apiKey) ?? ''
   const maxTokens = useSettings((state) => state.maxTokens)
   const model = useSettings((state) => state.model)
+  const serverSearchFree = useSettings((state) => state.serverSearchFree)
   const memoryDimension = useSettings((state) => state.memoryBankDimension)
   const memoryNodes = useMemoryBank((state) => state.nodes.length)
   const memoryEdges = useMemoryBank((state) => state.edges.length)
@@ -94,8 +95,13 @@ const StatsContent = () => {
   const contextWindow = contextWindowFor(model)
   const reserve = reserveGeometry(contextWindow, maxTokens ?? 8192)
   const cost = useMemo(
-    () => estimateCost(session, { holiday, voiceDiscount: discount }),
-    [session, holiday, discount]
+    () =>
+      estimateCost(session, {
+        holiday,
+        voiceDiscount: discount,
+        serverSearchFree,
+      }),
+    [session, holiday, discount, serverSearchFree]
   )
   const daily = useDailyUsage()
   useEffect(() => {
@@ -557,6 +563,9 @@ const StatsContent = () => {
             {cost.peakNow ? t('billingPeak') : t('billingOffPeak')}
           </span>
         </div>
+        {serverSearchFree ? (
+          <div className={styles.freeNote}>{t('billingSearchFreeNote')}</div>
+        ) : null}
         <div className={styles.switchRow}>
           <span className={styles.switchLabel}>{t('billingHoliday')}</span>
           <Switch checked={holiday} onChange={setHoliday} label={t('billingHoliday')} />

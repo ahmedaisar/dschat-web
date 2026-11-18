@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_CUSTOM_COT } from './chat/defaultCot.js'
 import type { TtsVoice } from './api/speech.js'
 import type { ChatModel } from './api/types.js'
 import { normalizeLocation, type UserLocation } from './location.js'
@@ -72,6 +73,11 @@ type Settings = {
   attachmentPoison: AttachmentPoisonConfig
   /** 每日 Token / 费用提醒 */
   dailyLimitEnabled: boolean
+  /**
+   * 服务端搜索 / 网页抓取是否免费。
+   * 官方自北京时间 2026-11-18 12:00 起不再对这两项计费，默认按新政策估算。
+   */
+  serverSearchFree: boolean
   dailyTokenLimit: number
   dailyCostLimit: number
   /** 变体赛跑的预算上限（元） */
@@ -148,6 +154,7 @@ const KEYS = {
   memoryBankVectorWeight: 'chat-demo:memory-bank-vector-weight',
   memoryBankEdgeWeight: 'chat-demo:memory-bank-edge-weight',
   dailyLimitEnabled: 'chat-demo:daily-limit-enabled',
+  serverSearchFree: 'chat-demo:server-search-free',
   dailyTokenLimit: 'chat-demo:daily-token-limit',
   dailyCostLimit: 'chat-demo:daily-cost-limit',
   variantRaceBudget: 'chat-demo:variant-race-budget',
@@ -288,7 +295,8 @@ const initialReasoningEffort = (): number => {
 }
 
 /** 自定义思维链：旧数据没有该键或内容超长时按空 / 上限处理 */
-const initialCustomCot = (): string => (read(KEYS.customCot) ?? '').slice(0, CUSTOM_COT_MAX_CHARS)
+const initialCustomCot = (): string =>
+  (read(KEYS.customCot) ?? DEFAULT_CUSTOM_COT).slice(0, CUSTOM_COT_MAX_CHARS)
 
 /** 附件大小：未设置或不是正整数时为 null（使用内置默认值） */
 const initialAttachmentNumber = (key: string): number | null => {
@@ -415,6 +423,8 @@ export const useSettings = create<Settings>(() => ({
   memoryBankVectorWeight: initialNumber(KEYS.memoryBankVectorWeight, 0.8, 0, 5),
   memoryBankEdgeWeight: initialNumber(KEYS.memoryBankEdgeWeight, 0.4, 0, 5),
   dailyLimitEnabled: read(KEYS.dailyLimitEnabled) === 'true',
+  // 缺省为 true：新政策已生效，只有显式存过 false 才按旧规则计算
+  serverSearchFree: read(KEYS.serverSearchFree) !== 'false',
   dailyTokenLimit: initialNumber(KEYS.dailyTokenLimit, 1_000_000, 1000, 100_000_000),
   dailyCostLimit: initialNumber(KEYS.dailyCostLimit, 10, 0.01, 100_000),
   variantRaceBudget: initialNumber(KEYS.variantRaceBudget, 1, 0.01, 1000),
@@ -730,6 +740,11 @@ export const setMemoryBankWeight = (key: 'keyword' | 'tag' | 'vector' | 'edge', 
   useSettings.setState({ [field[key]]: next } as Partial<Settings>)
 }
 
+export const setServerSearchFree = (serverSearchFree: boolean) => {
+  write(KEYS.serverSearchFree, String(serverSearchFree))
+  useSettings.setState({ serverSearchFree })
+}
+
 export const setDailyLimitEnabled = (dailyLimitEnabled: boolean) => {
   write(KEYS.dailyLimitEnabled, String(dailyLimitEnabled))
   useSettings.setState({ dailyLimitEnabled })
@@ -774,7 +789,7 @@ export const resetSettings = () => {
     thinking: false,
     reasoningEffort: 0,
     customCotEnabled: false,
-    customCot: '',
+    customCot: DEFAULT_CUSTOM_COT,
     autoJailbreak: false,
     injectPromptEveryTurn: false,
     translateJailbreakZh: false,
@@ -791,6 +806,7 @@ export const resetSettings = () => {
     memoryBankVectorWeight: 0.8,
     memoryBankEdgeWeight: 0.4,
     dailyLimitEnabled: false,
+    serverSearchFree: true,
     dailyTokenLimit: 1_000_000,
     dailyCostLimit: 10,
     variantRaceBudget: 1,
