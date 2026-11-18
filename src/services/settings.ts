@@ -36,6 +36,9 @@ type Settings = {
   thinking: boolean
   /** 思考强度 0-4；0 为关闭，与 thinking 保持同步 */
   reasoningEffort: number
+  /** 自定义思维链：预先写好推理步骤，请求前注入 system */
+  customCotEnabled: boolean
+  customCot: string
   /** 自动越狱：GODMODE 提示词 + 自动扰动 + 被拒绝后自动换组合重试 */
   autoJailbreak: boolean
   /** 每轮把系统提示词静默注入 latest_reminder，防止长对话遗忘设定 */
@@ -127,6 +130,8 @@ const KEYS = {
   ttsVoice: 'chat-demo:tts-voice',
   thinking: 'chat-demo:thinking',
   reasoningEffort: 'chat-demo:reasoning-effort',
+  customCotEnabled: 'chat-demo:custom-cot-enabled',
+  customCot: 'chat-demo:custom-cot',
   autoJailbreak: 'chat-demo:auto-jailbreak',
   injectPromptEveryTurn: 'chat-demo:inject-prompt-every-turn',
   translateJailbreakZh: 'chat-demo:translate-jailbreak-zh',
@@ -241,6 +246,9 @@ const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide'
 /** 思考强度档位：0 关闭，1-4 由弱到强 */
 export const EFFORT_LEVELS = 4
 
+/** 自定义思维链最长字符数；每轮都注入 system，过长会明显增加输入 token */
+export const CUSTOM_COT_MAX_CHARS = 4000
+
 /** 1-4 档对应的协议字段值，0 档不下发 */
 const REASONING_EFFORT = ['low', 'medium', 'high', 'max'] as const
 
@@ -278,6 +286,9 @@ const initialReasoningEffort = (): number => {
   }
   return read(KEYS.thinking) === 'true' ? 2 : 0
 }
+
+/** 自定义思维链：旧数据没有该键或内容超长时按空 / 上限处理 */
+const initialCustomCot = (): string => (read(KEYS.customCot) ?? '').slice(0, CUSTOM_COT_MAX_CHARS)
 
 /** 附件大小：未设置或不是正整数时为 null（使用内置默认值） */
 const initialAttachmentNumber = (key: string): number | null => {
@@ -386,6 +397,8 @@ export const useSettings = create<Settings>(() => ({
   ttsVoice: initialTtsVoice(),
   thinking: initialReasoningEffort() > 0,
   reasoningEffort: initialReasoningEffort(),
+  customCotEnabled: read(KEYS.customCotEnabled) === 'true',
+  customCot: initialCustomCot(),
   autoJailbreak: read(KEYS.autoJailbreak) === 'true',
   injectPromptEveryTurn: read(KEYS.injectPromptEveryTurn) === 'true',
   translateJailbreakZh: read(KEYS.translateJailbreakZh) === 'true',
@@ -485,6 +498,19 @@ export const setReasoningEffort = (value: number) => {
   write(KEYS.reasoningEffort, String(effort))
   write(KEYS.thinking, String(effort > 0))
   useSettings.setState({ reasoningEffort: effort, thinking: effort > 0 })
+}
+
+/** 开关自定义思维链；正文为空时不注入，但保留开关供之后填写 */
+export const setCustomCotEnabled = (customCotEnabled: boolean) => {
+  write(KEYS.customCotEnabled, String(customCotEnabled))
+  useSettings.setState({ customCotEnabled })
+}
+
+/** 自定义思维链正文；超长部分直接截断，避免每轮 system 无限膨胀 */
+export const setCustomCot = (customCot: string) => {
+  const value = customCot.slice(0, CUSTOM_COT_MAX_CHARS)
+  write(KEYS.customCot, value)
+  useSettings.setState({ customCot: value })
 }
 
 export const setSearch = (search: boolean) => {
@@ -747,6 +773,8 @@ export const resetSettings = () => {
     ttsVoice: 'stella',
     thinking: false,
     reasoningEffort: 0,
+    customCotEnabled: false,
+    customCot: '',
     autoJailbreak: false,
     injectPromptEveryTurn: false,
     translateJailbreakZh: false,

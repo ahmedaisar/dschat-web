@@ -131,6 +131,7 @@ export const en = {
   settingDialogAsideGeneralOptionLabel: 'General',
   settingDialogAsideModelOptionLabel: 'Model',
   settingDialogAsidePromptOptionLabel: 'Prompt',
+  settingDialogAsideCotOptionLabel: 'Chain of thought',
   settingDialogAsideAboutOptionLabel: 'About',
   settingDialogAsideChangelogOptionLabel: 'Changelog',
   aboutProjectName: 'deepseek unrestricted',
@@ -140,6 +141,14 @@ export const en = {
   aboutDemoLabel: 'Live demo',
   aboutUpstreamLabel: 'Upstream project',
   changelogTitle: 'Changelog',
+  changelogV262Title: 'v2.6.2 · 2026-11',
+  changelogV262Custom:
+    'New custom chain of thought: write reasoning steps under Settings → Chain of thought and inject them into system; direct when deep thinking is off, experimental guidance when it is on',
+  changelogV262Modes:
+    'A Chain shortcut in the composer shows whether it is active; the settings page inserts an example, clears, previews the injected text and keeps it when disabled',
+  changelogV262Compatibility:
+    'Only system changes: streaming / non-streaming, continue, regenerate, title generation and history import/export stay compatible; the config is local and restoring defaults clears it',
+  changelogV262Apk: 'Built the matching 2.6.2 APK (versionCode 262), signed with xiaohuangbo.jks',
   changelogV261Title: 'v2.6.1 · 2026-11',
   changelogV261Android:
     'New Android APK: WebView + local static server, preserving chat, settings, attachment poisoning and voice input; backend sources are bundled',
@@ -438,6 +447,36 @@ export const en = {
   settingsCustomPromptReset: 'Reset to default',
   settingsCustomPromptAuto: 'Using the assembled system prompt.',
   settingsCustomPromptCustom: 'Custom prompt in use.',
+  settingsCustomCot: 'Enable custom chain of thought',
+  settingsCustomCotDescription:
+    'Write reasoning steps in advance and inject them into system on every request. It applies directly when deep thinking is off and is experimental when deep thinking is on. Off by default.',
+  settingsCustomCotEditorLabel: 'Reasoning steps',
+  settingsCustomCotEditorDescription:
+    'Describe the steps with numbering or plain language. The text stays on this device and is sent to the model on every request; each turn increases input tokens.',
+  settingsCustomCotPlaceholder:
+    'For example:\n1. Restate the question and confirm the goal, constraints and deliverable.\n2. List known facts and uncertainties.\n3. Compare at least two approaches and pick the more reliable one.\n4. Derive step by step and check edge cases.\n5. Give the conclusion first, then the structured reasons.',
+  settingsCustomCotCount: '{count} / {max} characters',
+  settingsCustomCotInsertExample: 'Insert example',
+  settingsCustomCotClear: 'Clear',
+  settingsCustomCotExample:
+    '1. Restate the question and confirm the goal, constraints and deliverable.\n2. List known facts and unknowns; flag possible factual errors or ambiguity.\n3. Compare at least two approaches and pick the more reliable one.\n4. Derive step by step and check key steps and edge cases.\n5. Give the conclusion first, then a structured rationale.',
+  settingsCustomCotStatusDirectTitle: 'Deep thinking off: injected directly',
+  settingsCustomCotStatusDirectDescription:
+    'The chain is written into system and guides the model internally. The server does not return a separate chain of thought; the UI shows the final answer only.',
+  settingsCustomCotStatusThinkingTitle: 'Deep thinking on: experimental',
+  settingsCustomCotStatusThinkingDescription:
+    'The chain is still written into system as guidance for server-side reasoning. The server may ignore or rewrite it, so results are not guaranteed.',
+  settingsCustomCotPreview: 'Preview the text injected into system',
+  settingsCustomCotEmpty: 'No chain written yet; nothing is injected.',
+  settingsCustomCotActiveHint: 'Enabled: every request injects this chain into system.',
+  settingsCustomCotOffHint: 'Custom chain of thought is off; requests do not include it.',
+  settingsCustomCotToolbar: 'Custom chain of thought (click to edit)',
+  settingsCustomCotToolbarActive: 'Custom chain of thought enabled (click to edit)',
+  settingsCustomCotShort: 'Chain',
+  customCotInjectionDirect:
+    '[CUSTOM CHAIN OF THOUGHT]\nBefore the final answer, reason internally through the steps below. Do not restate this chain of thought or mention it in the answer; only show the reasoning when the user explicitly asks for it.\n\n{chain}',
+  customCotInjectionThinking:
+    '[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]\nDeep thinking is enabled for this turn. Treat the chain below as guidance for the server-side reasoning: prefer these steps internally, but the server may adjust or rewrite them. Do not restate this block in the final answer.\n\n{chain}',
   settingsPromptPreview: 'Preview the system prompt sent with the next request',
   avatarMenuSettingsDialogThemeItemLabel: 'Theme',
   avatarMenuSettingsDialogThemeSelectLightOption: 'Light',

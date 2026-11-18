@@ -78,7 +78,7 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         settings.setUserAgentString(
-            settings.getUserAgentString() + " DeepSeekUnrestrictedAndroid/2.6.1"
+            settings.getUserAgentString() + " DeepSeekUnrestrictedAndroid/2.6.2"
         );
 
         webView.addJavascriptInterface(new DownloadBridge(), "AndroidDownload");

@@ -17,6 +17,7 @@ import {
   shouldTakeoverSearch,
 } from '../searchPoison.js'
 import { composeSystemPrompt } from './systemPrompt.js'
+import { formatCustomCotContext } from './customCot.js'
 import { noteContextUsage } from './contextUsage.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
@@ -1386,6 +1387,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           autoTune,
           autoTuneStrategy,
           reasoningEffort,
+          customCotEnabled,
+          customCot,
           autoJailbreak,
           injectPromptEveryTurn,
           translateJailbreakZh,
@@ -1427,7 +1430,14 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ]
               .filter(Boolean)
               .join('\n\n')
-        const systemText = [baseSystemText, memoryContext, poisonContext]
+        const systemText = [
+          baseSystemText,
+          // 自定义思维链放在角色 / 破限规则之后、记忆与搜索上下文之前；
+          // 首轮同时携带标题生成请求，也必须带上，否则新会话的第一条回复不会生效。
+          customCotEnabled ? formatCustomCotContext(customCot, initial.thinking ?? false) : '',
+          memoryContext,
+          poisonContext,
+        ]
           .filter(Boolean)
           .join('\n\n')
         // 每轮注入：只加在本次请求的 latest_reminder 里，不写入历史快照，避免存储膨胀

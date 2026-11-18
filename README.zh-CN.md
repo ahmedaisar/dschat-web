@@ -48,11 +48,12 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.6.1**
+> 当前版本：**2.6.2**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
 - **解除限制与提示词**：解除限制模式、默认破限文档 / GODMODE 预设、每轮静默注入系统提示词、实验性中文翻译；
+- **自定义思维链**：预先写好推理步骤，关闭深度思考时直接注入 system，开启时作为实验性引导；
 - **高级引擎**：思考强度 0–4 档、输入扰动（33 种技术，可单技术或按档位生成变体）、AutoTune 自动调参、STM 输出整形、一键自动越狱（被拒绝自动换组合重试）；
 - **越狱实验台**：本地 MCP + EasyJailbreak 攻击器，多路提示词赛跑、变体赛跑（预算上限 + 开跑确认）、结果导入导出；
 - **会话能力**：回复改写、防撤回、分支到新对话（原对话不受影响）、长对话压缩（压力触发自动压缩 + 手动压缩）；
@@ -105,13 +106,14 @@
 
 ### 3.1 设置页结构
 
-设置页从原来的「通用设置 / 数据管理」两组扩到十一组：
+设置页从原来的「通用设置 / 数据管理」两组扩到十二组：
 
 | 分组       | 内容                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------- |
 | 通用设置   | 主题、语言、朗读音色、位置、每日用量与提醒                                                            |
 | **模型**   | 当前模型、流式输出、温度、Top P、最大输出 Token、防撤回、自动压缩长对话、跳过安全审核、拒绝后继续生成 |
 | **提示词** | 解除限制模式、每轮注入系统提示词、自定义系统提示词、组装流水线说明、实际下发全文预览                  |
+| **思维链** | 自定义思维链开关、步骤编辑、示例 / 清空、注入预览，以及深度思考关闭 / 开启时的两种说明                 |
 | **高级**   | 系统提示词预设、中文越狱提示词、输入扰动、自动越狱、自动调参、输出整形                                |
 | **搜索投毒** | 自定义当前时间与知识截止、接管联网搜索、关键字 / 正则替换、黑名单、强制自定义结果、白名单          |
 | **记忆**   | 长期记忆、自动提炼、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                        |
@@ -428,6 +430,21 @@ Persona（官方身份分块）
 - 恢复默认设置会关闭并清空附件投毒配置，并移除草稿中自动生成的伴随文本附件；
 - 图片文字覆盖会重新编码图片，GIF / 动图会变成静态图，GIF / BMP 等可能转成 PNG；PDF / Office 建议优先使用伴随文本附件。
 
+### 3.22 自定义思维链
+
+设置 → **思维链**。默认关闭；打开后把预先写好的推理步骤作为独立 system 分块注入每次请求，让模型按你定义的顺序推理，而不是只靠一句「请逐步思考」。
+
+| 深度思考 | 注入内容 | 行为 | 稳定性 |
+| --- | --- | --- | --- |
+| 关闭（0 档） | `[自定义思维链]` | 模型在内部按步骤作答；服务端没有独立 thinking 通道，界面只显示最终回答 | 常规能力 |
+| 开启（1-4 档） | `[自定义思维链 · 实验性]` | 作为服务端思考的引导；服务端可能忽略、调整或重写这些步骤 | 实验性 |
+
+- 思维链放在 Persona / 破限规则之后、长期记忆与搜索上下文之前；首轮请求同时带标题生成，也会注入，否则新会话第一条回复不会生效；
+- 正文上限 4000 字符；只保存在本机 `chat-demo:custom-cot` 与 `chat-demo:custom-cot-enabled`，每轮都会增加输入 token；
+- 设置页提供「填入示例」「清空」与「预览注入 system 的内容」；输入栏新增「思维链」按钮，启用时高亮，点击直接打开该分组；
+- 关闭开关会保留正文，方便下次再开；恢复默认设置会清空正文并关闭；
+- 只修改 `system`，不改消息结构：流式 / 非流式、续写、重新生成、标题生成、附件、搜索投毒与历史导入导出都保持兼容。
+
 ---
 
 ## 4. 行为对照表
@@ -446,6 +463,7 @@ Persona（官方身份分块）
 | 导出拒绝回复         | `CONTENT_FILTER` + 模板 | 同原版（保留内容时按正常结束）                         | 同默认                     |
 | 其他原版功能         | —                       | 搜索、附件、分支、导入导出、朗读、主题、双语等全部保留 | 同默认                     |
 | 联网搜索             | 服务端执行              | 默认保留；搜索投毒可接管或改写展示                      | 同默认                     |
+| 自定义思维链         | 无此设置                | 默认关；启用后作为 system 分块注入                      | 同默认                     |
 
 ---
 
@@ -461,6 +479,8 @@ Persona（官方身份分块）
 | 模型   | 拒绝后继续生成     | 关               | `chat-demo:continue-refused`               | 强制开启、置灰       |
 | 提示词 | 解除限制模式       | 关               | `chat-demo:unrestricted`                   | ——                   |
 | 提示词 | 自定义系统提示词   | 空（自动组装）   | `chat-demo:system-prompt`                  | 覆盖自动组装结果     |
+| 思维链 | 启用自定义思维链   | 关               | `chat-demo:custom-cot-enabled`             | 不受影响             |
+| 思维链 | 思维链正文         | 空               | `chat-demo:custom-cot`                     | 不受影响             |
 | 高级   | 系统提示词预设     | `deepseek`       | `chat-demo:prompt-preset`                  | 不受影响             |
 | 高级   | 输入扰动           | 关               | `chat-demo:parseltongue`                   | 不受影响             |
 | 高级   | 扰动技术           | `leetspeak`      | `chat-demo:parseltongue-technique`         | 不受影响             |
@@ -521,6 +541,8 @@ Persona（官方身份分块）
 
 （`title` 只在这条会话还没有标题时出现，`thinking` 跟随输入框的深度思考开关，`max_tokens` 仅在设置后出现。）
 
+开启自定义思维链后，`system` 在 Persona / 破限规则与记忆、搜索上下文之间追加 `[自定义思维链]` 分块；深度思考开启时换成 `[自定义思维链 · 实验性]`。首轮同时带 `title` 也会注入，其余字段与消息结构不变。
+
 开启搜索投毒并接管时，`tools` 只剩 `deepseek_read_url`，`system` 末尾追加 `[LOCAL SEARCH LAYER]` 搜索上下文，`latest_reminder` 使用自定义日期与位置；关闭接管或没有自定义结果时仍保持上面的真实搜索请求。
 
 附件投毒只改变上传到 Files API 的文件字节，不改变请求体结构；附件仍以 `file_id` 引用。
@@ -548,7 +570,8 @@ Persona（官方身份分块）
 | 文件                                                                                               | 作用                                                                                                                   |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | 系统提示词组装流水线：Persona + 破限规则分块，支持自定义覆盖                                                           |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、回复结束时的防撤回处理、续写守卫                                    |
+| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | 自定义思维链归一化与 system 分块生成（直接 / 实验性两种文案）                                                          |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、自定义思维链注入、回复结束时的防撤回处理、续写守卫                  |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
 | [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | 导出时拒绝回复的状态与模板处理                                                                                         |
@@ -559,11 +582,12 @@ Persona（官方身份分块）
 | [`src/components/settings/SearchPoisonSettings.tsx`](src/components/settings/SearchPoisonSettings.tsx) | 搜索投毒设置界面：时间、接管、规则与结果编辑                                                                          |
 | [`src/services/location.ts`](src/services/location.ts)                                             | 位置归一化与自定义位置                                                                                                 |
 | [`src/services/api/types.ts`](src/services/api/types.ts)                                           | 请求类型：`temperature` / `top_p` / `max_tokens` / 可选 `safety_check`                                                 |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | 设置页：模型分组、提示词分组、开关与预览                                                                               |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | 设置页：模型 / 提示词 / 思维链分组、开关与预览                                                                         |
 | [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | 滑块 + 数字输入控件                                                                                                    |
 | [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                           | 会话统计、计时与费用估算                                                                                               |
 | [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                           | 上下文占用（按会话缓存）                                                                                               |
 | [`src/components/chatInput/ThinkingSlider.tsx`](src/components/chatInput/ThinkingSlider.tsx)       | 思考强度 0–4 轨道                                                                                                      |
+| [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | 输入栏「思维链」快捷入口，显示启用状态并打开设置分组                                                                   |
 | [`src/components/session/StatsDialog.tsx`](src/components/session/StatsDialog.tsx)                 | 统计与计费弹窗                                                                                                         |
 | [`src/services/chat/compression.ts`](src/services/chat/compression.ts)                             | 长对话压缩：结构化摘要、自动触发与节省量                                                                               |
 | [`src/services/chat/savedMemory.ts`](src/services/chat/savedMemory.ts)                             | 长期记忆：增删改查、自动提炼、system 注入                                                                              |
@@ -640,7 +664,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.1.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.2.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
@@ -651,7 +675,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 261；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 262；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---
@@ -689,6 +713,9 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 29. **图片文字覆盖会重新编码**：GIF / 动图会变成静态图，GIF / BMP 等可能转为 PNG；文件尾附加对 ZIP 类 Office 文件自动跳过。
 30. **APK 内的 Python 后端不会执行**：EasyJailbreak / torch 依赖无法放进普通 WebView APK；后端源码只随包附带，实验台必须连接电脑或服务器上的 MCP 服务。
 31. **APK 是 WebView 壳**：文件下载等浏览器能力取决于系统 WebView；本地服务固定占用 18765 端口，被占用时应用会显示启动失败提示。
+32. **自定义思维链是提示词引导，不是真正的 reasoning 通道**：关闭深度思考时不会显示单独的推理过程，模型也可能不完全遵守；每轮都会增加输入 token，正文上限 4000 字符。
+33. **开启深度思考时自定义思维链是实验性**：服务端 thinking 优先，可能忽略或重写这些步骤，不保证与直接注入同样效果。
+34. **自定义思维链只作用于聊天请求**：多路赛跑、变体赛跑、长对话压缩、记忆提炼等独立调用使用各自的系统提示词，不读取该设置；聊天首轮同时生成标题，仍会注入。
 
 ---
 

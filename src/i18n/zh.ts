@@ -125,6 +125,7 @@ export const zh = {
   settingDialogAsideGeneralOptionLabel: '通用设置',
   settingDialogAsideModelOptionLabel: '模型',
   settingDialogAsidePromptOptionLabel: '提示词',
+  settingDialogAsideCotOptionLabel: '思维链',
   settingDialogAsideAboutOptionLabel: '关于',
   settingDialogAsideChangelogOptionLabel: '更新日志',
   aboutProjectName: 'deepseek unrestricted',
@@ -134,6 +135,14 @@ export const zh = {
   aboutDemoLabel: '在线演示',
   aboutUpstreamLabel: '上游项目',
   changelogTitle: '更新日志',
+  changelogV262Title: 'v2.6.2 · 2026-11',
+  changelogV262Custom:
+    '新增「自定义思维链」：在设置 → 思维链里预先写好推理步骤，请求前注入 system；关闭深度思考时直接生效，开启时作为实验性引导',
+  changelogV262Modes:
+    '输入栏新增「思维链」快捷键并显示启用状态；设置页可填入示例、清空、预览实际注入内容，关闭开关后保留正文',
+  changelogV262Compatibility:
+    '自定义思维链只改变 system，流式 / 非流式、续写、重新生成、标题生成与历史导入导出保持兼容；配置只存本机，恢复默认会清空',
+  changelogV262Apk: '同步构建 2.6.2 APK（versionCode 262），使用 xiaohuangbo.jks 签名',
   changelogV261Title: 'v2.6.1 · 2026-11',
   changelogV261Android:
     '新增 Android APK：WebView + 本地静态服务器，完整保留聊天、设置、附件投毒与语音输入；包内附带后端源码',
@@ -375,6 +384,36 @@ export const zh = {
   settingsCustomPromptReset: '恢复默认',
   settingsCustomPromptAuto: '当前使用自动组装结果。',
   settingsCustomPromptCustom: '已启用自定义提示词。',
+  settingsCustomCot: '启用自定义思维链',
+  settingsCustomCotDescription:
+    '预先写好推理步骤，每次请求作为 system 分块注入。关闭深度思考时直接生效；开启深度思考时属于实验性引导。默认关闭。',
+  settingsCustomCotEditorLabel: '思维链步骤',
+  settingsCustomCotEditorDescription:
+    '用编号或自然语言描述推理步骤。内容只保存在本机，并随每次请求发送给模型；每轮都会增加输入 token。',
+  settingsCustomCotPlaceholder:
+    '例如：\n1. 先复述问题，确认目标、约束与需要交付的内容。\n2. 列出已知条件和不确定之处。\n3. 给出两种解法并比较，选择更可靠的一种。\n4. 逐步推导，最后自检边界条件。',
+  settingsCustomCotCount: '{count} / {max} 字符',
+  settingsCustomCotInsertExample: '填入示例',
+  settingsCustomCotClear: '清空',
+  settingsCustomCotExample:
+    '1. 先复述问题，确认目标、约束与需要交付的内容。\n2. 列出已知条件与未知信息，标出可能的事实错误或歧义。\n3. 给出至少两种解法，比较优缺点，选择最可靠的一种。\n4. 逐步推导，必要时自检关键步骤与边界条件。\n5. 先给结论，再给结构化的理由与步骤。',
+  settingsCustomCotStatusDirectTitle: '深度思考关闭：直接注入',
+  settingsCustomCotStatusDirectDescription:
+    '这段思维链会写入 system，模型在内部按步骤作答；服务端不会返回单独的思维链，界面上只显示最终回答。',
+  settingsCustomCotStatusThinkingTitle: '深度思考开启：实验性',
+  settingsCustomCotStatusThinkingDescription:
+    '这段思维链同样写入 system，作为服务端思考的引导；服务端可能忽略或重写，效果不保证。',
+  settingsCustomCotPreview: '预览注入 system 的内容',
+  settingsCustomCotEmpty: '尚未填写思维链内容，当前不会注入。',
+  settingsCustomCotActiveHint: '已启用：每次请求都会把这段思维链注入 system。',
+  settingsCustomCotOffHint: '自定义思维链已关闭；请求不会携带这段内容。',
+  settingsCustomCotToolbar: '自定义思维链（点击编辑）',
+  settingsCustomCotToolbarActive: '自定义思维链已启用（点击编辑）',
+  settingsCustomCotShort: '思维链',
+  customCotInjectionDirect:
+    '【自定义思维链】\n在给出最终回答前，先按下面的步骤在内部完成推理。不要复述这段思维链本身，也不要在回答里提到它；只有用户明确要求展示推理过程时才展示。\n\n{chain}',
+  customCotInjectionThinking:
+    '【自定义思维链 · 实验性】\n本轮已开启深度思考。下面的思维链作为思考方向的引导：优先在内部思考中参考这些步骤，但服务端可能自行调整或重写。不要在最终回答中复述本段内容。\n\n{chain}',
   settingsPromptPreview: '查看本次请求将下发的系统提示词',
   avatarMenuSettingsDialogThemeItemLabel: '主题',
   avatarMenuSettingsDialogThemeSelectLightOption: '浅色',

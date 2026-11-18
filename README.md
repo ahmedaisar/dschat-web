@@ -48,11 +48,12 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.1**
+> Current version: **2.6.2**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
 - **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
+- **Custom chain of thought**: write reasoning steps in advance and inject them into system; direct when deep thinking is off, experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
 - **Chat features**: editable replies, anti-retraction, branch to a new chat (the original is untouched), and long-chat compression (pressure-triggered auto plus manual);
@@ -105,13 +106,14 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to eleven:
+The settings dialog grows from two groups to twelve:
 
 | Group           | Contents                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | General         | Theme, language, TTS voice, location, daily usage and alerts                                                                                     |
 | **Model**       | Current model, stream output, temperature, Top P, max output tokens, anti-retraction, auto-compress, skip safety check, continue refused replies |
 | **Prompt**      | Unrestricted mode, per-round prompt injection, custom system prompt, pipeline explanation, full preview                                          |
+| **Chain of thought** | Custom chain switch, step editor, example / clear, injection preview, and the two deep-thinking modes                                      |
 | **Advanced**    | System prompt preset, Chinese jailbreak prompts, input perturbation, auto jailbreak, AutoTune, output shaping                                    |
 | **Search poison** | Custom current time and knowledge cutoff, search takeover, keyword / regex replacement, blacklist, forced results and whitelist              |
 | **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
@@ -428,6 +430,21 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 - Restoring defaults disables and clears the config and removes automatically generated companion attachments from drafts;
 - Image text overlay re-encodes the image: GIF / animations become static and GIF / BMP may become PNG; prefer the companion text attachment for PDF / Office.
 
+### 3.22 Custom chain of thought
+
+**Where:** Settings → **Chain of thought**. Off by default. When enabled, the reasoning steps you write are injected as a separate system block on every request, so the model follows your order instead of a vague “think step by step”.
+
+| Deep thinking | Injected block | Behaviour | Stability |
+| --- | --- | --- | --- |
+| Off (level 0) | `[CUSTOM CHAIN OF THOUGHT]` | The model reasons internally through the steps; the server has no separate thinking channel, so the UI shows only the final answer | Standard |
+| On (levels 1-4) | `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]` | Guidance for server-side reasoning; the server may ignore, adjust or rewrite the steps | Experimental |
+
+- The block sits after the Persona / unrestricted rules and before long-term memory and search context. The first request also asks for a title, and still gets the block; otherwise the first reply in a new chat would not use it.
+- The text is capped at 4000 characters and stored locally in `chat-demo:custom-cot` and `chat-demo:custom-cot-enabled`; every request increases input tokens.
+- The settings page offers “Insert example”, “Clear” and “Preview the text injected into system”. A **Chain** button in the composer highlights when active and opens this group directly.
+- Turning the switch off keeps the text for later; restoring defaults clears it and disables the feature.
+- Only `system` changes. Streaming / non-streaming, continue, regenerate, title generation, attachments, search poisoning and history import/export stay compatible.
+
 ---
 
 ## 4. Behaviour matrix
@@ -446,6 +463,7 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Export of refused reply     | `CONTENT_FILTER` + template | Same (normal finish when content was kept)                                           | Same as default                                           |
 | Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
 | Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                | Same as default                                           |
+| Custom chain of thought     | Not available               | Off by default; injected as a system block when enabled                              | Same as default                                           |
 
 ---
 
@@ -461,6 +479,8 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Model       | Continue refused replies             | off               | `chat-demo:continue-refused`               | Forced on, disabled             |
 | Prompt      | Unrestricted mode                    | off               | `chat-demo:unrestricted`                   | —                               |
 | Prompt      | Custom system prompt                 | empty (assembled) | `chat-demo:system-prompt`                  | Overrides the assembled result  |
+| Chain of thought | Enable custom chain of thought  | off               | `chat-demo:custom-cot-enabled`             | Unaffected                      |
+| Chain of thought | Chain text                      | empty             | `chat-demo:custom-cot`                     | Unaffected                      |
 | Advanced    | System prompt preset                 | `deepseek`        | `chat-demo:prompt-preset`                  | Unaffected                      |
 | Advanced    | Input perturbation                   | off               | `chat-demo:parseltongue`                   | Unaffected                      |
 | Advanced    | Perturbation technique               | `leetspeak`       | `chat-demo:parseltongue-technique`         | Unaffected                      |
@@ -521,6 +541,8 @@ A normal request (all switches at defaults):
 
 (`title` appears only while the conversation has no title yet, `thinking` follows the DeepThink toggle, and `max_tokens` appears only when set.)
 
+With custom chain of thought enabled, `system` gains a `[CUSTOM CHAIN OF THOUGHT]` block between the Persona / unrestricted rules and the memory / search context; with deep thinking on it becomes `[CUSTOM CHAIN OF THOUGHT · EXPERIMENTAL]`. The first request also carries `title`, and still gets the block; every other field and the message structure stay unchanged.
+
 With search poisoning enabled and takeover active, `tools` only keeps `deepseek_read_url`, `system` gains a `[LOCAL SEARCH LAYER]` block, and `latest_reminder` uses the custom date and location; with takeover off or no custom results the real-search request above is unchanged.
 
 Attachment poisoning changes only the uploaded file bytes sent to the Files API, not the request shape; attachments are still referenced by `file_id`.
@@ -548,7 +570,9 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | File                                                                                               | Purpose                                                                                                              |
 | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | [`src/services/chat/systemPrompt.ts`](src/services/chat/systemPrompt.ts)                           | System prompt pipeline: Persona + unrestricted rules block, with custom override                                     |
-| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), refusal settling, continuation guard                  |
+| [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | Custom chain normalization and system-block generation (direct / experimental wording)                               |
+| [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
+| [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | Composer Chain shortcut, active state and settings entry                                                             |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | Refusal notices: a hint line when content was kept, the template otherwise                                           |
 | [`src/services/chat/history/toArchive.ts`](src/services/chat/history/toArchive.ts)                 | Export status and template handling for refused replies                                                              |
@@ -559,7 +583,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/settings/SearchPoisonSettings.tsx`](src/components/settings/SearchPoisonSettings.tsx) | Search-poison settings UI: time, takeover, rules and result editing                                                  |
 | [`src/services/location.ts`](src/services/location.ts)                                             | Location normalization and custom places                                                                             |
 | [`src/services/api/types.ts`](src/services/api/types.ts)                                           | Request types: `temperature` / `top_p` / `max_tokens` / optional `safety_check`                                      |
-| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | Settings page: Model group, Prompt group, switches and preview                                                       |
+| [`src/components/settings/SettingsDialog.tsx`](src/components/settings/SettingsDialog.tsx)         | Settings page: Model / Prompt / Chain of thought groups, switches and preview                                        |
 | [`src/components/settings/ParamControls.tsx`](src/components/settings/ParamControls.tsx)           | Slider + number input control                                                                                        |
 | [`src/services/chat/sessionStats.ts`](src/services/chat/sessionStats.ts)                           | Session aggregates, timings and cost estimate                                                                        |
 | [`src/services/chat/contextUsage.ts`](src/services/chat/contextUsage.ts)                           | Context usage cached per session                                                                                     |
@@ -640,7 +664,7 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.1.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.2.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
@@ -651,7 +675,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 261;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 262;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---
@@ -689,6 +713,9 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 29. **Image text overlay re-encodes the image**: GIF / animations become static and GIF / BMP may become PNG; the file trailer skips ZIP-based Office files.
 30. **The Python backend does not run inside the APK**: EasyJailbreak / torch cannot be packed into a normal WebView APK; the bundled backend sources are for reference and the lab must connect to an MCP service on a PC or server.
 31. **The APK is a WebView shell**: browser capabilities such as file downloads depend on the system WebView; the local server occupies port 18765 and shows a startup error if the port is taken.
+32. **Custom chain of thought is prompt guidance, not a real reasoning channel**: with deep thinking off the UI does not show a separate reasoning process, and the model may not follow every step; each request increases input tokens and the text is capped at 4000 characters.
+33. **With deep thinking on the custom chain is experimental**: server-side thinking takes priority and may ignore or rewrite the steps, so results are not guaranteed to match direct injection.
+34. **Custom chain of thought only applies to chat requests**: race, variant race, long-chat compression and memory extraction use their own system prompts and ignore it; the first chat request that also generates a title still receives it.
 
 ---
 

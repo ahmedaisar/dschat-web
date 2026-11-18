@@ -617,6 +617,39 @@
   line-height: 18px;
 }
 
+/* 自定义思维链：深度思考开启时用琥珀色提示“实验性” */
+.cotStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background-color: var(--dsw-alias-bg-layer-2);
+}
+
+.cotStatusTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.cotStatusBody {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.cotStatus[data-experimental] {
+  border-color: var(--dsw-static-amber-500);
+}
+
+.cotStatus[data-experimental] .cotStatusTitle {
+  color: var(--dsw-static-amber-600);
+}
+
 /* 关于 / 更新日志 / 鸣谢 */
 .about {
   display: flex;

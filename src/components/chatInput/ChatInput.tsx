@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import {
+  IconCustomCotOutline16,
   IconDataOutline16,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
@@ -26,7 +27,7 @@ import {
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
-import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { ensureApiKey, openSettings } from '../settings/settingsDialogState.js'
 import { openStats } from '../session/statsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
@@ -39,6 +40,7 @@ import { ModelPicker } from './ModelPicker.js'
 import { ThinkingSlider } from './ThinkingSlider.js'
 import { ContextRing } from './ContextRing.js'
 import { Spectrum } from './Spectrum.js'
+import { isCustomCotActive } from '../../services/chat/customCot.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ChatInput.module.css'
 
@@ -61,6 +63,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
+  const customCotEnabled = useSettings((state) => state.customCotEnabled)
+  const customCot = useSettings((state) => state.customCot)
+  const customCotActive = isCustomCotActive(customCotEnabled, customCot)
   const attachmentPoisonEnabled = useSettings((state) => state.attachmentPoison.enabled)
   const attachmentPoisonSidecar = useSettings((state) =>
     state.attachmentPoison.methods.includes('sidecar')
@@ -229,6 +234,24 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             </button>
           </Tooltip>
           <ThinkingSlider />
+          <Tooltip
+            content={t(
+              customCotActive ? 'settingsCustomCotToolbarActive' : 'settingsCustomCotToolbar'
+            )}
+          >
+            <button
+              type="button"
+              className={clsx(styles.toggle, customCotActive && styles.selected)}
+              aria-label={t(
+                customCotActive ? 'settingsCustomCotToolbarActive' : 'settingsCustomCotToolbar'
+              )}
+              aria-haspopup="dialog"
+              onClick={() => openSettings('cot')}
+            >
+              <IconCustomCotOutline16 />
+              <span className={styles.toggleLabel}>{t('settingsCustomCotShort')}</span>
+            </button>
+          </Tooltip>
           <Tooltip content={t('deactivatedSearchTooltip')}>
             <button
               type="button"

@@ -307,6 +307,27 @@ export const IconThinkOutline16 = () => (
   </svg>
 )
 
+export const IconCustomCotOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="3.25" cy="3.25" r="1.55" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="8" cy="8" r="1.55" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="12.75" cy="12.75" r="1.55" stroke="currentColor" strokeWidth="1.4" />
+    <path
+      d="M4.45 4.45 6.8 6.8M9.2 9.2l2.35 2.35"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+    <path
+      d="M11.2 3.25h2.8m0 0v2.8"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 export const IconTrashOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

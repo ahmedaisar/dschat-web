@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   IconBranchOutline16,
   IconBrowseOutline16,
+  IconCustomCotOutline16,
   IconDarkOutline16,
   IconDataOutline16,
   IconDownloadOutline16,
@@ -39,6 +40,7 @@ import {
 import {
   isChineseBrowser,
   resetSettings,
+  CUSTOM_COT_MAX_CHARS,
   setAttachmentExts,
   setAutoJailbreak,
   setAttachmentLimits,
@@ -47,6 +49,8 @@ import {
   setAutoCompress,
   setAutoTune,
   setAutoTuneStrategy,
+  setCustomCot,
+  setCustomCotEnabled,
   setInjectPromptEveryTurn,
   setContinueRefused,
   setDailyCostLimit,
@@ -85,6 +89,7 @@ import type { ObfuscationTechnique } from '../../services/unrestricted/parselton
 import type { PromptPreset } from '../../services/unrestricted/prompts.js'
 import { useFeedback } from '../../services/chat/feedbackStore.js'
 import { composeSystemPrompt } from '../../services/chat/systemPrompt.js'
+import { formatCustomCotContext } from '../../services/chat/customCot.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
@@ -114,6 +119,7 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   },
   { value: 'model', label: 'settingDialogAsideModelOptionLabel', icon: <IconThinkOutline16 /> },
   { value: 'prompt', label: 'settingDialogAsidePromptOptionLabel', icon: <IconEditOutline16 /> },
+  { value: 'cot', label: 'settingDialogAsideCotOptionLabel', icon: <IconCustomCotOutline16 /> },
   {
     value: 'advanced',
     label: 'settingDialogAsideAdvancedOptionLabel',
@@ -208,6 +214,8 @@ const SettingsContent = () => {
             <ModelSettings />
           ) : section === 'prompt' ? (
             <UnrestrictedSetting />
+          ) : section === 'cot' ? (
+            <CustomCotSetting />
           ) : section === 'advanced' ? (
             <AdvancedSettings />
           ) : section === 'poison' ? (
@@ -679,6 +687,15 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV262Title',
+      items: [
+        'changelogV262Custom',
+        'changelogV262Modes',
+        'changelogV262Compatibility',
+        'changelogV262Apk',
+      ],
+    },
     {
       title: 'changelogV261Title',
       items: ['changelogV261Android', 'changelogV261Backend', 'changelogV261Sign'],
@@ -1159,6 +1176,99 @@ const SystemPromptSetting = () => {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * 自定义思维链：预先写好推理步骤，请求前作为独立 system 分块注入。
+ * 关闭深度思考时直接约束作答过程；开启时只是实验性引导，服务端可能重写。
+ */
+const CustomCotSetting = () => {
+  const t = useTranslate()
+  const enabled = useSettings((state) => state.customCotEnabled)
+  const text = useSettings((state) => state.customCot)
+  const thinking = useSettings((state) => state.thinking)
+  const [draft, setDraft] = useState(text)
+
+  // 恢复默认或从其他入口修改时同步草稿
+  useEffect(() => {
+    setDraft(text)
+  }, [text])
+
+  const commit = (value: string) => {
+    setDraft(value)
+    setCustomCot(value)
+  }
+  const empty = draft.trim() === ''
+
+  return (
+    <>
+      <SettingCell
+        label={t('settingsCustomCot')}
+        description={t('settingsCustomCotDescription')}
+        status={null}
+        action={
+          <Switch checked={enabled} onChange={setCustomCotEnabled} label={t('settingsCustomCot')} />
+        }
+      />
+      <div className={styles.systemPrompt}>
+        <div className={styles.systemPromptHead}>
+          <div className={styles.systemPromptLabel}>{t('settingsCustomCotEditorLabel')}</div>
+          <div className={styles.systemPromptDescription}>
+            {t('settingsCustomCotEditorDescription')}
+          </div>
+        </div>
+        <textarea
+          className={styles.systemPromptTextarea}
+          aria-label={t('settingsCustomCotEditorLabel')}
+          rows={7}
+          maxLength={CUSTOM_COT_MAX_CHARS}
+          placeholder={t('settingsCustomCotPlaceholder')}
+          value={draft}
+          onChange={(event) => commit(event.target.value)}
+        />
+        <div className={styles.systemPromptActions}>
+          <span className={styles.systemPromptHint}>
+            {t('settingsCustomCotCount', { count: draft.length, max: CUSTOM_COT_MAX_CHARS })}
+          </span>
+          <Button variant="outlined" size="s" onClick={() => commit(t('settingsCustomCotExample'))}>
+            {t('settingsCustomCotInsertExample')}
+          </Button>
+          <Button variant="outlined" size="s" disabled={draft === ''} onClick={() => commit('')}>
+            {t('settingsCustomCotClear')}
+          </Button>
+        </div>
+      </div>
+      <div className={styles.cotStatus} data-experimental={thinking || undefined}>
+        <div className={styles.cotStatusTitle}>
+          {t(
+            thinking ? 'settingsCustomCotStatusThinkingTitle' : 'settingsCustomCotStatusDirectTitle'
+          )}
+        </div>
+        <div className={styles.cotStatusBody}>
+          {t(
+            thinking
+              ? 'settingsCustomCotStatusThinkingDescription'
+              : 'settingsCustomCotStatusDirectDescription'
+          )}
+        </div>
+      </div>
+      <div className={styles.pipeline}>
+        {t(
+          !enabled
+            ? 'settingsCustomCotOffHint'
+            : empty
+              ? 'settingsCustomCotEmpty'
+              : 'settingsCustomCotActiveHint'
+        )}
+      </div>
+      {empty ? null : (
+        <details className={styles.promptPreview}>
+          <summary className={styles.promptPreviewSummary}>{t('settingsCustomCotPreview')}</summary>
+          <pre className={styles.promptPreviewBody}>{formatCustomCotContext(draft, thinking)}</pre>
+        </details>
+      )}
+    </>
   )
 }
 
