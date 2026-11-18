@@ -1,7 +1,7 @@
 <p align="center">
   <img src="./brand.jpg" alt="chat-demo-unrestricted — 是，孙笑川聊天" width="760">
 </p>
-<h1 align="center"><img src="brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会"></h1>
+<h1 align="center"><img src="brand_2.jpg" alt="你应该放弃这世间所有的C端客户端，来体验宇宙最强对抗路神作，这是你唯一和顶级开源模型厮杀的机会" width="250"></h1>
 
 <h1 align="center">deepseek unrestricted</h1>
 
