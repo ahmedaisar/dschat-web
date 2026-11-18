@@ -1,10 +1,10 @@
 import {
-  WORKSPACE_MAX_FILE_CHARS,
   deleteWorkspaceFile,
   diffWorkspaceFile,
   listWorkspaceFiles,
   readWorkspaceFile,
   saveWorkspaceFile,
+  isTextFile,
   workspaceUsage,
 } from '../workspace/store.js'
 import type { AgentTool } from './tools.js'
@@ -41,9 +41,9 @@ const listTool: AgentTool = {
     const usage = workspaceUsage()
     const lines = files.map(
       (file) =>
-        `- ${file.path}（${file.content.length} 字符，更新于 ${new Date(file.updatedAt).toLocaleString()}）`
+        `- ${file.path}（${file.size} 字节，${isTextFile(file) ? '文本' : file.mime}，更新于 ${new Date(file.updatedAt).toLocaleString()}）`
     )
-    return ok([`工作区共 ${usage.files} 个文件、${usage.chars} 字符：`, ...lines].join('\n'))
+    return ok([`工作区共 ${usage.files} 个文件、${usage.bytes} 字节：`, ...lines].join('\n'))
   },
 }
 
@@ -70,17 +70,24 @@ const readTool: AgentTool = {
     if (!file) {
       return fail(`工作区里没有文件「${path}」。可以先用 list_workspace 看一下现有文件。`)
     }
-    const max = Math.min(
-      WORKSPACE_MAX_FILE_CHARS,
-      Math.max(500, (input.max_chars as number) || 20_000)
-    )
+    const max = Math.min(200_000, Math.max(500, (input.max_chars as number) || 20_000))
+    const header = [
+      `路径：${file.path}`,
+      `类型：${file.mime}`,
+      `大小：${file.size} 字节`,
+      `更新：${new Date(file.updatedAt).toLocaleString()}`,
+    ]
+    if (isTextFile(file)) {
+      return ok([...header, '', clip(file.content, max)].join('\n'))
+    }
+    // 二进制没法直接给模型读，给 base64 片段并说明
+    const base64 = file.content.slice(0, Math.max(256, Math.floor(max * 0.75)))
     return ok(
       [
-        `路径：${file.path}`,
-        `类型：${file.mime}`,
-        `更新：${new Date(file.updatedAt).toLocaleString()}`,
+        ...header,
+        `说明：二进制文件，以下为 base64 片段（前 ${base64.length} 字符，共 ${file.content.length} 字符）。`,
         '',
-        clip(file.content, max),
+        base64,
       ].join('\n')
     )
   },
@@ -113,7 +120,7 @@ const writeTool: AgentTool = {
     if (!result.ok) {
       const reasons: Record<string, string> = {
         path: '路径不合法：只允许相对路径，且不能包含 ..',
-        tooLarge: `文件超过 ${WORKSPACE_MAX_FILE_CHARS} 字符，请拆分`,
+        tooLarge: '文件超过当前存储方式的大小上限，请拆分成更小的文件',
         tooManyFiles: '工作区文件数已达上限，请先删除一些文件',
         totalTooLarge: '工作区总容量已满，请先清理文件',
       }

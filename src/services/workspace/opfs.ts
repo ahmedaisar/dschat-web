@@ -20,10 +20,7 @@ const rootDirectory = async (): Promise<FileSystemDirectoryHandle> => {
 }
 
 /** 按相对路径拿到文件句柄，自动创建中间目录 */
-const fileHandle = async (
-  path: string,
-  create: boolean
-): Promise<FileSystemFileHandle> => {
+const fileHandle = async (path: string, create: boolean): Promise<FileSystemFileHandle> => {
   const parts = path.split('/').filter(Boolean)
   const name = parts.pop()
   if (!name) {
@@ -52,18 +49,19 @@ const walk = async (
   }
 }
 
-/** 读取整个工作区；返回 路径 → 文本 */
-export const opfsReadAll = async (): Promise<Record<string, string>> => {
+/** 读取整个工作区；返回 路径 → 原始字节 */
+export const opfsReadAll = async (): Promise<Record<string, Uint8Array>> => {
   if (!opfsSupported()) {
     return {}
   }
-  const files: Record<string, string> = {}
+  const files: Record<string, Uint8Array> = {}
   const paths: string[] = []
   await walk(await rootDirectory(), '', paths)
   for (const path of paths) {
     try {
       const handle = await fileHandle(path, false)
-      files[path] = await (await handle.getFile()).text()
+      const buffer = await (await handle.getFile()).arrayBuffer()
+      files[path] = new Uint8Array(buffer)
     } catch {
       // 单个文件读失败不影响其它文件
     }
@@ -71,12 +69,15 @@ export const opfsReadAll = async (): Promise<Record<string, string>> => {
   return files
 }
 
-/** 写入一个文件（覆盖），必要时创建目录 */
-export const opfsWriteFile = async (path: string, content: string): Promise<void> => {
+/** 写入一个文件（覆盖），必要时创建目录；按原始字节写，二进制不会损坏 */
+export const opfsWriteFile = async (path: string, bytes: Uint8Array): Promise<void> => {
   const handle = await fileHandle(path, true)
   const writable = await handle.createWritable()
   try {
-    await writable.write(content)
+    // 复制到独立的 ArrayBuffer，避免 SharedArrayBuffer / 视图偏移导致的类型与写入问题
+    const copy = new Uint8Array(bytes.byteLength)
+    copy.set(bytes)
+    await writable.write(copy)
   } finally {
     await writable.close()
   }
@@ -110,10 +111,10 @@ export const opfsClear = async (): Promise<void> => {
 }
 
 /** 把一组文件整体写入 OPFS（模式切换 / 导入时用） */
-export const opfsWriteAll = async (files: Record<string, string>): Promise<void> => {
+export const opfsWriteAll = async (files: Record<string, Uint8Array>): Promise<void> => {
   await opfsClear()
-  for (const [path, content] of Object.entries(files)) {
-    await opfsWriteFile(path, content)
+  for (const [path, bytes] of Object.entries(files)) {
+    await opfsWriteFile(path, bytes)
   }
 }
 

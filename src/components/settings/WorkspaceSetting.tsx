@@ -2,21 +2,22 @@ import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
-  WORKSPACE_MAX_FILES,
-  WORKSPACE_MAX_FILE_CHARS,
-  WORKSPACE_MAX_TOTAL_CHARS,
   clearWorkspace,
   deleteWorkspaceFile,
-  exportWorkspace,
+  downloadWorkspaceFile,
   importWorkspace,
+  importWorkspaceFiles,
+  isTextFile,
   saveWorkspaceFile,
   setWorkspaceEnabled,
   setWorkspaceMode,
   useWorkspace,
-  type WorkspaceMode,
+  workspaceLimits,
   workspaceUsage,
   type WorkspaceFile,
+  type WorkspaceMode,
 } from '../../services/workspace/store.js'
+import { exportWorkspaceZip, readWorkspaceZip } from '../../services/workspace/archive.js'
 import {
   opfsSupported,
   readStorageStatus,
@@ -35,9 +36,9 @@ import styles from './WorkspaceSetting.module.css'
 /**
  * 设置 → 工作区。
  *
- * 这里是 localStorage 里的虚拟文件系统：可以新建 / 编辑 / 删除文件，
- * 也可以整包导出或导入，用来长期保存 Agent 的产出，不依赖任何后端。
- * 默认关闭，开启后工作区工具才会下发给模型。
+ * 浏览器本地的虚拟文件库：任意格式都能导入导出（文本、图片、PDF、压缩包……），
+ * 可以新建文本文件、在线编辑、单个下载，也可以整包 ZIP 导入导出。
+ * 存储可选 localStorage 或 OPFS，并支持申请持久化权限。默认关闭。
  */
 
 /** 字节数按人类可读单位显示 */
@@ -64,14 +65,11 @@ const formatTime = (at: number, locale: string): string =>
     hourCycle: 'h23',
   }).format(new Date(at))
 
-const downloadFile = (file: WorkspaceFile) => {
-  const blob = new Blob([file.content], { type: file.mime })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = file.path.split('/').pop() ?? file.path
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+const fileKind = (file: WorkspaceFile): 'text' | 'image' | 'binary' => {
+  if (isTextFile(file)) {
+    return 'text'
+  }
+  return file.mime.startsWith('image/') ? 'image' : 'binary'
 }
 
 export const WorkspaceSetting = () => {
@@ -82,17 +80,21 @@ export const WorkspaceSetting = () => {
   const mode = useWorkspace((state) => state.mode)
   const hydrated = useWorkspace((state) => state.hydrated)
   const persistError = useWorkspace((state) => state.persistError)
-  const [storage, setStorage] = useState<StorageStatus | null>(null)
-  const [storageBusy, setStorageBusy] = useState(false)
   const files = useWorkspace((state) => state.files)
   const usage = workspaceUsage()
+  const limits = workspaceLimits()
   const fileList = Object.values(files).sort((a, b) => a.path.localeCompare(b.path))
+
   const [draft, setDraft] = useState<{ path: string; content: string; editing: boolean } | null>(
     null
   )
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [preview, setPreview] = useState<WorkspaceFile | null>(null)
   const [mergeMode, setMergeMode] = useState<'merge' | 'replace'>('merge')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [storage, setStorage] = useState<StorageStatus | null>(null)
+  const [storageBusy, setStorageBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const archiveInputRef = useRef<HTMLInputElement>(null)
 
   const refreshStorage = async () => {
     setStorage(await readStorageStatus())
@@ -123,6 +125,10 @@ export const WorkspaceSetting = () => {
   }
 
   const startEdit = (file: WorkspaceFile) => {
+    if (!isTextFile(file)) {
+      showToast({ key: 'workspaceBinaryReadonly', type: 'error' })
+      return
+    }
     setDraft({ path: file.path, content: file.content, editing: true })
   }
 
@@ -143,14 +149,62 @@ export const WorkspaceSetting = () => {
     setDraft(null)
   }
 
-  const onImport = async (file: File) => {
-    const text = await file.text()
+  /** 导入任意文件：文本与二进制都接受 */
+  const onImportFiles = async (list: File[]) => {
+    const payload: { name: string; bytes: Uint8Array; mime: string }[] = []
+    for (const file of list) {
+      payload.push({
+        name: file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+        mime: file.type || '',
+      })
+    }
+    const result = importWorkspaceFiles(payload)
+    if (result.imported === 0) {
+      showToast({ key: 'workspaceImportFailed', type: 'error' })
+    } else {
+      showToast({ key: 'workspaceImported', params: { count: result.imported } })
+    }
+  }
+
+  /** 导入工作区归档：ZIP（任意文件）或旧版 JSON 备份 */
+  const onImportArchive = async (file: File) => {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const lower = file.name.toLowerCase()
+    if (lower.endsWith('.zip')) {
+      const entries = readWorkspaceZip(bytes)
+      if (entries.length === 0) {
+        showToast({ key: 'workspaceImportFailed', type: 'error' })
+        return
+      }
+      if (mergeMode === 'replace') {
+        clearWorkspace()
+      }
+      const result = importWorkspaceFiles(entries)
+      showToast({ key: 'workspaceImported', params: { count: result.imported } })
+      return
+    }
+    const text = new TextDecoder().decode(bytes)
     const result = importWorkspace(text, mergeMode)
     if (result.error) {
       showToast({ key: 'workspaceImportFailed', type: 'error' })
       return
     }
     showToast({ key: 'workspaceImported', params: { count: result.imported } })
+  }
+
+  const exportZip = () => {
+    if (fileList.length === 0) {
+      return
+    }
+    const blob = exportWorkspaceZip(fileList)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `chat-demo-workspace-${new Date().toISOString().slice(0, 10)}.zip`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    showToast({ key: 'workspaceExported' })
   }
 
   return (
@@ -258,57 +312,44 @@ export const WorkspaceSetting = () => {
         <div className={styles.usageHead}>
           <span>{t('workspaceUsageTitle')}</span>
           <span className={styles.usageNumbers}>
-            {t('workspaceUsageFiles', { files: usage.files, max: WORKSPACE_MAX_FILES })} ·{' '}
-            {t('workspaceUsageChars', {
-              chars: usage.chars.toLocaleString(),
-              max: WORKSPACE_MAX_TOTAL_CHARS.toLocaleString(),
+            {t('workspaceUsageFiles', { files: usage.files, max: limits.files })} ·{' '}
+            {t('workspaceUsageBytes', {
+              used: formatBytes(usage.bytes),
+              max: formatBytes(limits.total),
             })}
           </span>
         </div>
         <div className={styles.bar} aria-hidden>
           <span
-            style={{
-              width: `${Math.min(100, Math.round((usage.chars / WORKSPACE_MAX_TOTAL_CHARS) * 100))}%`,
-            }}
+            style={{ width: `${Math.min(100, Math.round((usage.bytes / limits.total) * 100))}%` }}
           />
         </div>
       </div>
 
       <div className={styles.actions}>
-        <Button size="s" onClick={startCreate} disabled={!enabled}>
+        <Button size="s" onClick={startCreate}>
           {t('workspaceNewFile')}
         </Button>
-        <Button size="s" variant="outlined" onClick={() => inputRef.current?.click()}>
-          {t('workspaceImport')}
+        <Button size="s" variant="outlined" onClick={() => fileInputRef.current?.click()}>
+          {t('workspaceImportFiles')}
         </Button>
-        <Button
-          size="s"
-          variant="outlined"
-          disabled={fileList.length === 0}
-          onClick={() => {
-            const { name, blob } = exportWorkspace()
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement('a')
-            link.href = url
-            link.download = name
-            link.click()
-            setTimeout(() => URL.revokeObjectURL(url), 10_000)
-            showToast({ key: 'workspaceExported' })
-          }}
-        >
-          {t('workspaceExport')}
+        <Button size="s" variant="outlined" onClick={() => archiveInputRef.current?.click()}>
+          {t('workspaceImportArchive')}
+        </Button>
+        <Button size="s" variant="outlined" disabled={fileList.length === 0} onClick={exportZip}>
+          {t('workspaceExportZip')}
         </Button>
         <div className={styles.modeTabs} role="tablist" aria-label={t('workspaceImportMode')}>
-          {(['merge', 'replace'] as const).map((mode) => (
+          {(['merge', 'replace'] as const).map((item) => (
             <button
-              key={mode}
+              key={item}
               type="button"
               role="tab"
-              aria-selected={mergeMode === mode}
-              className={clsx(styles.modeTab, mergeMode === mode && styles.modeTabActive)}
-              onClick={() => setMergeMode(mode)}
+              aria-selected={mergeMode === item}
+              className={clsx(styles.modeTab, mergeMode === item && styles.modeTabActive)}
+              onClick={() => setMergeMode(item)}
             >
-              {t(mode === 'merge' ? 'workspaceImportMerge' : 'workspaceImportReplace')}
+              {t(item === 'merge' ? 'workspaceImportMerge' : 'workspaceImportReplace')}
             </button>
           ))}
         </div>
@@ -325,15 +366,29 @@ export const WorkspaceSetting = () => {
           {t('workspaceClear')}
         </Button>
         <input
-          ref={inputRef}
+          ref={fileInputRef}
           type="file"
-          accept="application/json,.json"
+          multiple
+          hidden
+          onChange={(event) => {
+            // 先拷贝成数组再清空 input，否则 FileList 会被清空
+            const list = Array.from(event.target.files ?? [])
+            event.target.value = ''
+            if (list.length > 0) {
+              void onImportFiles(list)
+            }
+          }}
+        />
+        <input
+          ref={archiveInputRef}
+          type="file"
+          accept=".zip,.json,application/zip,application/json"
           hidden
           onChange={(event) => {
             const file = event.target.files?.[0]
             event.target.value = ''
             if (file) {
-              void onImport(file)
+              void onImportArchive(file)
             }
           }}
         />
@@ -353,13 +408,13 @@ export const WorkspaceSetting = () => {
             aria-label={t('workspaceContentLabel')}
             rows={8}
             value={draft.content}
-            maxLength={WORKSPACE_MAX_FILE_CHARS}
             placeholder={t('workspaceContentPlaceholder')}
             onChange={(event) => setDraft({ ...draft, content: event.target.value })}
           />
           <div className={styles.editorFoot}>
             <span className={styles.counter}>
-              {draft.content.length} / {WORKSPACE_MAX_FILE_CHARS}
+              {formatBytes(new TextEncoder().encode(draft.content).length)} · {draft.content.length}{' '}
+              字符
             </span>
             <div className={styles.editorActions}>
               <Button size="s" variant="outlined" onClick={() => setDraft(null)}>
@@ -377,41 +432,94 @@ export const WorkspaceSetting = () => {
         <div className={styles.empty}>{t('workspaceEmpty')}</div>
       ) : (
         <div className={styles.list} role="list">
-          {fileList.map((file) => (
-            <div key={file.path} className={styles.row} role="listitem">
-              <div className={styles.rowMain}>
-                <span className={styles.path} title={file.path}>
-                  {file.path}
-                </span>
-                <span className={styles.meta}>
-                  {file.content.length} · {formatTime(file.updatedAt, locale)}
-                </span>
+          {fileList.map((file) => {
+            const kind = fileKind(file)
+            return (
+              <div key={file.path} className={styles.row} role="listitem">
+                <div className={styles.rowMain}>
+                  <span className={styles.path} title={file.path}>
+                    {file.path}
+                  </span>
+                  <span className={styles.meta}>
+                    {formatBytes(file.size)} · {t(`workspaceKind_${kind}`)} ·{' '}
+                    {formatTime(file.updatedAt, locale)}
+                  </span>
+                </div>
+                <div className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkButton}
+                    onClick={() => setPreview(file)}
+                  >
+                    {t('workspacePreview')}
+                  </button>
+                  {kind === 'text' ? (
+                    <button
+                      type="button"
+                      className={styles.linkButton}
+                      onClick={() => startEdit(file)}
+                    >
+                      {t('workspaceEdit')}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={styles.linkButton}
+                    onClick={() => downloadWorkspaceFile(file)}
+                  >
+                    {t('workspaceDownload')}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.linkButton}
+                    onClick={() => setPendingDelete(file.path)}
+                  >
+                    {t('workspaceDelete')}
+                  </button>
+                </div>
               </div>
-              <div className={styles.rowActions}>
-                <button type="button" className={styles.linkButton} onClick={() => startEdit(file)}>
-                  {t('workspaceEdit')}
-                </button>
-                <button
-                  type="button"
-                  className={styles.linkButton}
-                  onClick={() => downloadFile(file)}
-                >
-                  {t('workspaceDownload')}
-                </button>
-                <button
-                  type="button"
-                  className={styles.linkButton}
-                  onClick={() => setPendingDelete(file.path)}
-                >
-                  {t('workspaceDelete')}
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       <div className={styles.note}>{isMobile ? t('workspaceNoteMobile') : t('workspaceNote')}</div>
+
+      {preview ? (
+        <Modal
+          title={preview.path}
+          closable
+          onClose={() => setPreview(null)}
+          className={styles.previewDialog}
+          footer={
+            <div className={styles.confirmActions}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  downloadWorkspaceFile(preview)
+                }}
+              >
+                {t('workspaceDownload')}
+              </Button>
+              <Button onClick={() => setPreview(null)}>{t('close')}</Button>
+            </div>
+          }
+        >
+          {fileKind(preview) === 'image' ? (
+            <img
+              className={styles.previewImage}
+              alt={preview.path}
+              src={`data:${preview.mime};base64,${preview.content}`}
+            />
+          ) : fileKind(preview) === 'text' ? (
+            <pre className={styles.previewText}>{preview.content}</pre>
+          ) : (
+            <div className={styles.previewBinary}>
+              {t('workspaceBinaryPreview', { mime: preview.mime, size: formatBytes(preview.size) })}
+            </div>
+          )}
+        </Modal>
+      ) : null}
 
       {pendingDelete ? (
         <Modal

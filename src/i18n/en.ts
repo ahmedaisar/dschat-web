@@ -150,6 +150,8 @@ export const en = {
     'The workspace now supports two storage backends: browser localStorage (default) and the OPFS file system, switchable at any time with the current files copied over; files survive refreshes and browser restarts',
   changelogV267Persist:
     'The workspace can request persistent storage and shows whether it was granted, plus used space and quota, reducing the risk of automatic eviction',
+  changelogV267AnyFiles:
+    'The workspace no longer restricts formats: images, PDFs, archives and any other file can be imported and exported, single downloads keep the original bytes, and ZIP archives can round-trip everything; legacy JSON backups still import',
   changelogV267Apk: 'Built the matching 2.6.7 APK (versionCode 267), signed with xiaohuangbo.jks',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:
@@ -405,6 +407,17 @@ export const en = {
   workspaceUsageTitle: 'Workspace usage',
   workspaceUsageFiles: '{files} / {max} files',
   workspaceUsageChars: '{chars} / {max} characters',
+  workspaceUsageBytes: '{used} / {max}',
+  workspaceImportFiles: 'Import files',
+  workspaceImportArchive: 'Import workspace',
+  workspaceExportZip: 'Export ZIP',
+  workspacePreview: 'Preview',
+  workspaceKind_text: 'Text',
+  workspaceKind_image: 'Image',
+  workspaceKind_binary: 'Binary',
+  workspaceBinaryPreview:
+    'Binary file ({mime}, {size}); cannot be previewed inline — download it to inspect.',
+  workspaceBinaryReadonly: 'Binary files cannot be edited inline; download, edit and import again',
   workspaceNewFile: 'New file',
   workspaceImport: 'Import',
   workspaceExport: 'Export',
@@ -426,9 +439,9 @@ export const en = {
   workspaceEmpty:
     'The workspace is empty: create a file, or import a previously exported workspace.',
   workspaceNote:
-    'Text files only: 200k characters per file, 1.5M in total, 200 files max. Export a backup before clearing or replacing.',
+    'Any format is supported — text, images, PDFs, archives — and ZIP exports keep binary files intact. Limits depend on the backend (localStorage: 2 MB per file, 3 MB total; OPFS: 10 MB per file, 64 MB total). Export a ZIP before clearing or replacing.',
   workspaceNoteMobile:
-    'Text files only, bounded by browser storage; export a backup for anything important.',
+    'Any format is supported; capacity depends on the storage backend. Export a ZIP backup for anything important.',
   workspaceFileCreated: 'File created',
   workspaceFileSaved: 'File saved',
   workspaceFileDeleted: 'File deleted',

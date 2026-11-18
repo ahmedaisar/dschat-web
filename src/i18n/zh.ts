@@ -144,6 +144,8 @@ export const zh = {
     '工作区新增两种存储方式：浏览器本地存储（默认）与 OPFS 真文件系统，可随时切换并整体复制现有文件；刷新、重启浏览器后文件仍在',
   changelogV267Persist:
     '工作区可申请持久化存储权限，并展示是否已获授权、已用空间与配额，降低浏览器自动清理数据的风险',
+  changelogV267AnyFiles:
+    '工作区不再限制格式：图片、PDF、压缩包等任意文件都能导入导出，单个下载按原始字节保存；新增 ZIP 整包导出 / 导入，旧版 JSON 备份仍可导入',
   changelogV267Apk: '同步构建 2.6.7 APK（versionCode 267），使用 xiaohuangbo.jks 签名',
   changelogV265Title: 'v2.6.5 · 2026-11',
   changelogV265Workspace:
@@ -349,6 +351,16 @@ export const zh = {
   workspaceUsageTitle: '工作区用量',
   workspaceUsageFiles: '{files} / {max} 个文件',
   workspaceUsageChars: '{chars} / {max} 字符',
+  workspaceUsageBytes: '{used} / {max}',
+  workspaceImportFiles: '导入文件',
+  workspaceImportArchive: '导入工作区',
+  workspaceExportZip: '导出 ZIP',
+  workspacePreview: '预览',
+  workspaceKind_text: '文本',
+  workspaceKind_image: '图片',
+  workspaceKind_binary: '二进制',
+  workspaceBinaryPreview: '二进制文件（{mime}，{size}），无法内联预览，请下载后查看。',
+  workspaceBinaryReadonly: '二进制文件不支持在线编辑，可下载后修改再导入',
   workspaceNewFile: '新建文件',
   workspaceImport: '导入',
   workspaceExport: '导出',
@@ -367,10 +379,11 @@ export const zh = {
   workspaceEdit: '编辑',
   workspaceDownload: '下载',
   workspaceDelete: '删除',
-  workspaceEmpty: '工作区还是空的：新建一个文件，或导入之前导出的工作区。',
+  workspaceEmpty:
+    '工作区还是空的：新建文本文件、导入任意文件，或导入之前的工作区 ZIP / JSON 备份。',
   workspaceNote:
-    '只存文本文件，单文件上限 20 万字符、总量 150 万字符、最多 200 个文件。清空或覆盖前请先导出备份。',
-  workspaceNoteMobile: '只存文本文件，受浏览器 localStorage 容量限制；重要内容请先导出备份。',
+    '支持任意格式：文本、图片、PDF、压缩包等都能导入导出，ZIP 会原样保留二进制。容量上限随存储方式变化（本地存储 2MB / 文件、3MB 总量；OPFS 10MB / 文件、64MB 总量），清空或覆盖前请先导出 ZIP 备份。',
+  workspaceNoteMobile: '支持任意格式，容量受当前存储方式限制；重要内容请先导出 ZIP 备份。',
   workspaceFileCreated: '文件已创建',
   workspaceFileSaved: '文件已保存',
   workspaceFileDeleted: '文件已删除',

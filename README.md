@@ -511,9 +511,9 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 
 | Piece | Behaviour |
 | --- | --- |
-| Files | Text only; create, edit, rename by editing the path, delete, and download a single file |
-| Limits | 200k characters per file, 1.5M in total, 200 files, surfaced as a live usage bar; localStorage mode is also bounded by the browser's ~5–10 MB, OPFS is roomier |
-| Import / export | The whole archive round-trips as a JSON file; import can merge (same paths overwritten) or replace everything |
+| Files | Any format: text files can be created and edited inline (renaming by editing the path), while images, PDFs and archives are stored byte-for-byte; everything can be deleted, previewed and downloaded |
+| Limits | Measured in bytes: localStorage allows 2 MB per file, 3 MB total and 200 files; OPFS allows 10 MB per file, 64 MB total and 500 files; the usage bar is live |
+| Import / export | “Import files” accepts any format (multi-select); “Export ZIP / Import workspace” round-trips everything with binary intact; legacy JSON backups still import. Archive import can merge (same paths overwritten) or replace |
 | Paths | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane |
 | Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace |
 | Storage | Browser localStorage (default) or the **OPFS file system**, switchable at any time; switching copies the current files to the new backend |
@@ -752,7 +752,7 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 - Attachment-poison settings live only in localStorage; original attachments stay on this device, the processed copies are uploaded, and companion text attachments are sent as ordinary files.
 - Conversations and original attachments: IndexedDB, isolated per browser profile and site origin.
 - The only outbound traffic goes to the API origin you configured (default `https://api.deepseek.com`): `/models` for key validation, `/anthropic/v1/messages` for chat, `/anthropic/v1/files` for attachments, and the ASR / TTS endpoints for speech.
-- Browser tools / workspace: switches live in localStorage; workspace files default to `chat-demo:workspace`, and in OPFS mode live under the origin-private `chat-demo-workspace/` directory (inaccessible to other sites); tool results / artifacts go into IndexedDB with the reply.
+- Browser tools / workspace: switches live in localStorage; workspace files default to `chat-demo:workspace` (binary stored as base64, roughly a third larger), and in OPFS mode live as raw bytes under the origin-private `chat-demo-workspace/` directory (inaccessible to other sites); tool results / artifacts go into IndexedDB with the reply.
 - Statistics: `chat-demo:usage-ledger`, `chat-demo:context-usage` and `chat-demo:context-breakdown` store aggregate numbers only, never message text.
 - Tools reach third parties only where the capability requires it: Open-Meteo (weather), BigDataCloud (reverse geocoding), and whatever page the agent is told to fetch; everything else runs locally.
 - No analytics, no telemetry, no third-party scripts, no relay server.
@@ -855,7 +855,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
 36. **Browser tools inherit browser limits**: page fetching is bound by the target site's CORS; notifications, location and clipboard need permissions (notifications are usually unavailable inside the APK WebView and are marked disabled); “open link” can be blocked by popup rules.
 37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
-38. **The workspace stores text only**: 200k characters per file, 1.5M total, 200 files, all bounded by browser storage — export a backup before clearing or replacing.
+38. **Workspace capacity depends on the backend**: localStorage allows 2 MB per file and 3 MB total (base64 adds roughly a third), OPFS allows 10 MB per file and 64 MB total; writes over the limit are rejected with an explanation. Export a ZIP before clearing or replacing.
 39. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
 41. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
 42. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.
