@@ -48,7 +48,7 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.2**
+> Current version: **2.6.4**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
@@ -106,7 +106,7 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to twelve:
+The settings dialog grows from two groups to thirteen:
 
 | Group           | Contents                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -119,6 +119,7 @@ The settings dialog grows from two groups to twelve:
 | **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
 | **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                                      |
 | **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment          |
+| **Statistics**  | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management |
 | Data            | API key, import, export, restore default settings, delete all                                                                                    |
 | About           | Repository, demo and upstream links                                                                                                              |
 | Changelog       | Version history and upstream credits                                                                                                             |
@@ -449,6 +450,27 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 - Turning the switch off keeps the text for later; restoring defaults clears it and disables the feature.
 - Only `system` changes. Streaming / non-streaming, continue, regenerate, title generation, attachments, search poisoning and history import/export stay compatible.
 
+### 3.23 Statistics, charts and context management
+
+**Where:** Settings → **Statistics**, plus the stats dialog in the composer toolbar.
+
+- **Usage ledger** (`usageLedger`): every finished request is written into a day / model bucket with uncached input, cache read, cache write, output, estimated cost, request count and web searches. The ledger keeps the last 400 days in localStorage, never stores message text, and is separate from the today-only daily usage that drives the quota reminders.
+- **Range switch**: today / 7 days / 30 days; missing days are filled with zeros so the chart always has a continuous axis.
+- **KPI band**: total tokens, estimated cost, cache hit rate, requests, days with usage, web searches.
+- **Daily trend bars**: switchable metric — tokens (with cost as the second bar), cost, or request count — one bar pair per day, with a hover tooltip carrying the exact numbers.
+- **Activity heatmap**: the last 8 weeks, one cell per day, four intensity steps relative to the busiest day in the window.
+- **Hourly distribution**: all 24 hours of the range on one axis, so you can see when you actually chat; the note names the busiest hour.
+- **Input composition ring**: uncached input / cached input / cache write / output, each with tokens and share, so it is obvious which part drives the bill.
+- **Per-model split**: requests, tokens and cost for each model seen in the range; unknown ids fall back to Flash prices.
+- **Session ranking**: the busiest sessions in the range by tokens, with cost and request count; **Open** jumps straight into that session (disabled once the session is gone).
+- **Auxiliary usage**: web searches, parsed document pages, TTS characters and ASR seconds — the parts of the bill that token counts do not cover.
+- **Context statistics management**: the current session's context against the model window and the compaction threshold, then a table of tracked sessions with context size, window share and last request time. Clear a single record, clear all records, export the ledger as JSON or CSV, or wipe the ledger entirely.
+- **Ledger v2**: per-day records now also carry an hourly histogram and a per-session breakdown. Older v1 ledgers are read with the missing fields defaulted, so upgrading never needs a migration script; corrupt JSON is treated as an empty ledger instead of crashing the page.
+
+**The composer stats dialog** now also carries the per-session output trend (sparkline plus latest / average / longest), the last-7-days app-wide trend for comparison, the input composition ring, an auxiliary card (searches, fetches, parsed files and pages, TTS characters, ASR seconds), and a pressure gauge with remaining window and compaction threshold; its footer jumps straight into Settings → Statistics.
+
+**API key masking:** the jailbreak lab no longer renders the full key. It shows `sk-****` plus the last four characters, and a “Change in Settings” link that opens Settings → Data, matching how the data section itself masks the saved key.
+
 ---
 
 ## 4. Behaviour matrix
@@ -577,6 +599,10 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | Custom chain normalization, injection snapshot and system-block generation (direct / experimental wording)           |
 | [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)       | Composer Chain card: toggle, edit, example / clear, open settings                                                    |
 | [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)               | Collapsible “Injected chain of thought” card above replies                                                          |
+| [`src/services/chat/usageLedger.ts`](src/services/chat/usageLedger.ts)                             | Day / model usage ledger (400 days) behind the statistics charts                                                    |
+| [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)           | Settings → Statistics: KPI, trend bars, heatmap, composition ring, context management                                |
+| [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                               | Hand-rolled SVG/CSS charts: bars, heatmap, ring, sparkline, pressure gauge                                            |
+| [`src/services/api/mask.ts`](src/services/api/mask.ts)                                             | API key masking (`sk-****` + last four) shared by the lab and other read-only displays                                |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
 | [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | Composer Chain shortcut, active state and settings entry                                                             |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
@@ -670,11 +696,11 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.2.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.4.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.2 / 262), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.4 / 264), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -685,7 +711,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 262;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 264;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---

@@ -77,8 +77,15 @@ public final class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
+        // 版本号从包信息读取，避免每次发版都要回来改这一行
+        String versionName = "unknown";
+        try {
+            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception ignored) {
+            // 取不到时保留 unknown，不影响页面加载
+        }
         settings.setUserAgentString(
-            settings.getUserAgentString() + " DeepSeekUnrestrictedAndroid/2.6.2"
+            settings.getUserAgentString() + " DeepSeekUnrestrictedAndroid/" + versionName
         );
 
         webView.addJavascriptInterface(new DownloadBridge(), "AndroidDownload");

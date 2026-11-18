@@ -254,6 +254,19 @@ export const IconSendOutline16 = () => (
   </svg>
 )
 
+/** 统计图表：三根高低不同的柱子，和侧边栏其它 16px 图标同网格 */
+export const IconChartOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M2 13.25H14M3.75 13V9.5H6.25V13M6.875 13V4.5H9.375V13M10 13V7H12.5V13"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 /** 设置图标直接绘制路径，各实例在侧边栏和弹窗中独立显示。 */
 export const IconSettingsOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

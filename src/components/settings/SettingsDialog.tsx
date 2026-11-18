@@ -14,6 +14,7 @@ import {
   IconPaperclipOutline16,
   IconRefreshOutline16,
   IconSearchWarningOutline16,
+  IconChartOutline16,
   IconSettingsOutline16,
   IconThinkOutline16,
   IconUploadOutline14,
@@ -97,6 +98,7 @@ import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import { ParamControl } from './ParamControls.js'
+import { StatsSettings } from './StatsSettings.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -145,6 +147,7 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     label: 'settingDialogAsideAttachmentPoisonOptionLabel',
     icon: <IconPaperclipOutline16 />,
   },
+  { value: 'stats', label: 'settingDialogAsideStatsOptionLabel', icon: <IconChartOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
   { value: 'about', label: 'settingDialogAsideAboutOptionLabel', icon: <IconLinkOutline16 /> },
   {
@@ -226,6 +229,8 @@ const SettingsContent = () => {
             <AttachmentsSetting />
           ) : section === 'attachmentPoison' ? (
             <AttachmentPoisonSettings />
+          ) : section === 'stats' ? (
+            <StatsSettings />
           ) : section === 'about' ? (
             <AboutSetting />
           ) : section === 'changelog' ? (
@@ -687,6 +692,27 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV264Title',
+      items: [
+        'changelogV264Ledger',
+        'changelogV264Charts',
+        'changelogV264Export',
+        'changelogV264Dialog',
+        'changelogV264Compat',
+        'changelogV264Apk',
+      ],
+    },
+    {
+      title: 'changelogV263Title',
+      items: [
+        'changelogV263LabKey',
+        'changelogV263Stats',
+        'changelogV263Context',
+        'changelogV263Dialog',
+        'changelogV263Apk',
+      ],
+    },
     {
       title: 'changelogV262Title',
       items: [

@@ -48,7 +48,7 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.6.2**
+> 当前版本：**2.6.4**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
@@ -106,7 +106,7 @@
 
 ### 3.1 设置页结构
 
-设置页从原来的「通用设置 / 数据管理」两组扩到十二组：
+设置页从原来的「通用设置 / 数据管理」两组扩到十三组：
 
 | 分组       | 内容                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------- |
@@ -119,6 +119,7 @@
 | **记忆**   | 长期记忆、自动提炼、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                        |
 | **附件**   | 附件限制开关、单文件大小、单会话数量、扩展名白名单                                                    |
 | **附件投毒** | 上传前改写附件：文本正文 / 图片文字 / DOCX / 元数据 / 文件尾 / 文件名 / 伴随文本附件                |
+| **统计**   | 用量概览与范围切换、每日趋势柱状图、8 周活跃热力图、输入构成环、按模型拆分、上下文统计管理          |
 | 数据管理   | API Key、导入、导出、恢复默认设置、删除全部对话                                                       |
 | 关于       | 仓库地址、演示地址、上游项目                                                                          |
 | 更新日志   | 版本记录与上游鸣谢                                                                                    |
@@ -448,6 +449,27 @@ Persona（官方身份分块）
 - 正文上限 4000 字符；只保存在本机 `chat-demo:custom-cot` 与 `chat-demo:custom-cot-enabled`，每轮都会增加输入 token；
 - 只修改 `system`，不改消息结构：流式 / 非流式、续写、重新生成、标题生成、附件、搜索投毒与历史导入导出都保持兼容。
 
+### 3.23 统计、图表与上下文管理
+
+**位置：** 设置 → **统计**，以及输入栏的会话统计弹窗。
+
+- **用量账本**（`usageLedger`）：每轮请求结束时按「日 / 模型」记账，记录未缓存输入、缓存读取、缓存写入、输出、预估费用、请求次数与联网搜索次数；账本在 localStorage 里保留最近 400 天，只存聚合数字、不含对话正文，和只管今天（用来触发额度提醒）的每日用量分开。
+- **范围切换**：今天 / 7 天 / 30 天；中间没有请求的日期补 0，保证图表坐标连续。
+- **KPI 区**：总 token、预估费用、缓存命中率、请求次数、有用量的天数、联网搜索次数。
+- **每日趋势柱状图**：可切换指标——token（右柱为费用）、费用、请求数；每天一对柱子，悬停显示当天明细。
+- **活跃热力图**：最近 8 周，每天一格，按窗口内最忙的一天分四档强度。
+- **小时分布**：把所选范围内 24 小时的请求数画在一根轴上，能看出自己一般什么时候在聊；下方注明最忙的一小时。
+- **输入构成环**：未命中缓存输入 / 命中缓存输入 / 缓存写入 / 输出，各带 token 与占比，一眼看出费用主要来自哪一段。
+- **按模型拆分**：所选范围内每个模型的请求数、token 与费用；未知模型按 Flash 单价估算。
+- **会话排行**：范围内按 token 排序的会话，带费用与请求数；点「打开」直接跳到该会话（会话已删除时按钮置灰）。
+- **附加用量**：联网搜索、文档解析页数、语音合成字符与语音识别秒数——token 统计覆盖不到的计费项。
+- **上下文统计管理**：当前会话上下文对照模型窗口与压缩阈值，下面是记录中的会话表格，含上下文体量、窗口占比与最近请求时间；可清除单条、清空全部记录、导出 JSON / CSV、清空用量账本。
+- **账本 v2**：每天记录里增加 24 小时直方图与会话维度拆分；旧版 v1 账本读取时按缺省值补齐，升级不需要迁移脚本；损坏的 JSON 当作空账本处理，不会带崩页面。
+
+**输入栏会话统计弹窗**新增本次会话输出趋势（迷你折线 + 最新 / 平均 / 最长）、用于横向对比的「最近 7 天用量」、输入构成环、附加用量卡（搜索 / 抓取 / 解析文件与页数 / 语音字符 / 语音秒数），以及带剩余窗口与压缩阈值的上下文压力表；底部可直接跳到设置 → 统计。
+
+**API Key 脱敏**：越狱实验台不再渲染完整 Key，改成 `sk-****` 加末四位，并提供「在设置中修改」跳到设置 → 数据管理，和设置页自己保存 Key 的掩码展示保持一致。
+
 ---
 
 ## 4. 行为对照表
@@ -576,6 +598,10 @@ Persona（官方身份分块）
 | [`src/services/chat/customCot.ts`](src/services/chat/customCot.ts)                                 | 自定义思维链归一化、注入快照与 system 分块生成（直接 / 实验性两种文案）                                                |
 | [`src/components/chatInput/CustomCotPanel.tsx`](src/components/chatInput/CustomCotPanel.tsx)       | 输入栏「思维链」卡片：开关、编辑、示例 / 清空、打开设置                                                                 |
 | [`src/components/messages/InjectedCot.tsx`](src/components/messages/InjectedCot.tsx)               | 回复上方的「已注入思维链」折叠卡片                                                                                     |
+| [`src/services/chat/usageLedger.ts`](src/services/chat/usageLedger.ts)                             | 按日 / 模型的用量账本（保留 400 天），统计图表的数据源                                                                 |
+| [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)           | 设置 → 统计：KPI、趋势柱状图、热力图、构成环与上下文管理                                                              |
+| [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                               | 手写 SVG / CSS 图表：柱状图、热力图、环形图、迷你折线、压力表                                                          |
+| [`src/services/api/mask.ts`](src/services/api/mask.ts)                                             | API Key 脱敏（`sk-****` + 末四位），实验台与其它只读展示共用                                                          |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、自定义思维链注入、回复结束时的防撤回处理、续写守卫                  |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
@@ -669,11 +695,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.2.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.4.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.2 / 262），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.4 / 264），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -684,7 +710,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 262；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 264；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---

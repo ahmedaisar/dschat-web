@@ -1,4 +1,4 @@
-# Android APK（DeepSeek Unrestricted 2.6.2）
+# Android APK（DeepSeek Unrestricted 2.6.4）
 
 这是纯原生 WebView 壳，不依赖 Capacitor / Cordova：
 
@@ -9,10 +9,10 @@
 
 ## 产物
 
-`android/deepseek-unrestricted-2.6.2.apk`，versionCode 262，使用
+`android/deepseek-unrestricted-2.6.4.apk`，versionCode 264，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`9c93bfaf6274aff9135555c76f33f60e3599302a42f99fe66b285d0104ec7083`（7.2 MB）。
+SHA-256：`10efa0fbc16125eaf0c4d9f0a0bce4be788eb501025803288e80e99fb3b212b2`（7.2 MB）。
 
 ## 构建
 
@@ -21,6 +21,8 @@ SHA-256：`9c93bfaf6274aff9135555c76f33f60e3599302a42f99fe66b285d0104ec7083`（7
 ```sh
 KS_PASS=<keystore-password> ./构建APK.sh
 ```
+
+版本号由构建脚本注入（`aapt2 link --replace-version`），`AndroidManifest.xml` 里的值只是兜底，因此改 `package.json` 的版本就会同时改 APK 的 versionCode / versionName。
 
 手动构建需要：
 

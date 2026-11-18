@@ -21,11 +21,12 @@ import { customCotSnapshot, formatCustomCotContext } from './customCot.js'
 import { noteContextUsage } from './contextUsage.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
-import { noteRunTiming } from './sessionStats.js'
+import { estimatePages, noteRunTiming } from './sessionStats.js'
 import { autoCompressNeeded, compressSession } from './compression.js'
 import { extractMemoriesFromTurn, formatSavedMemories } from './savedMemory.js'
 import { formatMemoryBankContext } from './memoryBank.js'
 import { noteDailyUsage } from './dailyUsage.js'
+import { noteLedgerUsage } from './usageLedger.js'
 import { contextWindowFor, useContextUsage } from './contextUsage.js'
 import { showToast } from '../../components/base/toastState.js'
 import { computeAutoTuneParams } from '../unrestricted/autotune.js'
@@ -65,6 +66,15 @@ import {
 
 /** deepseek-flash 同时支持深度思考与图片输入 */
 const MODEL: ChatModel = 'deepseek-flash'
+
+/** 文档解析计费按页算，客户端拿不到页数，这里与会话统计用同一套体积估算 */
+const PARSE_EXTS = new Set(['pdf', 'doc', 'docx', 'ppt', 'pptx'])
+const parsedPages = (files: { name: string; size: number }[]): number =>
+  files.reduce((sum, file) => {
+    const dot = file.name.lastIndexOf('.')
+    const ext = dot > 0 ? file.name.slice(dot + 1).toLowerCase() : ''
+    return PARSE_EXTS.has(ext) ? sum + estimatePages(file.size) : sum
+  }, 0)
 
 /**
  * 自动越狱的临时状态：
@@ -1624,6 +1634,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
     // 每日用量与费用：标题请求不计入用户可见的日用量
     if (reply.usage && !titleRequests.has(controller)) {
       noteDailyUsage(reply.model ?? MODEL, reply.usage)
+      // 账本同时留档，统计页的趋势图、热力图、小时分布与会话排行读它
+      noteLedgerUsage(reply.model ?? MODEL, reply.usage, new Date(), {
+        sessionId,
+        pages: parsedPages(request.question.files),
+      })
     }
     if (
       reply.status === 'done' &&
