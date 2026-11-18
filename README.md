@@ -48,11 +48,14 @@
 
 A fully static DeepSeek chat front end: multiple conversations, streaming replies, deep thinking, web search, link reading, attachments, speech, Markdown / KaTeX / Mermaid, Chinese and English UI, light and dark themes, and history import/export. Every original feature is preserved.
 
-> Current version: **2.6.4**
+> Current version: **2.6.5**
 
 On top of that, this fork turns the hard-coded limits of the original into configurable settings and adds a full set of jailbreak, experiment and context-management features:
 
 - **Unrestricted mode and prompts**: unrestricted mode, the default rules document / GODMODE preset, silent per-round system-prompt injection, and the experimental Chinese translation;
+- **Browser tools**: date & time, location, weather, notifications, clipboard, webpage fetch, file generation, open link and visualization widgets ported from DeepSeek-Agent, each with its own switch;
+- **Virtual workspace**: a long-lived file store in browser localStorage with create / edit / delete, per-file download, archive import / export, plus five workspace tools;
+- **Statistics and context**: usage ledger, trend / heatmap / hourly charts, an eight-way context breakdown (system prompt, tool definitions, messages, thinking, tool calls / results, attachments) and billing rates;
 - **Custom chain of thought**: write reasoning steps in advance and inject them into system, with an injected-steps card above replies when deep thinking is off; experimental guidance when it is on;
 - **Advanced engines**: a 0–4 thinking slider, input perturbation (33 techniques, single technique or tiered variants), AutoTune, STM output shaping, and one-click auto jailbreak that retries with another combo on refusal;
 - **Jailbreak lab**: local MCP + EasyJailbreak attackers, model races, variant races (budget cap + start confirmation), and result import/export;
@@ -106,7 +109,7 @@ These are the limit-related behaviours in the upstream code. Paths point at the 
 
 ### 3.1 Settings layout
 
-The settings dialog grows from two groups to thirteen:
+The settings dialog grows from two groups to fifteen:
 
 | Group           | Contents                                                                                                                                         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -119,6 +122,8 @@ The settings dialog grows from two groups to thirteen:
 | **Memory**      | Long-term memory, auto-extraction, memory graph, import/export, relation graph, vector dimension, retrieval weights, search debug                |
 | **Attachments** | Limit switch, max size per file, max files per session, extension whitelist                                                                      |
 | **Attachment poison** | Rewrite attachments before upload: text body / image text / DOCX / metadata / file trailer / filename / companion text attachment          |
+| **Browser tools** | Master switch plus ten independent capability switches: date & time, location, weather, notifications, clipboard read / write, webpage fetch, file generation, open link, visualization widget |
+| **Workspace**   | Virtual file store in browser storage: create / edit / delete files, per-file download, whole-archive import (merge or replace) and export |
 | **Statistics**  | Usage overview with range switch, daily trend bars, 8-week activity heatmap, input composition ring, per-model split, context statistics management |
 | Data            | API key, import, export, restore default settings, delete all                                                                                    |
 | About           | Repository, demo and upstream links                                                                                                              |
@@ -466,10 +471,52 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 - **Auxiliary usage**: web searches, parsed document pages, TTS characters and ASR seconds — the parts of the bill that token counts do not cover.
 - **Context statistics management**: the current session's context against the model window and the compaction threshold, then a table of tracked sessions with context size, window share and last request time. Clear a single record, clear all records, export the ledger as JSON or CSV, or wipe the ledger entirely.
 - **Ledger v2**: per-day records now also carry an hourly histogram and a per-session breakdown. Older v1 ledgers are read with the missing fields defaulted, so upgrading never needs a migration script; corrupt JSON is treated as an empty ledger instead of crashing the page.
+- **Context breakdown**: the latest request of the session is split into system prompt, tool definitions, user messages, model replies, model thinking, tool calls, tool results and attachments, each with estimated tokens and share. Estimates use character weights, so server-reported numbers in the KPI band remain the authoritative ones.
+- **Billing rates**: the model's miss / hit / output prices (CNY per million tokens) plus search, document parsing, TTS and ASR unit prices, with the peak-hour doubling rule spelled out — handy when a bill looks unexpected.
 
 **The composer stats dialog** now also carries the per-session output trend (sparkline plus latest / average / longest), the last-7-days app-wide trend for comparison, the input composition ring, an auxiliary card (searches, fetches, parsed files and pages, TTS characters, ASR seconds), and a pressure gauge with remaining window and compaction threshold; its footer jumps straight into Settings → Statistics.
 
 **API key masking:** the jailbreak lab no longer renders the full key. It shows `sk-****` plus the last four characters, and a “Change in Settings” link that opens Settings → Data, matching how the data section itself masks the saved key.
+
+### 3.24 Browser agent tools
+
+**Where:** Settings → **Browser tools**. Ported from `DeepSeek-Agent`'s browser and widget tools — browser-only capabilities; MCP tools, subagents and workspace (desktop) tools are deliberately left out.
+
+| Tool | What it does | Notes |
+| --- | --- | --- |
+| Date & time | Localised date, ISO time, weekday and zone offset; accepts an IANA zone | Safe, no network |
+| Location | Latitude / longitude, accuracy and a reverse-geocoded city | Browser permission prompt |
+| Weather | Open-Meteo current conditions plus a 1–7 day forecast, by city or coordinates | No API key; falls back to geolocation |
+| Notification | System desktop notification | Asks for permission the first time |
+| Read clipboard | Returns clipboard text | Asks for confirmation |
+| Write clipboard | Copies text to the clipboard | Writes to the device |
+| Fetch webpage | Downloads a page and extracts readable text, cap on characters | Subject to the target site's CORS |
+| Create file | Produces a previewable, downloadable file (Markdown, HTML, CSV, JSON, SVG, code) | Asks for confirmation; stored locally |
+| Open link | Opens a URL in a new tab | May be blocked by popup rules |
+| Visualization widget | Renders a self-contained interactive HTML component in a sandboxed iframe | Sandbox has no same-origin access |
+
+- **Every tool has its own switch.** With the master switch off nothing is declared; with one tool off the model never sees it, and a call from history is refused at execution time with an explanatory error instead of running.
+- **Tool round trips** happen inside one reply: the model emits `tool_use`, the page executes it, the result goes back as `tool_result` and generation continues (up to four rounds). Each round is a real request, so tokens are billed per round.
+- **Cards** show the tool name, an input summary, status and duration, with the raw input and result available on expand. Artifacts render below: files get preview and download, widgets are rendered live in a sandbox iframe that can run scripts but cannot read the chat page.
+- **Approvals**: reading the clipboard and creating files pause for a confirmation dialog with the exact input; “allow for this conversation” remembers the decision. Refusal is returned to the model as an error result, so the reply never stalls.
+- **Environment checks**: notifications, geolocation and clipboard availability are detected and surfaced in the settings header; unsupported capabilities are disabled rather than failing at call time.
+- Everything runs locally: tool results and artifacts live in the reply on this device, and history exports contain neither.
+
+### 3.25 Virtual workspace
+
+**Where:** Settings → **Workspace**. A file store that lives entirely in browser storage — no backend, no real disk — so the agent has somewhere durable to keep notes, reports and generated files across conversations.
+
+| Piece | Behaviour |
+| --- | --- |
+| Files | Text only; create, edit, rename by editing the path, delete, and download a single file |
+| Limits | 200k characters per file, 1.5M in total, 200 files — surfaced as a live usage bar |
+| Import / export | The whole archive round-trips as a JSON file; import can merge (same paths overwritten) or replace everything |
+| Paths | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane |
+| Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace |
+| Defaults | **Off.** Both the agent master switch and the workspace switch start disabled, so a fresh install declares no tools at all |
+
+- Turning the workspace off hides every workspace tool from the model even if the agent master switch is on; a call from history is refused at execution time.
+- Nothing here is uploaded. History exports do not include the workspace, so export the archive yourself before clearing browser data.
 
 ---
 
@@ -490,6 +537,9 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Other original features     | —                           | Search, attachments, branches, import/export, read-aloud, themes, i18n all preserved | Same                                                      |
 | Web search                  | Server-side                 | Kept by default; search poisoning can take over or rewrite the display                | Same as default                                           |
 | Custom chain of thought     | Not available               | Off by default; injected into system; the “Injected chain of thought” card shows above replies when deep thinking is off | Same as default                                           |
+| Browser tools               | Not available               | Off by default; enabled tools are declared to the model and executed locally | Same as default                                           |
+| Virtual workspace           | Not available               | Off by default; the agent reads and writes localStorage virtual files, with confirmation for writes and deletes | Same as default                                           |
+| Context breakdown           | Not available               | Records the latest request's eight categories per session; display only | Same as default                                           |
 
 ---
 
@@ -538,6 +588,13 @@ Settings → Attachment poisoning. Off by default; when enabled, attachments are
 | Memory      | Memory-graph retrieval               | on                | `chat-demo:memory-bank-enabled`            | Unaffected                      |
 | Memory      | Results to inject                    | 4                 | `chat-demo:memory-bank-limit`              | Unaffected                      |
 | Memory      | Vector dimension                     | 256               | `chat-demo:memory-bank-dimension`          | Unaffected                      |
+| Browser tools | Enable browser tools              | Off                 | `chat-demo:agent-tools-enabled`            | Unaffected                      |
+| Browser tools | Per-tool switches                 | All on (with master) | `chat-demo:agent-tool-flags`              | Unaffected                      |
+| Workspace    | Enable workspace                  | Off                 | `chat-demo:workspace-enabled`              | Unaffected                      |
+| Workspace    | Workspace files                   | Empty               | `chat-demo:workspace`                      | Unaffected                      |
+| Statistics   | Usage ledger (auto)               | Empty               | `chat-demo:usage-ledger`                   | Unaffected                      |
+| Statistics   | Context usage (auto)              | Empty               | `chat-demo:context-usage`                  | Unaffected                      |
+| Statistics   | Context breakdown (auto)          | Empty               | `chat-demo:context-breakdown`              | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 
@@ -573,6 +630,29 @@ With search poisoning enabled and takeover active, `tools` only keeps `deepseek_
 
 Attachment poisoning changes only the uploaded file bytes sent to the Files API, not the request shape; attachments are still referenced by `file_id`.
 
+With browser tools or the workspace enabled, `tools` gains client tool definitions (name, description, input schema). When the model answers with `tool_use`, the page executes it locally and appends the result as a `tool_result` before the next request:
+
+```json
+{
+  "tools": [
+    { "type": "deepseek_read_url", "name": "deepseek_read_url" },
+    {
+      "name": "get_weather",
+      "description": "Query city weather (Open-Meteo, no API key).",
+      "input_schema": { "type": "object", "properties": { "location": { "type": "string" } } }
+    }
+  ],
+  "messages": [
+    { "role": "latest_reminder", "content": "2026-11-18,Tuesday,Beijing,Web,Chinese" },
+    { "role": "user", "content": "Is it hot in Hangzhou today?" },
+    { "role": "assistant", "content": [{ "type": "tool_use", "id": "toolu_1", "name": "get_weather", "input": { "location": "Hangzhou" } }] },
+    { "role": "user", "content": [{ "type": "tool_result", "tool_use_id": "toolu_1", "content": "Location: Hangzhou..." }] }
+  ]
+}
+```
+
+Client tool round trips are capped at four per reply and each round is a separate request (billed per round). Tool calls and results never become part of the replayed history, and exports do not include tool cards.
+
 Unrestricted mode with adjusted parameters (only fields that differ are shown):
 
 ```json
@@ -603,6 +683,16 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 | [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)           | Settings → Statistics: KPI, trend bars, heatmap, composition ring, context management                                |
 | [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                               | Hand-rolled SVG/CSS charts: bars, heatmap, ring, sparkline, pressure gauge                                            |
 | [`src/services/api/mask.ts`](src/services/api/mask.ts)                                             | API key masking (`sk-****` + last four) shared by the lab and other read-only displays                                |
+| [`src/services/agent/tools.ts`](src/services/agent/tools.ts)                                       | Browser tool registry and executors (time, location, weather, notifications, clipboard, fetch, files, links, widgets)  |
+| [`src/services/agent/workspaceTools.ts`](src/services/agent/workspaceTools.ts)                     | Workspace tools: list / read / write / delete / diff                                                                   |
+| [`src/services/agent/agentToolSettings.ts`](src/services/agent/agentToolSettings.ts)               | Master and per-tool switches for browser and workspace tools                                                          |
+| [`src/services/agent/runTool.ts`](src/services/agent/runTool.ts)                                   | Single tool execution: approval, timeout, result normalisation                                                        |
+| [`src/services/agent/approval.ts`](src/services/agent/approval.ts)                                 | Human approval queue before a tool runs                                                                               |
+| [`src/services/workspace/store.ts`](src/services/workspace/store.ts)                               | localStorage virtual file store: path checks, limits, import / export, diff baseline                                  |
+| [`src/services/chat/contextBreakdown.ts`](src/services/chat/contextBreakdown.ts)                   | Eight-way context classification and persistence                                                                      |
+| [`src/components/agent/ToolCallCards.tsx`](src/components/agent/ToolCallCards.tsx)                 | Reply tool cards: status, input, result, artifacts (files / sandboxed widgets)                                        |
+| [`src/components/settings/AgentToolsSetting.tsx`](src/components/settings/AgentToolsSetting.tsx)   | Settings → Browser tools and workspace tool switches                                                                  |
+| [`src/components/settings/WorkspaceSetting.tsx`](src/components/settings/WorkspaceSetting.tsx)     | Settings → Workspace: file list, editor, import / export                                                              |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | Request assembly (system / parameters / safety_check / tools), custom chain injection, refusal settling, continuation guard |
 | [`src/components/chatInput/ChatInput.tsx`](src/components/chatInput/ChatInput.tsx)                 | Composer Chain shortcut, active state and settings entry                                                             |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply` (keep refused content), `hasReplyContent`, `rewriteReplyBlocks` (write edits back), `canContinueReply` |
@@ -655,6 +745,9 @@ Only three things differ: `system` is the assembled pipeline, the whole `safety_
 - Attachment-poison settings live only in localStorage; original attachments stay on this device, the processed copies are uploaded, and companion text attachments are sent as ordinary files.
 - Conversations and original attachments: IndexedDB, isolated per browser profile and site origin.
 - The only outbound traffic goes to the API origin you configured (default `https://api.deepseek.com`): `/models` for key validation, `/anthropic/v1/messages` for chat, `/anthropic/v1/files` for attachments, and the ASR / TTS endpoints for speech.
+- Browser tools / workspace: switches live in localStorage, workspace files in `chat-demo:workspace`, and tool results / artifacts go into IndexedDB with the reply.
+- Statistics: `chat-demo:usage-ledger`, `chat-demo:context-usage` and `chat-demo:context-breakdown` store aggregate numbers only, never message text.
+- Tools reach third parties only where the capability requires it: Open-Meteo (weather), BigDataCloud (reverse geocoding), and whatever page the agent is told to fetch; everything else runs locally.
 - No analytics, no telemetry, no third-party scripts, no relay server.
 - History import/export uses ZIP archives; exports contain conversations and locally available image originals, but no API keys or settings. See the [history archive documentation](src/services/chat/history/README.md) for the format and retention rules.
 
@@ -696,11 +789,11 @@ The API origin is set in [`rspack.config.ts`](rspack.config.ts) via `createConfi
 
 ### 9.1 Android APK
 
-A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.4.apk`:
+A native WebView shell is included; the built artifact is `android/deepseek-unrestricted-2.6.5.apk`:
 
 - The app starts a local static server on `http://127.0.0.1:18765` and loads `assets/public`, giving localStorage / IndexedDB / fetch a stable secure origin;
 - File selection, microphone permission, the back key and external links are wired up;
-- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.4 / 264), builds the web app and the signed APK:
+- Building requires Android SDK 34, build-tools 34.0.0 and JDK 17 (JDK 27 crashes d8). A one-click script at the repo root reads the `package.json` version (currently 2.6.5 / 265), builds the web app and the signed APK:
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -711,7 +804,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 264;
+- The APK is signed with `xiaohuangbo.jks`, alias `xiaohuangbo`, versionCode 265;
 - **The Python backend is not executed inside the APK**: `android/assets/backend` bundles the `mcp-server` and EasyJailbreak sources for reference only; the lab still needs a backend on a PC or server, with its endpoint set to `http://<PC-IP>:8765/mcp`. The phone page origin is `http://127.0.0.1:18765`, which the backend already allows.
 
 ---
@@ -753,6 +846,11 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 33. **With deep thinking on the custom chain is experimental**: server-side thinking takes priority and may ignore or rewrite the steps, so results are not guaranteed to match direct injection; the injected card is not repeated and server-side thinking is shown instead.
 34. **Custom chain of thought only applies to chat requests**: race, variant race, long-chat compression and memory extraction use their own system prompts and ignore it; the first chat request that also generates a title still receives it.
 35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
+36. **Browser tools inherit browser limits**: page fetching is bound by the target site's CORS; notifications, location and clipboard need permissions (notifications are usually unavailable inside the APK WebView and are marked disabled); “open link” can be blocked by popup rules.
+37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
+38. **The workspace stores text only**: 200k characters per file, 1.5M total, 200 files, all bounded by browser storage — export a backup before clearing or replacing.
+39. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
+40. **The context breakdown is an estimate**: character weights (1 token per CJK character, 4 characters per token otherwise) differ from server billing; the KPI numbers reported by the server stay authoritative.
 
 ---
 

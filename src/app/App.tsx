@@ -16,6 +16,7 @@ import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
 import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
+import { ToolApprovalDialog } from '../components/agent/ToolApprovalDialog.js'
 import { StatsDialog } from '../components/session/StatsDialog.js'
 import { LabView } from '../components/lab/LabView.js'
 import { ErrorBoundary } from '../components/base/ErrorBoundary.js'
@@ -153,6 +154,7 @@ export const App = () => {
       </div>
       <SettingsDialog />
       <StatsDialog />
+      <ToolApprovalDialog />
       <Toast />
     </>
   )

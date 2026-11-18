@@ -31,6 +31,7 @@ import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js
 import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { InjectedCot } from './InjectedCot.js'
+import { ToolCallCards } from '../agent/ToolCallCards.js'
 import { ReplyArea } from './ReplyArea.js'
 import { ReplyEditor } from './ReplyEditor.js'
 import { useReplyView } from './useReplyView.js'
@@ -128,6 +129,7 @@ export const AssistantMessage = memo(function AssistantMessage({
       {message.customCot && message.thinking === false ? (
         <InjectedCot text={message.customCot} />
       ) : null}
+      <ToolCallCards calls={message.toolCalls} />
       {refused ? null : (
         <ReplyArea
           message={message}

@@ -245,6 +245,14 @@ const TTS_PER_CHAR = 3 / 10000
 /** 语音识别：0.78 元 / 小时（限时 5 折） */
 const ASR_PER_SECOND = 0.78 / 3600
 
+/** 计费口径：统计页把单价摊开展示，避免用户去翻文档 */
+export const billingRates = () => ({
+  searchPerCall: SEARCH_PER_CALL,
+  parsePerPage: PARSE_PER_PAGE,
+  ttsPerChar: TTS_PER_CHAR,
+  asrPerSecond: ASR_PER_SECOND,
+})
+
 /** 北京时间的工作日高峰时段：9:00–12:00、14:00–18:00；节假日整体按空闲价 */
 export const isPeakHour = (date: Date, holiday = false): boolean => {
   if (holiday) {

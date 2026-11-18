@@ -1,3 +1,4 @@
+import type { ChatToolCall } from '../agent/types.js'
 import type { TranslationMessage } from '../../i18n/index.js'
 import type { ApiErrorKind } from '../api/client.js'
 import type {
@@ -85,6 +86,8 @@ export type AssistantMessage = MessageBranch & {
   thinking?: boolean
   /** 本轮请求注入的自定义思维链快照；关闭深度思考时在回复上方展示 */
   customCot?: string
+  /** 本轮调用的浏览器工具记录；导出的历史包不含该字段，重新导入后不显示 */
+  toolCalls?: ChatToolCall[]
   /** 请求时是否声明 deepseek_web_search；关闭时仍声明 deepseek_read_url */
   search?: boolean
   /** 本轮请求的系统信息快照；各回答版本独立保存，续写沿用。历史消息中缺省的快照保持为空。 */

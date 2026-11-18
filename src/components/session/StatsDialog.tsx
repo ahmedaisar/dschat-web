@@ -28,6 +28,11 @@ import { Modal } from '../base/Modal.js'
 import { Switch } from '../base/Switch.js'
 import { PressureGauge, RingChart, Sparkline } from '../stats/charts.js'
 import { ledgerSeries, ledgerTotals, useLedger } from '../../services/chat/usageLedger.js'
+import {
+  CONTEXT_CATEGORIES,
+  breakdownTotal,
+  useContextBreakdown,
+} from '../../services/chat/contextBreakdown.js'
 import { readVoiceUsage } from '../../services/chat/sessionStats.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { closeStats, useStatsDialog } from './statsDialogState.js'
@@ -139,6 +144,18 @@ const StatsContent = () => {
     [week]
   )
   const voice = useMemo(() => readVoiceUsage(session?.id ?? null), [session])
+  // 上下文分类：当前会话最近一轮请求的构成
+  const breakdownEntry = useContextBreakdown((state) =>
+    activeId ? state.byId[activeId] : undefined
+  )
+  const breakdownSum = breakdownEntry ? breakdownTotal(breakdownEntry.parts) : 0
+  const breakdownRows = breakdownEntry
+    ? CONTEXT_CATEGORIES.map((key) => ({
+        key,
+        label: t(`contextCategory_${key}`),
+        tokens: breakdownEntry.parts[key],
+      })).filter((row) => row.tokens > 0)
+    : []
 
   const liveItems: MetricItem[] = liveMetrics
     ? [
@@ -375,6 +392,39 @@ const StatsContent = () => {
           </div>
         </div>
         <div className={styles.note}>{t('statsExtrasDialogHint')}</div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>{t('contextBreakdownTitle')}</div>
+        {breakdownRows.length > 0 ? (
+          <div className={styles.compositionRow}>
+            <RingChart
+              segments={breakdownRows.map((row) => ({
+                key: row.key,
+                label: row.label,
+                value: row.tokens,
+              }))}
+              centerLabel={t('statsUnitTokens')}
+              centerValue={formatTokens(breakdownSum)}
+              ariaLabel={t('contextBreakdownTitle')}
+            />
+            <ul className={styles.compositionLegend}>
+              {breakdownRows.map((row, index) => (
+                <li key={row.key} className={styles.compositionItem}>
+                  <span className={styles.swatch} data-index={(index % 5) + 1} aria-hidden />
+                  <span className={styles.compositionLabel}>{row.label}</span>
+                  <span className={styles.compositionValue}>
+                    {formatTokens(row.tokens)} ·{' '}
+                    {((row.tokens / Math.max(1, breakdownSum)) * 100).toFixed(1)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className={styles.empty}>{t('contextBreakdownEmpty')}</div>
+        )}
+        <div className={styles.note}>{t('contextBreakdownHint')}</div>
       </section>
 
       <section className={styles.section}>

@@ -15,6 +15,7 @@ import {
   IconRefreshOutline16,
   IconSearchWarningOutline16,
   IconChartOutline16,
+  IconRobotOutline16,
   IconSettingsOutline16,
   IconThinkOutline16,
   IconUploadOutline14,
@@ -99,6 +100,8 @@ import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import { ParamControl } from './ParamControls.js'
 import { StatsSettings } from './StatsSettings.js'
+import { AgentToolsSetting } from './AgentToolsSetting.js'
+import { WorkspaceSetting } from './WorkspaceSetting.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
@@ -146,6 +149,16 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'attachmentPoison',
     label: 'settingDialogAsideAttachmentPoisonOptionLabel',
     icon: <IconPaperclipOutline16 />,
+  },
+  {
+    value: 'agentTools',
+    label: 'settingDialogAsideAgentToolsOptionLabel',
+    icon: <IconRobotOutline16 />,
+  },
+  {
+    value: 'workspace',
+    label: 'settingDialogAsideWorkspaceOptionLabel',
+    icon: <IconBrowseOutline16 />,
   },
   { value: 'stats', label: 'settingDialogAsideStatsOptionLabel', icon: <IconChartOutline16 /> },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
@@ -229,6 +242,10 @@ const SettingsContent = () => {
             <AttachmentsSetting />
           ) : section === 'attachmentPoison' ? (
             <AttachmentPoisonSettings />
+          ) : section === 'agentTools' ? (
+            <AgentToolsSetting />
+          ) : section === 'workspace' ? (
+            <WorkspaceSetting />
           ) : section === 'stats' ? (
             <StatsSettings />
           ) : section === 'about' ? (
@@ -693,8 +710,23 @@ const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
     {
+      title: 'changelogV265Title',
+      items: [
+        'changelogV265Workspace',
+        'changelogV265WorkspaceTools',
+        'changelogV265Defaults',
+        'changelogV265Breakdown',
+        'changelogV265Billing',
+        'changelogV265Apk',
+      ],
+    },
+    {
       title: 'changelogV264Title',
       items: [
+        'changelogV264Tools',
+        'changelogV264ToolLoop',
+        'changelogV264ToolApproval',
+        'changelogV264ToolCompat',
         'changelogV264Ledger',
         'changelogV264Charts',
         'changelogV264Export',

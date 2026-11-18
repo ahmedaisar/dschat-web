@@ -48,11 +48,14 @@
 
 一个纯静态的 DeepSeek 网页聊天前端：多会话、流式回答、深度思考、联网搜索、链接阅读、附件、语音、Markdown / KaTeX / Mermaid、中英文与明暗主题、历史导入导出——这些原版功能全部保留，没有删减。
 
-> 当前版本：**2.6.4**
+> 当前版本：**2.6.5**
 
 在这个基础上，本仓库把原版里写死的限制改成可配置项，并补上了一整套越狱、实验与上下文管理能力：
 
 - **解除限制与提示词**：解除限制模式、默认破限文档 / GODMODE 预设、每轮静默注入系统提示词、实验性中文翻译；
+- **浏览器工具**：从 DeepSeek-Agent 移植时间、定位、天气、通知、剪贴板、抓网页、生成文件、打开链接与可视化组件，十项能力各自开关；
+- **虚拟工作区**：浏览器 localStorage 里的长期文件库，可新建 / 编辑 / 删除、单文件下载、整包导入导出，并配有 5 个工作区工具；
+- **统计与上下文**：用量账本、趋势 / 热力 / 小时分布、上下文分类构成（系统提示词、工具定义、消息、思考、工具调用 / 结果、附件）与计费口径；
 - **自定义思维链**：预先写好推理步骤，关闭深度思考时直接注入 system 并在回复上方显示，开启时作为实验性引导；
 - **高级引擎**：思考强度 0–4 档、输入扰动（33 种技术，可单技术或按档位生成变体）、AutoTune 自动调参、STM 输出整形、一键自动越狱（被拒绝自动换组合重试）；
 - **越狱实验台**：本地 MCP + EasyJailbreak 攻击器，多路提示词赛跑、变体赛跑（预算上限 + 开跑确认）、结果导入导出；
@@ -106,7 +109,7 @@
 
 ### 3.1 设置页结构
 
-设置页从原来的「通用设置 / 数据管理」两组扩到十三组：
+设置页从原来的「通用设置 / 数据管理」两组扩到十五组：
 
 | 分组       | 内容                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------- |
@@ -119,6 +122,8 @@
 | **记忆**   | 长期记忆、自动提炼、网状记忆库、导入导出、关系图、向量维度、检索权重、搜索调试                        |
 | **附件**   | 附件限制开关、单文件大小、单会话数量、扩展名白名单                                                    |
 | **附件投毒** | 上传前改写附件：文本正文 / 图片文字 / DOCX / 元数据 / 文件尾 / 文件名 / 伴随文本附件                |
+| **浏览器工具** | 一个主开关 + 十项独立开关：时间日期、网络定位、天气查询、发送通知、读 / 写剪贴板、抓取网页、生成文件、打开链接、生成可视化组件 |
+| **工作区** | 浏览器本地的虚拟文件库：新建 / 编辑 / 删除文件、单文件下载、整包导入（合并或覆盖）与导出 |
 | **统计**   | 用量概览与范围切换、每日趋势柱状图、8 周活跃热力图、输入构成环、按模型拆分、上下文统计管理          |
 | 数据管理   | API Key、导入、导出、恢复默认设置、删除全部对话                                                       |
 | 关于       | 仓库地址、演示地址、上游项目                                                                          |
@@ -465,10 +470,52 @@ Persona（官方身份分块）
 - **附加用量**：联网搜索、文档解析页数、语音合成字符与语音识别秒数——token 统计覆盖不到的计费项。
 - **上下文统计管理**：当前会话上下文对照模型窗口与压缩阈值，下面是记录中的会话表格，含上下文体量、窗口占比与最近请求时间；可清除单条、清空全部记录、导出 JSON / CSV、清空用量账本。
 - **账本 v2**：每天记录里增加 24 小时直方图与会话维度拆分；旧版 v1 账本读取时按缺省值补齐，升级不需要迁移脚本；损坏的 JSON 当作空账本处理，不会带崩页面。
+- **上下文分类**：把当前会话最近一轮请求拆成系统提示词 / 工具定义 / 用户消息 / 模型回复 / 模型思考 / 工具调用 / 工具结果 / 附件，各自给出估算 token 与占比；估算按字符权重，准确用量仍以 KPI 区服务端上报的数字为准。
+- **计费口径**：按模型列出未命中 / 命中 / 输出的单价（元 / 百万 token），并摊开联网搜索、文档解析、语音合成与识别的单价，标注工作日高峰翻倍规则，账单对不上时可以直接对照。
 
 **输入栏会话统计弹窗**新增本次会话输出趋势（迷你折线 + 最新 / 平均 / 最长）、用于横向对比的「最近 7 天用量」、输入构成环、附加用量卡（搜索 / 抓取 / 解析文件与页数 / 语音字符 / 语音秒数），以及带剩余窗口与压缩阈值的上下文压力表；底部可直接跳到设置 → 统计。
 
 **API Key 脱敏**：越狱实验台不再渲染完整 Key，改成 `sk-****` 加末四位，并提供「在设置中修改」跳到设置 → 数据管理，和设置页自己保存 Key 的掩码展示保持一致。
+
+### 3.24 浏览器 Agent 工具
+
+**位置：** 设置 → **浏览器工具**。移植自 `DeepSeek-Agent` 的 browser / widget 工具，只保留浏览器能力；MCP 工具、子 Agent 与工作区（桌面端）工具按要求没有移植。
+
+| 工具 | 做什么 | 说明 |
+| --- | --- | --- |
+| 时间日期 | 本地化日期、ISO 时间、星期与时区偏移，可指定 IANA 时区 | 只读，不联网 |
+| 网络定位 | 经纬度、精度与逆地理得到的城市名 | 浏览器会弹定位授权 |
+| 天气查询 | Open-Meteo 当前天气 + 1–7 天预报，可传城市名或经纬度 | 无需 API Key；都不传时尝试定位 |
+| 发送通知 | 系统桌面通知 | 首次使用请求权限 |
+| 读取剪贴板 | 返回剪贴板纯文本 | 执行前需要确认 |
+| 写入剪贴板 | 把文本写进剪贴板 | 会写入本机 |
+| 抓取网页 | 抓取页面正文并转纯文本，限制字符数 | 受目标站点 CORS 限制 |
+| 生成文件 | 产出可预览、可下载的文件（Markdown / HTML / CSV / JSON / SVG / 代码） | 执行前需要确认；只存在本机 |
+| 打开链接 | 在新标签页打开 URL | 可能被弹窗策略拦截 |
+| 生成可视化组件 | 在沙箱 iframe 里渲染自包含的可交互 HTML | 沙箱没有同源权限，读不到聊天页面 |
+
+- **每一项都能单独开关。** 主开关关闭时一个工具都不下发；关掉某一项后模型完全看不到它，若模型凭历史记忆调用，执行阶段会直接拒绝并说明原因，不会真的执行。
+- **工具往返发生在同一条回复里**：模型给出 `tool_use`，页面本地执行，结果作为 `tool_result` 回传后继续生成（最多 4 轮）。每一轮都是一次真实请求，token 按轮计费。
+- **工具卡片**展示工具名、参数摘要、状态与耗时，展开可看原始参数与结果；产物在卡片下方：文件给预览与下载，组件直接在沙箱 iframe 里渲染，可运行脚本但读不到聊天页面数据。
+- **执行确认**：读取剪贴板与生成文件会先弹窗展示完整参数，可勾选「本次会话都允许」；拒绝会以错误结果回传给模型，回复不会卡住。
+- **环境检测**：通知、定位、剪贴板在当前浏览器不可用时会标注并禁用对应开关，而不是等到调用时才失败。
+- 全部在本机完成：工具结果与产物随回复保存在本地，历史导出包里不含这些字段。
+
+### 3.25 虚拟工作区
+
+**位置：** 设置 → **工作区**。完全活在浏览器存储里的文件库，不需要后端也不碰真实磁盘，让 Agent 有一个可以跨对话长期保存笔记、报告与生成文件的地方。
+
+| 组成 | 行为 |
+| --- | --- |
+| 文件 | 只支持文本：新建、编辑（改路径即重命名）、删除、单文件下载 |
+| 限制 | 单文件 20 万字符、总量 150 万字符、最多 200 个文件；设置页有实时占用条 |
+| 导入 / 导出 | 整包以 JSON 往返；导入可选合并（同名覆盖）或覆盖全部 |
+| 路径 | 只允许相对路径，拒绝 `..`、绝对路径与盘符，避免出现奇怪的键名 |
+| 工作区工具 | `list_workspace`、`read_workspace_file`、`write_workspace_file`、`diff_workspace_file`、`delete_workspace_file`；写入与删除需要确认，diff 以文件进入工作区时的内容为基线 |
+| 默认值 | **关闭**。Agent 主开关与工作区开关都从关闭开始，全新安装不会下发任何工具 |
+
+- 关掉工作区后，即使 Agent 主开关打开，模型也看不到任何工作区工具；若模型凭历史调用，执行阶段会直接拒绝。
+- 这里的内容不会上传。历史导出包不含工作区，清浏览器数据前请自行导出备份。
 
 ---
 
@@ -489,6 +536,9 @@ Persona（官方身份分块）
 | 其他原版功能         | —                       | 搜索、附件、分支、导入导出、朗读、主题、双语等全部保留 | 同默认                     |
 | 联网搜索             | 服务端执行              | 默认保留；搜索投毒可接管或改写展示                      | 同默认                     |
 | 自定义思维链         | 无此设置                | 默认关；启用后注入 system，关闭深度思考时回复上方显示「已注入思维链」 | 同默认                     |
+| 浏览器工具           | 无此能力                | 默认关；开启后把勾选的工具声明给模型，本地执行并回传结果 | 同默认                     |
+| 虚拟工作区           | 无此能力                | 默认关；开启后 Agent 可读写 localStorage 虚拟文件，需确认写入 / 删除 | 同默认                     |
+| 上下文分类           | 无此统计                | 每个会话记录最近一轮的 8 类构成，仅展示不进入请求 | 同默认                     |
 
 ---
 
@@ -537,6 +587,13 @@ Persona（官方身份分块）
 | 记忆   | 网状记忆检索       | 开               | `chat-demo:memory-bank-enabled`            | 不受影响             |
 | 记忆   | 注入条数           | 4                | `chat-demo:memory-bank-limit`              | 不受影响             |
 | 记忆   | 向量维度           | 256              | `chat-demo:memory-bank-dimension`          | 不受影响             |
+| 浏览器工具 | 启用浏览器工具 | 关           | `chat-demo:agent-tools-enabled`          | 不受影响             |
+| 浏览器工具 | 单项工具开关   | 全开（随主开关） | `chat-demo:agent-tool-flags`         | 不受影响             |
+| 工作区 | 启用工作区         | 关               | `chat-demo:workspace-enabled`              | 不受影响             |
+| 工作区 | 工作区文件         | 空               | `chat-demo:workspace`                      | 不受影响             |
+| 统计   | 用量账本（自动）   | 空               | `chat-demo:usage-ledger`                   | 不受影响             |
+| 统计   | 上下文占用（自动） | 空               | `chat-demo:context-usage`                  | 不受影响             |
+| 统计   | 上下文分类（自动） | 空               | `chat-demo:context-breakdown`              | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 
@@ -572,6 +629,29 @@ Persona（官方身份分块）
 
 附件投毒只改变上传到 Files API 的文件字节，不改变请求体结构；附件仍以 `file_id` 引用。
 
+开启浏览器工具 / 工作区后，`tools` 追加客户端工具定义（名称、说明与参数 schema），模型返回 `tool_use` 时由页面本地执行，再把结果作为 `tool_result` 追加到下一轮请求：
+
+```json
+{
+  "tools": [
+    { "type": "deepseek_read_url", "name": "deepseek_read_url" },
+    {
+      "name": "get_weather",
+      "description": "查询城市天气（Open-Meteo，无需 API Key）…",
+      "input_schema": { "type": "object", "properties": { "location": { "type": "string" } } }
+    }
+  ],
+  "messages": [
+    { "role": "latest_reminder", "content": "2026-11-18,星期二,北京市,Web,中文" },
+    { "role": "user", "content": "杭州今天热吗" },
+    { "role": "assistant", "content": [{ "type": "tool_use", "id": "toolu_1", "name": "get_weather", "input": { "location": "杭州" } }] },
+    { "role": "user", "content": [{ "type": "tool_result", "tool_use_id": "toolu_1", "content": "地点：杭州…" }] }
+  ]
+}
+```
+
+客户端工具往返最多 4 轮，每轮都是一次独立请求（token 按轮计费）；工具调用与结果不进历史上下文，导出包也不含工具卡片。
+
 越狱模式 + 调过参数（只列与上一例不同的字段）：
 
 ```json
@@ -602,6 +682,16 @@ Persona（官方身份分块）
 | [`src/components/settings/StatsSettings.tsx`](src/components/settings/StatsSettings.tsx)           | 设置 → 统计：KPI、趋势柱状图、热力图、构成环与上下文管理                                                              |
 | [`src/components/stats/charts.tsx`](src/components/stats/charts.tsx)                               | 手写 SVG / CSS 图表：柱状图、热力图、环形图、迷你折线、压力表                                                          |
 | [`src/services/api/mask.ts`](src/services/api/mask.ts)                                             | API Key 脱敏（`sk-****` + 末四位），实验台与其它只读展示共用                                                          |
+| [`src/services/agent/tools.ts`](src/services/agent/tools.ts)                                       | 浏览器工具注册表与执行器（时间、定位、天气、通知、剪贴板、抓网页、文件、链接、组件）                                   |
+| [`src/services/agent/workspaceTools.ts`](src/services/agent/workspaceTools.ts)                     | 工作区工具：列出 / 读取 / 写入 / 删除 / diff                                                                           |
+| [`src/services/agent/agentToolSettings.ts`](src/services/agent/agentToolSettings.ts)               | 浏览器工具与工作区工具的开关状态（主开关 + 逐项）                                                                     |
+| [`src/services/agent/runTool.ts`](src/services/agent/runTool.ts)                                   | 单次工具执行：确认、超时、结果归一化                                                                                  |
+| [`src/services/agent/approval.ts`](src/services/agent/approval.ts)                                 | 工具执行前的人工确认队列                                                                                              |
+| [`src/services/workspace/store.ts`](src/services/workspace/store.ts)                               | localStorage 虚拟文件库：路径校验、容量限制、导入导出、diff 基线                                                      |
+| [`src/services/chat/contextBreakdown.ts`](src/services/chat/contextBreakdown.ts)                   | 上下文 8 类分类统计与持久化                                                                                            |
+| [`src/components/agent/ToolCallCards.tsx`](src/components/agent/ToolCallCards.tsx)                 | 回复里的工具卡片：状态、参数、结果、产物（文件 / 沙箱组件）                                                            |
+| [`src/components/settings/AgentToolsSetting.tsx`](src/components/settings/AgentToolsSetting.tsx)   | 设置 → 浏览器工具 / 工作区工具开关                                                                                     |
+| [`src/components/settings/WorkspaceSetting.tsx`](src/components/settings/WorkspaceSetting.tsx)     | 设置 → 工作区：文件列表、编辑器、导入导出                                                                              |
 | [`src/services/chat/store.ts`](src/services/chat/store.ts)                                         | 请求体组装（system / 参数 / safety_check / 工具）、自定义思维链注入、回复结束时的防撤回处理、续写守卫                  |
 | [`src/services/chat/reply.ts`](src/services/chat/reply.ts)                                         | `settleReply`（拒绝内容保留）、`hasReplyContent`、`rewriteReplyBlocks`（改写写回）、`canContinueReply`（继续生成判断） |
 | [`src/services/chat/describe.ts`](src/services/chat/describe.ts)                                   | 拒绝提示：保留内容时给提示行，否则给模板答复                                                                           |
@@ -654,6 +744,9 @@ Persona（官方身份分块）
 - 附件投毒配置只存 localStorage；原始附件在本机，上传的是处理后的副本，伴随文本附件会作为普通文件随消息发送；
 - 会话与附件原件：IndexedDB，按浏览器用户配置与站点源隔离；
 - 出站请求只有你配置的 API 地址（默认 `https://api.deepseek.com`）：`/models` 校验 Key、`/anthropic/v1/messages` 对话、`/anthropic/v1/files` 附件、ASR / TTS 语音接口；
+- 浏览器工具 / 工作区：开关在 localStorage，工作区文件在 `chat-demo:workspace`，工具结果与产物随回复写入 IndexedDB；
+- 统计：`chat-demo:usage-ledger`、`chat-demo:context-usage`、`chat-demo:context-breakdown` 只存聚合数字，不含对话正文；
+- 工具会向第三方服务发起请求：Open-Meteo（天气）、BigDataCloud（逆地理）、你让 Agent 抓取的网页；其余工具都在本地完成；
 - 没有统计、没有埋点、没有第三方脚本、没有中转服务器；
 - 历史导入导出为 ZIP，导出包含会话与本地图片原件，不包含 API Key 与设置；归档格式与保留范围见[历史导入导出说明](src/services/chat/history/README.md)。
 
@@ -695,11 +788,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 
 ### 9.1 Android APK
 
-仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.4.apk`：
+仓库内置一个原生 WebView 壳，APK 产物为 `android/deepseek-unrestricted-2.6.5.apk`：
 
 - 应用在 `http://127.0.0.1:18765` 启动本地静态服务器，再加载 `assets/public`，给 localStorage / IndexedDB / fetch 一个稳定的安全来源；
 - 支持文件选择、麦克风权限、返回键和外部链接跳转；
-- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.4 / 264），依次构建 Web、APK 并签名：
+- 构建需要 Android SDK 34、build-tools 34.0.0 与 JDK 17（JDK 27 会让 d8 崩溃）。仓库根目录提供一键脚本，会读取 `package.json` 的版本（当前 2.6.5 / 265），依次构建 Web、APK 并签名：
   ```sh
   KS_PASS=... ./构建APK.sh
   ```
@@ -710,7 +803,7 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
   pnpm build
   KS_PASS=... KEY_PASS=... ./android/build-apk.sh
   ```
-- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 264；
+- APK 使用 `xiaohuangbo.jks`、别名 `xiaohuangbo` 签名，versionCode 265；
 - **Python 后端不会在 APK 内执行**：`android/assets/backend` 只打包 `mcp-server` 与 EasyJailbreak 源码供参考；实验台仍需在电脑或服务器上运行后端，并在「实验台」里把地址改为 `http://<电脑IP>:8765/mcp`。手机页面的 Origin 是 `http://127.0.0.1:18765`，已在后端允许来源内。
 
 ---
@@ -752,6 +845,11 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 33. **开启深度思考时自定义思维链是实验性**：服务端 thinking 优先，可能忽略或重写这些步骤，不保证与直接注入同样效果；此时不重复显示「已注入思维链」卡片，以服务端 thinking 为准。
 34. **自定义思维链只作用于聊天请求**：多路赛跑、变体赛跑、长对话压缩、记忆提炼等独立调用使用各自的系统提示词，不读取该设置；聊天首轮同时生成标题，仍会注入。
 35. **「已注入思维链」卡片只保存在本机会话**：历史导出包不含该展示字段，重新导入后不显示；续写沿用原回复快照，重新生成使用当前设置。
+36. **浏览器工具受浏览器能力限制**：抓网页受目标站点 CORS 限制；通知、定位、剪贴板需要权限，APK 的 WebView 里通知通常不可用（自动标注并禁用）；「打开链接」可能被弹窗策略拦截。
+37. **工具往返按轮计费**：一轮回复最多 4 次工具往返，每次都是真实请求，token 与费用按轮累加；关闭主开关后模型完全看不到工具。
+38. **工作区只存文本**：单文件 20 万字符、总量 150 万字符、最多 200 个文件，受浏览器 localStorage 容量限制；清空或覆盖导入前请先导出备份。
+39. **工作区不随历史导出**：历史导出包只含会话与图片，工作区与工具卡片都不在其中；换浏览器或清站点数据会丢失工作区。
+40. **上下文分类是估算**：按字符权重计算（中文 1 字 1 token、其余 4 字符 1 token），与服务端计费口径可能有差异，准确用量以 KPI 区服务端上报数字为准。
 
 ---
 

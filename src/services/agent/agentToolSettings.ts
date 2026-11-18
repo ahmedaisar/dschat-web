@@ -1,0 +1,112 @@
+import { create } from 'zustand'
+import { allAgentTools, registerWorkspaceTools, type AgentTool } from './tools.js'
+import { WORKSPACE_TOOLS } from './workspaceTools.js'
+import { isWorkspaceEnabled } from '../workspace/store.js'
+
+const WORKSPACE_IDS = new Set(WORKSPACE_TOOLS.map((tool) => tool.id))
+registerWorkspaceTools(() => WORKSPACE_TOOLS)
+
+/**
+ * 浏览器工具的开关状态。
+ *
+ * 主开关关闭时一个工具都不下发；主开关打开后按每个工具自己的开关过滤。
+ * 只存本机 localStorage，和 API Key 分开保存。
+ */
+
+const ENABLED_KEY = 'chat-demo:agent-tools-enabled'
+const FLAGS_KEY = 'chat-demo:agent-tool-flags'
+
+type Flags = Record<string, boolean>
+
+const readFlags = (): Flags => {
+  try {
+    const raw = localStorage.getItem(FLAGS_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {}
+    }
+    const flags: Flags = {}
+    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (allAgentTools().some((tool) => tool.id === id)) {
+        flags[id] = value === true
+      }
+    }
+    return flags
+  } catch {
+    return {}
+  }
+}
+
+const write = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // 隐私模式下写不进去也不影响本次会话
+  }
+}
+
+type AgentToolsState = {
+  /** 主开关：关闭后所有浏览器工具都不下发 */
+  enabled: boolean
+  /** 单个工具开关；缺省视为开启 */
+  flags: Flags
+}
+
+export const useAgentTools = create<AgentToolsState>(() => ({
+  enabled: localStorage.getItem(ENABLED_KEY) === 'true',
+  flags: readFlags(),
+}))
+
+export const setAgentToolsEnabled = (enabled: boolean) => {
+  write(ENABLED_KEY, String(enabled))
+  useAgentTools.setState({ enabled })
+}
+
+export const setAgentToolEnabled = (id: string, enabled: boolean) => {
+  const flags = { ...useAgentTools.getState().flags, [id]: enabled }
+  write(FLAGS_KEY, JSON.stringify(flags))
+  useAgentTools.setState({ flags })
+}
+
+/**
+ * 单个工具是否开启：没单独设置过就跟随主开关。
+ * 工作区工具还额外要求工作区开关打开——工作区默认关闭。
+ */
+export const isAgentToolEnabled = (id: string): boolean => {
+  const state = useAgentTools.getState()
+  if (!state.enabled) {
+    return false
+  }
+  if (WORKSPACE_IDS.has(id) && !isWorkspaceEnabled()) {
+    return false
+  }
+  return state.flags[id] !== false
+}
+
+/** 当前实际会下发给模型的工具 */
+export const enabledAgentTools = (): AgentTool[] =>
+  allAgentTools().filter((tool) => isAgentToolEnabled(tool.id))
+
+/** 工作区工具是否至少有一项可用，设置页用来提示 */
+export const workspaceToolsAvailable = (): boolean =>
+  isWorkspaceEnabled() && WORKSPACE_TOOLS.some((tool) => isAgentToolEnabled(tool.id))
+
+/** 全部打开 / 全部关闭，设置页的快捷按钮用 */
+export const setAllAgentTools = (enabled: boolean) => {
+  const flags: Flags = {}
+  for (const tool of allAgentTools()) {
+    flags[tool.id] = enabled
+  }
+  write(FLAGS_KEY, JSON.stringify(flags))
+  useAgentTools.setState({ flags })
+}
+
+/** 恢复默认：关闭主开关并把每个工具恢复为开启 */
+export const resetAgentTools = () => {
+  write(ENABLED_KEY, 'false')
+  write(FLAGS_KEY, '{}')
+  useAgentTools.setState({ enabled: false, flags: {} })
+}

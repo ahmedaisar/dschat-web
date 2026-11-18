@@ -482,3 +482,35 @@
   color: var(--dsw-alias-label-primary);
   font-weight: 600;
 }
+
+/* 计费口径：单价与说明左名右值 */
+.rateList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 18px;
+
+  &:nth-child(odd) {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.rateName {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.rateValue {
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+}

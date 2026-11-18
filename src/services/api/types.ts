@@ -127,6 +127,9 @@ export type ServerToolBlock =
   | WebSearchToolResultBlock
   | WebFetchToolResultBlock
 
+/** 工具参数 schema：沿用 JSON Schema 的最小子集 */
+export type JsonSchema = ClientToolDefinition['input_schema']
+
 /** 用于识别客户端工具调用的内容块类型 */
 export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: unknown }
 
@@ -155,18 +158,38 @@ export type WebSearchToolResultBlockParam = WebSearchToolResultBlock
 /** 只回传 read_link 结果；成功时原样保留 signature，供服务端解密恢复网页上下文 */
 export type WebFetchToolResultBlockParam = WebFetchToolResultBlock
 
+/** 客户端工具调用块：由本地执行，结果通过 tool_result 回传 */
+export type ClientToolUseBlockParam = {
+  type: 'tool_use'
+  id: string
+  name: string
+  input: unknown
+}
+
+/** 客户端工具结果块，作为 user 消息的一部分回传 */
+export type ToolResultBlockParam = {
+  type: 'tool_result'
+  tool_use_id: string
+  content: string
+  is_error?: boolean
+}
+
 export type AssistantBlockParam =
   | TextBlockParam
   | ThinkingBlock
   | ServerToolUseBlockParam
   | WebSearchToolResultBlockParam
   | WebFetchToolResultBlockParam
+  | ClientToolUseBlockParam
 
 /** 末尾 assistant 自动触发继续生成，无需 prefix 字段 */
 export type MessageParam =
   /** Chat Engine 扩展角色，位于对应 user 前；需服务端支持 latest_reminder。 */
   | { role: 'latest_reminder'; content: string }
-  | { role: 'user'; content: string | (FileBlockParam | TextBlockParam)[] }
+  | {
+      role: 'user'
+      content: string | (FileBlockParam | TextBlockParam)[] | ToolResultBlockParam[]
+    }
   | { role: 'assistant'; content: AssistantBlockParam[] }
 
 /** 开启联网搜索与边想边搜 */
@@ -179,6 +202,21 @@ export type DeepseekWebSearchTool = {
 export type DeepseekReadUrlTool = {
   type: 'deepseek_read_url'
   name: 'deepseek_read_url'
+}
+
+/**
+ * 客户端工具声明：与内置的 server tool 不同，这些工具由页面自己执行，
+ * 模型只负责决定何时调用、传什么参数。
+ */
+export type ClientToolDefinition = {
+  name: string
+  description: string
+  input_schema: {
+    type: 'object'
+    properties: Record<string, unknown>
+    required?: string[]
+    additionalProperties?: boolean
+  }
 }
 
 export type CreateMessageRequest = {
@@ -194,7 +232,7 @@ export type CreateMessageRequest = {
   top_p?: number
   /** 本次回复的输出上限（含思考 token）；不传时由服务端决定 */
   max_tokens?: number
-  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
+  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientToolDefinition)[]
   /** 省略时不携带（等同 low 档默认检查）；high 开启基础风控，默认档下发 high */
   safety_check?: { level: 'high' | 'low' }
   title?: { enabled: boolean }
@@ -222,6 +260,8 @@ export type OutputBlockStart = TextBlock | ThinkingBlock | ServerToolBlock | Too
 
 export type ContentBlockDelta =
   | { type: 'text_delta'; text: string }
+  /** 客户端工具参数分片，按 SSE 顺序拼接后 JSON.parse */
+  | { type: 'input_json_delta'; partial_json: string }
   | { type: 'thinking_delta'; thinking: string }
   | { type: 'signature_delta'; signature: string }
   | { type: 'citations_delta'; citation: TextCitation }

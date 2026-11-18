@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
-import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import type { ChatModel, CreateMessageRequest, MessageParam } from '../api/types.js'
 import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
@@ -19,9 +19,13 @@ import {
 import { composeSystemPrompt } from './systemPrompt.js'
 import { customCotSnapshot, formatCustomCotContext } from './customCot.js'
 import { noteContextUsage } from './contextUsage.js'
+import { buildContextBreakdown, noteContextBreakdown } from './contextBreakdown.js'
 import { noteAutoTune, useFeedback } from './feedbackStore.js'
 import { beginLiveRun, finishLiveRun, noteDelta, noteUsage } from './liveStats.js'
 import { estimatePages, noteRunTiming } from './sessionStats.js'
+import { enabledAgentTools } from '../agent/agentToolSettings.js'
+import { createToolCall, runAgentToolCall, toolResultForModel } from '../agent/runTool.js'
+import type { ChatToolCall } from '../agent/types.js'
 import { autoCompressNeeded, compressSession } from './compression.js'
 import { extractMemoriesFromTurn, formatSavedMemories } from './savedMemory.js'
 import { formatMemoryBankContext } from './memoryBank.js'
@@ -110,6 +114,28 @@ const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
   }
   return tools
 }
+
+/**
+ * 本轮下发的工具列表：服务端工具 + 已开启的浏览器工具。
+ * 浏览器工具由设置里的主开关与逐项开关过滤，关闭时模型完全看不到它。
+ */
+const requestTools = (search: boolean, allowAgentTools: boolean): CreateMessageRequest['tools'] => {
+  const tools = serverTools(search)
+  if (!allowAgentTools) {
+    return tools
+  }
+  for (const tool of enabledAgentTools()) {
+    tools.push({
+      name: tool.id,
+      description: tool.description,
+      input_schema: tool.inputSchema,
+    })
+  }
+  return tools
+}
+
+/** 一轮里客户端工具往返的最大次数，防止模型来回调用停不下来 */
+const MAX_TOOL_ROUNDS = 4
 
 /**
  * 回复结束：防撤回开启时保留服务端已下发的内容，
@@ -1377,6 +1403,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   }
   streamFlushes.set(sessionId, () => flush(true))
 
+  /** 客户端工具往返：每轮把 tool_use 收齐，执行后作为 tool_result 追加到下一轮请求 */
+  const toolMessages: MessageParam[] = []
+  let toolRounds = 0
   try {
     for (let attempt = 0; ; attempt += 1) {
       /** 附件补齐前出错属于上传失败，请求还没有发出 */
@@ -1465,15 +1494,18 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         const requestReminder = injectPromptEveryTurn
           ? `${latestReminder}\n\n${baseSystemText}`
           : latestReminder
-        const messages = toRequestMessages(
-          prepared.history,
-          prepared.question,
-          prepared.prefix,
-          initial.thinking ?? false,
-          requestReminder,
-          getSession(sessionId)?.compression,
-          thinkingAsBody
-        )
+        const messages = [
+          ...toRequestMessages(
+            prepared.history,
+            prepared.question,
+            prepared.prefix,
+            initial.thinking ?? false,
+            requestReminder,
+            getSession(sessionId)?.compression,
+            thinkingAsBody
+          ),
+          ...toolMessages,
+        ]
         const effort = initial.thinking ? reasoningEffort : 0
         // 自动调参只覆盖 temperature 与 top_p：Anthropic 兼容接口不接受其余采样参数。
         const autoTuned =
@@ -1491,6 +1523,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         if (autoTuned) {
           noteAutoTune(initial.id, autoTuned.detectedContext, autoTuned.params)
         }
+        // 工具列表在发出前先定下来：上下文分类要用同一份定义，不能发给模型的和统计的不一致
+        const tools = requestTools(
+          (initial.search ?? false) && !shouldTakeoverSearch(poisonConfig),
+          true
+        )
+        noteContextBreakdown(
+          sessionId,
+          buildContextBreakdown({ system: systemText, tools, messages })
+        )
         const events = streamMessage(
           apiKey ?? '',
           {
@@ -1511,18 +1552,25 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
             safety_check: safetyCheck(unrestricted || autoJailbreak, skipSafetyCheck),
             // 接管搜索时只保留阅读链接工具，模型只能看到本地注入的结果
-            tools: serverTools((initial.search ?? false) && !shouldTakeoverSearch(poisonConfig)),
+            tools,
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },
           controller.signal
         )
         const blockIndexes = new Map<number, number>()
+        /** 本轮客户端工具调用：index → 累积中的参数 JSON */
+        const toolSlots = new Map<number, { id: string; name: string; json: string }>()
         for await (const rawEvent of events) {
           const event = poisonStreamEvent(rawEvent, poisonConfig)
           receivedContent ||= event.type === 'content_block_start'
           if (event.type === 'message_start') {
             noteContextUsage(sessionId, event.message.usage)
             noteUsage(event.message.usage, 'start')
+          } else if (event.type === 'content_block_start') {
+            if (event.content_block.type === 'tool_use') {
+              const block = event.content_block
+              toolSlots.set(event.index, { id: block.id, name: block.name, json: '' })
+            }
           } else if (event.type === 'content_block_delta') {
             if (event.delta.type === 'text_delta') {
               firstTokenAt ??= Date.now()
@@ -1530,6 +1578,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             } else if (event.delta.type === 'thinking_delta') {
               firstTokenAt ??= Date.now()
               noteDelta('thinking', event.delta.thinking)
+            } else if (event.delta.type === 'input_json_delta') {
+              const slot = toolSlots.get(event.index)
+              if (slot) {
+                slot.json += event.delta.partial_json
+              }
             }
           } else if (event.type === 'message_delta') {
             noteUsage(event.usage, 'delta')
@@ -1556,6 +1609,87 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settle(reply, 'done', Date.now())
+        // 客户端工具：模型请求了工具、且还有额度时，本地执行后带着结果再请求一轮
+        if (
+          reply.stopReason === 'tool_use' &&
+          toolSlots.size > 0 &&
+          toolRounds < MAX_TOOL_ROUNDS &&
+          !controller.signal.aborted
+        ) {
+          toolRounds += 1
+          const calls: ChatToolCall[] = [...toolSlots.values()].map((slot) => {
+            let input: unknown = {}
+            if (slot.json.trim() !== '') {
+              try {
+                input = JSON.parse(slot.json)
+              } catch {
+                input = {}
+              }
+            }
+            return createToolCall(slot.id, slot.name, input)
+          })
+          reply = { ...reply, toolCalls: [...(reply.toolCalls ?? []), ...calls] }
+          updateReply(sessionId, reply)
+          const locale = useSettings.getState().locale
+          const results: ChatToolCall[] = []
+          for (const call of calls) {
+            const finished = await runAgentToolCall(call, {
+              signal: controller.signal,
+              locale,
+              onUpdate: (patch) => {
+                reply = {
+                  ...reply,
+                  toolCalls: (reply.toolCalls ?? []).map((item) =>
+                    item.id === call.id ? { ...item, ...patch } : item
+                  ),
+                }
+                updateReply(sessionId, reply)
+              },
+            })
+            results.push(finished)
+            reply = {
+              ...reply,
+              toolCalls: (reply.toolCalls ?? []).map((item) =>
+                item.id === call.id ? finished : item
+              ),
+            }
+            updateReply(sessionId, reply)
+            persist(sessionId)
+          }
+          // 本轮用量先入账，最后一轮由 finally 统一记；否则工具往返的中间轮会漏记
+          if (reply.usage && !titleRequests.has(controller)) {
+            noteDailyUsage(reply.model ?? MODEL, reply.usage)
+            noteLedgerUsage(reply.model ?? MODEL, reply.usage, new Date(), {
+              sessionId,
+              pages: parsedPages(request.question.files),
+            })
+          }
+          if (controller.signal.aborted) {
+            reply = settle(reply, 'stopped', Date.now())
+            break
+          }
+          toolMessages.push(
+            {
+              role: 'assistant',
+              content: results.map((call) => ({
+                type: 'tool_use' as const,
+                id: call.id,
+                name: call.name,
+                input: call.input,
+              })),
+            },
+            {
+              role: 'user',
+              content: results.map((call) => ({
+                type: 'tool_result' as const,
+                tool_use_id: call.id,
+                content: toolResultForModel(call),
+                is_error: call.status === 'error' || call.status === 'rejected',
+              })),
+            }
+          )
+          continue
+        }
         break
       } catch (error) {
         if (controller.signal.aborted) {

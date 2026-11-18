@@ -254,6 +254,26 @@ export const IconSendOutline16 = () => (
   </svg>
 )
 
+/** 浏览器工具：方形机器人头，和 16px 图标网格对齐 */
+export const IconRobotOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="2.75"
+      y="5.25"
+      width="10.5"
+      height="7.5"
+      rx="2.25"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <path d="M8 5.25V3.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <circle cx="8" cy="2.6" r="0.9" fill="currentColor" />
+    <circle cx="5.9" cy="9" r="1" fill="currentColor" />
+    <circle cx="10.1" cy="9" r="1" fill="currentColor" />
+    <path d="M6.4 11.3H9.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+)
+
 /** 统计图表：三根高低不同的柱子，和侧边栏其它 16px 图标同网格 */
 export const IconChartOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
