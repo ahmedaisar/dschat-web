@@ -4,6 +4,7 @@ import { useTranslate } from '../../i18n/index.js'
 import {
   clearWorkspace,
   deleteWorkspaceFile,
+  importWorkspaceFile,
   downloadWorkspaceFile,
   importWorkspace,
   importWorkspaceFiles,
@@ -12,6 +13,7 @@ import {
   setWorkspaceEnabled,
   setWorkspaceMode,
   useWorkspace,
+  refreshWorkspaceQuota,
   workspaceLimits,
   workspaceUsage,
   type WorkspaceFile,
@@ -81,6 +83,7 @@ export const WorkspaceSetting = () => {
   const hydrated = useWorkspace((state) => state.hydrated)
   const persistError = useWorkspace((state) => state.persistError)
   const files = useWorkspace((state) => state.files)
+  const quota = useWorkspace((state) => state.quota)
   const usage = workspaceUsage()
   const limits = workspaceLimits()
   const fileList = Object.values(files).sort((a, b) => a.path.localeCompare(b.path))
@@ -98,10 +101,12 @@ export const WorkspaceSetting = () => {
 
   const refreshStorage = async () => {
     setStorage(await readStorageStatus())
+    await refreshWorkspaceQuota()
   }
 
   useEffect(() => {
     void refreshStorage()
+    void refreshWorkspaceQuota()
   }, [])
 
   const switchMode = async (next: WorkspaceMode) => {
@@ -151,19 +156,32 @@ export const WorkspaceSetting = () => {
 
   /** 导入任意文件：文本与二进制都接受 */
   const onImportFiles = async (list: File[]) => {
-    const payload: { name: string; bytes: Uint8Array; mime: string }[] = []
+    let imported = 0
+    let skipped = 0
+    let oversized = false
     for (const file of list) {
-      payload.push({
-        name: file.name,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-        mime: file.type || '',
-      })
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const result = importWorkspaceFile(file.name, bytes, file.type || '')
+      if (result.ok) {
+        imported += 1
+      } else {
+        skipped += 1
+        if (result.reason === 'tooLarge' || result.reason === 'totalTooLarge') {
+          oversized = true
+        }
+      }
     }
-    const result = importWorkspaceFiles(payload)
-    if (result.imported === 0) {
-      showToast({ key: 'workspaceImportFailed', type: 'error' })
+    if (imported === 0) {
+      showToast({
+        key: oversized ? 'workspaceImportTooLarge' : 'workspaceImportFailed',
+        type: 'error',
+      })
+      return
+    }
+    if (skipped > 0) {
+      showToast({ key: 'workspaceImportPartial', params: { count: imported, skipped } })
     } else {
-      showToast({ key: 'workspaceImported', params: { count: result.imported } })
+      showToast({ key: 'workspaceImported', params: { count: imported } })
     }
   }
 
@@ -331,6 +349,18 @@ export const WorkspaceSetting = () => {
           <span
             style={{ width: `${Math.min(100, Math.round((usage.bytes / limits.total) * 100))}%` }}
           />
+        </div>
+        <div className={styles.limitLine}>
+          {t('workspaceLimitsDynamic', {
+            file: formatBytes(limits.file),
+            total: formatBytes(limits.total),
+          })}
+          {' · '}
+          {mode === 'opfs'
+            ? quota
+              ? t('workspaceLimitsQuota', { quota: formatBytes(quota) })
+              : t('workspaceLimitsFallback')
+            : t('workspaceLimitsLocal')}
         </div>
       </div>
 

@@ -152,6 +152,8 @@ export const en = {
     'The workspace can request persistent storage and shows whether it was granted, plus used space and quota, reducing the risk of automatic eviction',
   changelogV267AnyFiles:
     'The workspace no longer restricts formats: images, PDFs, archives and any other file can be imported and exported, single downloads keep the original bytes, and ZIP archives can round-trip everything; legacy JSON backups still import',
+  changelogV267Capacity:
+    'Workspace capacity is no longer hard-coded: OPFS derives its limits from the browser quota (up to 80% of it, capped at 64 GB total / 256 MB per file) and grows with the quota; a full local storage now tells you to switch to OPFS or clear files',
   changelogV267UsageFix:
     'Fixed clipped and overlapping workspace usage / persistent-storage text under long labels or enlarged font sizes: usage now stacks on two lines and storage status and actions each get their own row',
   changelogV267Apk: 'Built the matching 2.6.7 APK (versionCode 267), signed with xiaohuangbo.jks',
@@ -431,6 +433,9 @@ export const en = {
   workspaceExported: 'Workspace exported',
   workspaceImported: 'Imported {count} files',
   workspaceImportFailed: 'Import failed: not a workspace file exported by this app',
+  workspaceImportPartial: 'Imported {count} files; skipped {skipped} due to capacity or format',
+  workspaceImportTooLarge:
+    'The file exceeds the current capacity limit and was not imported; switch to OPFS or clear some files',
   workspacePathPlaceholder: 'Relative path, e.g. notes/todo.md',
   workspaceContentLabel: 'File content',
   workspaceContentPlaceholder: 'Write the file content here',
@@ -453,6 +458,14 @@ export const en = {
   workspaceSaveFailed_tooLarge: 'File exceeds 200k characters; split it first',
   workspaceSaveFailed_tooManyFiles: 'File limit reached',
   workspaceSaveFailed_totalTooLarge: 'Workspace is full; clear some files first',
+  workspaceSaveFailed_quota:
+    'Browser local storage is full: clear some files, or switch to the OPFS file system for much more room',
+  workspaceLimitsDynamic: 'Limits: {file} per file, {total} total',
+  workspaceLimitsQuota: 'Derived from the browser quota of {quota}, using up to 80%',
+  workspaceLimitsLocal:
+    'Browser local storage cannot be expanded (typically 5–10 MB); switch to OPFS for more room',
+  workspaceQuotaRefresh: 'Refresh capacity',
+  workspaceLimitsFallback: 'The browser has not reported a quota yet; showing the default limit',
   contextBreakdownTitle: 'Context breakdown',
   contextBreakdownEmpty:
     'No breakdown yet; send a turn and it will split into system prompt, tool definitions, messages, thinking and more.',

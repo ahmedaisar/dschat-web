@@ -146,6 +146,8 @@ export const zh = {
     '工作区可申请持久化存储权限，并展示是否已获授权、已用空间与配额，降低浏览器自动清理数据的风险',
   changelogV267AnyFiles:
     '工作区不再限制格式：图片、PDF、压缩包等任意文件都能导入导出，单个下载按原始字节保存；新增 ZIP 整包导出 / 导入，旧版 JSON 备份仍可导入',
+  changelogV267Capacity:
+    '工作区容量不再写死：OPFS 按浏览器实际配额动态计算（最多用 80%，上限 64GB 总量 / 256MB 单文件），配额越大可用越大；本地存储写满时会提示切换 OPFS 或清理文件',
   changelogV267UsageFix:
     '修复工作区用量与持久化状态在长文案 / 放大字号下被裁切、重叠的问题：用量改成上下两行，存储状态与按钮各占一行，长数字自动换行',
   changelogV267Apk: '同步构建 2.6.7 APK（versionCode 267），使用 xiaohuangbo.jks 签名',
@@ -374,6 +376,8 @@ export const zh = {
   workspaceExported: '工作区已导出',
   workspaceImported: '已导入 {count} 个文件',
   workspaceImportFailed: '导入失败：不是本应用导出的工作区文件',
+  workspaceImportPartial: '已导入 {count} 个文件，{skipped} 个因容量或格式被跳过',
+  workspaceImportTooLarge: '文件超过当前容量上限，未导入；可切换到 OPFS 文件系统或清理一些文件',
   workspacePathPlaceholder: '相对路径，例如 notes/todo.md',
   workspaceContentLabel: '文件内容',
   workspaceContentPlaceholder: '在这里写文件内容',
@@ -395,6 +399,12 @@ export const zh = {
   workspaceSaveFailed_tooLarge: '文件超过 20 万字符，请拆分后再保存',
   workspaceSaveFailed_tooManyFiles: '文件数量已达上限',
   workspaceSaveFailed_totalTooLarge: '工作区总容量已满，请先清理文件',
+  workspaceSaveFailed_quota: '浏览器本地存储已满：请清理文件，或切换到 OPFS 文件系统获得更大容量',
+  workspaceLimitsDynamic: '容量上限：{file} / 文件，{total} 总量',
+  workspaceLimitsQuota: '按浏览器配额 {quota} 动态计算，最多使用 80%',
+  workspaceLimitsLocal: '浏览器本地存储无法扩容（通常 5–10MB）；需要更大容量请切换到 OPFS',
+  workspaceQuotaRefresh: '刷新容量',
+  workspaceLimitsFallback: '浏览器暂未返回配额，先按默认上限显示',
   contextBreakdownTitle: '上下文分类',
   contextBreakdownEmpty:
     '还没有分类记录；发一轮对话后这里会按系统提示词、工具定义、消息、思考等拆开显示。',

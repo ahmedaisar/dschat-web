@@ -716,6 +716,7 @@ const ChangelogSetting = () => {
         'changelogV267Cot',
         'changelogV267AnyFiles',
         'changelogV267UsageFix',
+        'changelogV267Capacity',
         'changelogV267Billing',
         'changelogV267WorkspaceOpfs',
         'changelogV267Persist',

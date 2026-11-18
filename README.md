@@ -512,7 +512,7 @@ The text is pre-filled with the built-in `thinking_prompt`: a fresh install, “
 | Piece | Behaviour |
 | --- | --- |
 | Files | Any format: text files can be created and edited inline (renaming by editing the path), while images, PDFs and archives are stored byte-for-byte; everything can be deleted, previewed and downloaded |
-| Limits | Measured in bytes: localStorage allows 2 MB per file, 3 MB total and 200 files; OPFS allows 10 MB per file, 64 MB total and 500 files; the usage bar is live |
+| Limits | Measured in bytes: OPFS scales with the browser's real quota (up to 80% of it, capped at 64 GB total / 256 MB per file), while localStorage is bounded by the browser's 5–10 MB with a 4 MB per-file soft cap; the page shows live usage and the effective limits |
 | Import / export | “Import files” accepts any format (multi-select); “Export ZIP / Import workspace” round-trips everything with binary intact; legacy JSON backups still import. Archive import can merge (same paths overwritten) or replace |
 | Paths | Relative only; `..`, absolute paths and drive letters are rejected so keys stay sane |
 | Workspace tools | `list_workspace`, `read_workspace_file`, `write_workspace_file`, `diff_workspace_file`, `delete_workspace_file` — writes and deletes require confirmation, and the diff compares against the content a file had when it entered the workspace |
@@ -855,7 +855,7 @@ A native WebView shell is included; the built artifact is `android/deepseek-unre
 35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
 36. **Browser tools inherit browser limits**: page fetching is bound by the target site's CORS; notifications, location and clipboard need permissions (notifications are usually unavailable inside the APK WebView and are marked disabled); “open link” can be blocked by popup rules.
 37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
-38. **Workspace capacity depends on the backend**: localStorage allows 2 MB per file and 3 MB total (base64 adds roughly a third), OPFS allows 10 MB per file and 64 MB total; writes over the limit are rejected with an explanation. Export a ZIP before clearing or replacing.
+38. **Workspace capacity**: in OPFS mode the limits derive from `navigator.storage.estimate()` (up to 80% of the quota, capped at 64 GB total / 256 MB per file) and grow with the quota; localStorage cannot be expanded (typically 5–10 MB, and base64 adds roughly a third), so a full write tells you to switch to OPFS. Export a ZIP before clearing or replacing.
 39. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
 41. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
 42. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.

@@ -363,3 +363,11 @@
   line-height: 20px;
   text-align: center;
 }
+
+/* 动态容量说明 */
+.limitLine {
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}

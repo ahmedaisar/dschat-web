@@ -26,13 +26,44 @@ const MODE_KEY = 'chat-demo:workspace-mode'
 /** 工作区底层存储：浏览器 localStorage 或 OPFS 真文件系统 */
 export type WorkspaceMode = 'local' | 'opfs'
 
-/** 单文件 / 总量上限（字节）；localStorage 模式更保守 */
-export const WORKSPACE_LIMITS: Record<
-  WorkspaceMode,
-  { file: number; total: number; files: number }
-> = {
-  local: { file: 2 * 1024 * 1024, total: 3 * 1024 * 1024, files: 200 },
-  opfs: { file: 10 * 1024 * 1024, total: 64 * 1024 * 1024, files: 500 },
+const MB = 1024 * 1024
+const GB = 1024 * MB
+
+/**
+ * 容量上限：
+ * - OPFS 按浏览器实际配额动态计算（留 20% 给其它数据），配额越大可用越大；
+ * - localStorage 无法扩容，给一个接近浏览器真实上限的软限制，写满时明确报错。
+ */
+export type WorkspaceLimits = {
+  file: number
+  total: number
+  files: number
+  /** quota：按 storage.estimate() 算出来的；default：浏览器没给配额时的兜底 */
+  source: 'quota' | 'default'
+}
+
+const LOCAL_LIMITS: WorkspaceLimits = { file: 4 * MB, total: 5 * MB, files: 200, source: 'default' }
+const OPFS_FALLBACK: WorkspaceLimits = {
+  file: 256 * MB,
+  total: 4 * GB,
+  files: 2000,
+  source: 'default',
+}
+
+export const computeWorkspaceLimits = (
+  mode: WorkspaceMode,
+  quota: number | null
+): WorkspaceLimits => {
+  if (mode !== 'opfs') {
+    return LOCAL_LIMITS
+  }
+  if (!quota || !Number.isFinite(quota) || quota <= 0) {
+    return OPFS_FALLBACK
+  }
+  // 最多用 80% 配额；总量不超过 64GB，单文件不超过 256MB（单个文件要整体读入内存）
+  const total = Math.min(64 * GB, Math.max(512 * MB, Math.floor(quota * 0.8)))
+  const file = Math.min(256 * MB, Math.max(64 * MB, Math.floor(total / 32)))
+  return { file, total, files: 2000, source: 'quota' }
 }
 
 export type FileEncoding = 'text' | 'base64'
@@ -57,6 +88,8 @@ type WorkspaceState = {
   enabled: boolean
   mode: WorkspaceMode
   hydrated: boolean
+  /** 浏览器给当前 Origin 的存储配额（字节），用于动态计算上限 */
+  quota: number | null
   persistError: string | null
   files: Record<string, WorkspaceFile>
 }
@@ -166,27 +199,95 @@ const base64ToBytes = (base64: string): Uint8Array<ArrayBuffer> => {
   return bytes
 }
 
-/** 明确按文本处理的 MIME；其余二进制类型不尝试 UTF-8 解码 */
-const isTextMime = (mime: string): boolean =>
-  mime.startsWith('text/') ||
-  mime === 'image/svg+xml' ||
-  mime === 'application/json' ||
-  mime === 'application/ld+json' ||
-  mime === 'application/xml' ||
-  mime === 'application/javascript' ||
-  mime === 'application/x-javascript' ||
-  mime.endsWith('+json') ||
-  mime.endsWith('+xml')
+const TEXT_EXTS = new Set([
+  'txt',
+  'md',
+  'markdown',
+  'csv',
+  'tsv',
+  'json',
+  'jsonl',
+  'xml',
+  'yml',
+  'yaml',
+  'toml',
+  'ini',
+  'conf',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'less',
+  'js',
+  'jsx',
+  'ts',
+  'tsx',
+  'py',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'c',
+  'h',
+  'cpp',
+  'hpp',
+  'cs',
+  'php',
+  'sh',
+  'bash',
+  'zsh',
+  'sql',
+  'svg',
+  'log',
+  'gitignore',
+  'env',
+])
+
+const extOf = (path: string): string => {
+  const name = path.slice(path.lastIndexOf('/') + 1)
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+}
+
+/** 明确按文本处理：已知文本扩展名或文本类 MIME */
+const isTextMime = (mime: string, path: string): boolean => {
+  const ext = extOf(path)
+  if (ext && TEXT_EXTS.has(ext)) {
+    return true
+  }
+  return (
+    mime.startsWith('text/') ||
+    mime === 'image/svg+xml' ||
+    mime === 'application/json' ||
+    mime === 'application/ld+json' ||
+    mime === 'application/xml' ||
+    mime === 'application/javascript' ||
+    mime === 'application/x-javascript' ||
+    mime.endsWith('+json') ||
+    mime.endsWith('+xml')
+  )
+}
 
 /** 把任意文件内容转成可持久化的文本 / base64 形态 */
 export const fileToContent = (
   bytes: Uint8Array,
-  mime: string
+  mime: string,
+  path = ''
 ): { encoding: FileEncoding; content: string; size: number } => {
-  // 明显的二进制特征：NUL 字节、图片 / 音视频 / 字体 / 压缩包等类型
   const head = bytes.subarray(0, 4096)
   let binary = head.includes(0)
-  if (!binary && !isTextMime(mime)) {
+  const ext = extOf(path)
+  // 浏览器只给 octet-stream 且扩展名不是常见文本：按二进制处理，避免把 .bin/.webm 误判成文本
+  if (
+    !binary &&
+    (mime === '' || mime === 'application/octet-stream') &&
+    ext !== '' &&
+    !TEXT_EXTS.has(ext)
+  ) {
+    binary = true
+  }
+  if (!binary && !isTextMime(mime, path)) {
     // 没有 NUL 也不一定是文本：控制字符占比高就按二进制处理
     let control = 0
     for (const byte of head) {
@@ -264,11 +365,16 @@ const readFiles = (): Record<string, WorkspaceFile> => {
   }
 }
 
-const writeFiles = (files: Record<string, WorkspaceFile>) => {
+const writeFiles = (files: Record<string, WorkspaceFile>): boolean => {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({ version: 2, files }))
-  } catch {
-    // 空间不足时忽略：调用方会先做容量检查
+    return true
+  } catch (error) {
+    // 配额写满（QuotaExceededError）：把原因留给调用方展示，不要静默丢数据
+    useWorkspace.setState({
+      persistError: error instanceof Error ? error.message : String(error),
+    })
+    return false
   }
 }
 
@@ -279,6 +385,7 @@ export const useWorkspace = create<WorkspaceState>(() => ({
   enabled: localStorage.getItem(ENABLED_KEY) === 'true',
   mode: readMode(),
   hydrated: localStorage.getItem(MODE_KEY) !== 'opfs' || !opfsSupported(),
+  quota: null,
   persistError: null,
   files: localStorage.getItem(MODE_KEY) === 'opfs' && opfsSupported() ? {} : readFiles(),
 }))
@@ -312,14 +419,32 @@ export const setWorkspaceEnabled = (enabled: boolean) => {
 
 export const isWorkspaceEnabled = () => useWorkspace.getState().enabled
 
-/** 当前模式的上限 */
-export const workspaceLimits = () => WORKSPACE_LIMITS[useWorkspace.getState().mode]
+/** 当前模式的上限（OPFS 按实际配额动态计算） */
+export const workspaceLimits = (): WorkspaceLimits =>
+  computeWorkspaceLimits(useWorkspace.getState().mode, useWorkspace.getState().quota)
+
+/** 读取浏览器配额并刷新上限；启动与打开设置页时调用 */
+export const refreshWorkspaceQuota = async (): Promise<number | null> => {
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+    useWorkspace.setState({ quota: null })
+    return null
+  }
+  try {
+    const estimate = await navigator.storage.estimate()
+    const quota = typeof estimate.quota === 'number' ? estimate.quota : null
+    useWorkspace.setState({ quota })
+    return quota
+  } catch {
+    useWorkspace.setState({ quota: null })
+    return null
+  }
+}
 
 export type SaveInput = string | { text?: string; bytes?: Uint8Array; mime?: string }
 
 export type SaveResult =
   | { ok: true; file: WorkspaceFile; created: boolean }
-  | { ok: false; reason: 'path' | 'tooLarge' | 'tooManyFiles' | 'totalTooLarge' }
+  | { ok: false; reason: 'path' | 'tooLarge' | 'tooManyFiles' | 'totalTooLarge' | 'quota' }
 
 /**
  * 写入文件：存在则覆盖并保留 baseline（首次创建时的内容），不存在则新建。
@@ -344,7 +469,7 @@ export const saveWorkspaceFile = (
     size = byteLength(input)
   } else if (input.bytes) {
     mime = input.mime ?? mime
-    const converted = fileToContent(input.bytes, mime)
+    const converted = fileToContent(input.bytes, mime, path)
     encoding = converted.encoding
     content = converted.content
     size = converted.size
@@ -384,11 +509,15 @@ export const saveWorkspaceFile = (
         : undefined,
   }
   const files = { ...current, [path]: file }
-  useWorkspace.setState({ files })
   if (useWorkspace.getState().mode === 'opfs') {
+    useWorkspace.setState({ files })
     queuePersist(() => opfsWriteFile(path, workspaceFileBytes(file)))
   } else {
-    writeFiles(files)
+    // localStorage 先写成功再更新内存，避免界面显示已保存但刷新后丢失
+    if (!writeFiles(files)) {
+      return { ok: false, reason: 'quota' }
+    }
+    useWorkspace.setState({ files })
   }
   return { ok: true, file, created: !existing }
 }
@@ -577,7 +706,7 @@ export const hydrateWorkspace = async (): Promise<void> => {
       if (!safePath) {
         continue
       }
-      const converted = fileToContent(bytes, mimeForPath(safePath))
+      const converted = fileToContent(bytes, mimeForPath(safePath), safePath)
       files[safePath] = {
         path: safePath,
         encoding: converted.encoding,
