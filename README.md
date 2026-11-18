@@ -18,7 +18,7 @@
 >
 > 📦Repository: <https://github.com/xiaohuangbo/chat-demo-unrestricted>
 >
-> 🎥Intro video: <https://www.bilibili.com/video/BV1p5sL6LEfd/>
+> 🎥Intro video: <https://www.bilibili.com/video/BV1m3s66WESg/>
 >
 > 📚Reference paper: <https://arxiv.org/pdf/2403.12171>
 
