@@ -1,8 +1,9 @@
 import clsx from 'clsx'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
+import { Select } from '../base/Select.js'
 import { Switch } from '../base/Switch.js'
 import { showToast } from '../base/toastState.js'
 import { loadEngine, resetEngine, useEngine } from '../../services/nanovm/boot.js'
@@ -19,6 +20,7 @@ import {
   useNanoVMConfig,
 } from '../../services/nanovm/config.js'
 import { vmFs } from '../../services/nanovm/fs.js'
+import { NetError, fetchNet, netStatus, type NetRoute } from '../../services/nanovm/netProxy.js'
 import {
   installToolchain,
   uninstallToolchain,
@@ -89,6 +91,136 @@ const SliderRow = ({
     <div className={styles.hint}>{hint}</div>
   </div>
 )
+
+/** 联网代理：自动 / 直连 / 自定义，带一条连通性测试 */
+const NetCard = () => {
+  const t = useTranslate()
+  const netMode = useNanoVMConfig((state) => state.netMode)
+  const proxyUrl = useNanoVMConfig((state) => state.proxyUrl)
+  const [draft, setDraft] = useState(proxyUrl)
+  const [invalid, setInvalid] = useState(false)
+  const [checking, setChecking] = useState(false)
+
+  // 提交后（或别处改了地址）把输入框同步成落盘值
+  useEffect(() => {
+    setDraft(proxyUrl)
+  }, [proxyUrl])
+
+  const status = netStatus()
+  const detail =
+    status.route === 'native'
+      ? t('nanovmNetNative')
+      : status.route === 'custom'
+        ? t('nanovmNetCustomStatus', { url: proxyUrl })
+        : status.route === 'off'
+          ? t('nanovmNetCustomEmpty')
+          : t('nanovmNetNativeOff')
+
+  const routeLabel = (route: NetRoute): string =>
+    route === 'native'
+      ? t('nanovmNetNative')
+      : route === 'custom'
+        ? t('nanovmNetCustom')
+        : t('nanovmNetNativeOff')
+
+  /** 失焦 / 回车提交：空值等于清空，非空必须以 http(s):// 开头 */
+  const commit = () => {
+    const value = draft.trim()
+    if (value && !/^https?:\/\//i.test(value)) {
+      setInvalid(true)
+      return
+    }
+    setInvalid(false)
+    setNanoVMConfig({ proxyUrl: value })
+  }
+
+  const check = async () => {
+    setChecking(true)
+    const started = performance.now()
+    try {
+      // api.github.com 带 Access-Control-Allow-Origin: *，浏览器直连也能成功
+      const result = await fetchNet('api.github.com', { method: 'HEAD', timeoutMs: 8000 })
+      showToast({
+        key: 'nanovmNetCheckOk',
+        params: {
+          status: result.status,
+          ms: Math.round(performance.now() - started),
+          route: routeLabel(result.route),
+        },
+      })
+    } catch (error) {
+      const reason =
+        error instanceof NetError
+          ? (error.hint ?? error.message)
+          : error instanceof Error
+            ? error.message
+            : String(error)
+      showToast({ key: 'nanovmNetCheckFail', params: { reason }, type: 'error' })
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  return (
+    <div className={styles.card} data-section="net">
+      <div className={styles.netHead}>
+        <div className={styles.actionLabel}>{t('nanovmNet')}</div>
+        <div className={styles.hint}>{t('nanovmNetHint')}</div>
+      </div>
+      <div className={styles.netControl}>
+        <Select
+          value={netMode}
+          ariaLabel={t('nanovmNet')}
+          options={[
+            { value: 'auto', label: t('nanovmNetAuto') },
+            { value: 'direct', label: t('nanovmNetDirect') },
+            { value: 'custom', label: t('nanovmNetCustom') },
+          ]}
+          onChange={(mode) => setNanoVMConfig({ netMode: mode })}
+        />
+      </div>
+      {netMode === 'custom' ? (
+        <>
+          <input
+            className={styles.netInput}
+            value={draft}
+            placeholder={t('nanovmNetPlaceholder')}
+            aria-label={t('nanovmNetCustom')}
+            aria-invalid={invalid || undefined}
+            spellCheck={false}
+            onChange={(event) => {
+              setDraft(event.target.value)
+              setInvalid(false)
+            }}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commit()
+              }
+            }}
+          />
+          {/* 地址格式不对：红边 + 一行红字 */}
+          {invalid ? <div className={styles.error}>{t('nanovmNetInvalid')}</div> : null}
+        </>
+      ) : null}
+      <div className={styles.netStatus}>{t('nanovmNetStatus', { detail })}</div>
+      <div className={styles.netActions}>
+        <Button
+          size="s"
+          variant="outlined"
+          disabled={checking}
+          aria-busy={checking}
+          onClick={() => void check()}
+        >
+          {checking ? t('nanovmNetChecking') : t('nanovmNetCheck')}
+        </Button>
+        {checking ? <span className={styles.spinner} aria-hidden /> : null}
+      </div>
+      <div className={styles.netNote}>{t('nanovmNetPingHint')}</div>
+    </div>
+  )
+}
 
 /** 单张工具链卡片：安装 / 卸载、体积与进度 */
 const ToolchainCard = ({ state, busy }: { state: ToolchainState; busy: boolean }) => {
@@ -320,6 +452,8 @@ export const NanoVMConsole = () => {
           onChange={(value) => setNanoVMConfig({ timeoutMs: value * 1000 })}
         />
       </div>
+
+      <NetCard />
 
       <div className={styles.card}>
         <div className={styles.statRow}>

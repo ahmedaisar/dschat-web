@@ -757,6 +757,73 @@
 
 /* ---------- 设置里的控制台 ---------- */
 
+/* 联网代理：标题说明 + 下拉 + 地址输入 + 状态 + 测试 */
+.netHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0 8px;
+}
+
+.netControl {
+  display: flex;
+  padding-bottom: 10px;
+
+  /* Select 触发器在窄屏铺满一行 */
+  button {
+    max-width: 100%;
+  }
+}
+
+.netInput {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
+  font-size: 12px;
+  line-height: 18px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--dsw-alias-label-caption);
+  }
+
+  &:focus-visible {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--dsw-alias-state-error-primary);
+  }
+}
+
+.netStatus {
+  padding: 0 0 10px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.netActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.netNote {
+  padding-bottom: 12px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 17px;
+}
+
 .console {
   display: flex;
   flex-direction: column;

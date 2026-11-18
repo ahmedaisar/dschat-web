@@ -540,6 +540,7 @@ Persona（官方身份分块）
 | 切换输入法 | 手机端输入行的键盘按钮可以呼出系统输入法选择器（APK 里走原生 `InputMethodManager`），换键盘不用离开终端；纯浏览器没有这个能力，会提示用系统快捷键                                                                                                                                                    |
 | 重置       | 桌面头部与手机工具条都有红色「重置」：二次确认后清空虚拟机里的全部文件并重启引擎（设置里的控制台同样可以重置）                                                                                                                                                                                       |
 | busybox    | 81 个内置命令：文件与系统（`ls cat cp mv rm mkdir rmdir touch ln stat chmod du df ps free env export which` …）、文本（`grep sed awk sort uniq cut tr wc nl rev tac paste find xargs tee` …）、归档与校验（`tar gzip gunzip sha256sum md5sum base64 cksum diff`）、网络（`curl wget`，受 CORS 限制） |
+| 联网       | `wget` / `curl` / `ping` 自动补 `https://`；**APK 走内置代理**（本地 127.0.0.1 反向代理，用 Android 的 `HttpURLConnection` 真发请求，不受 WebView 的 CORS 限制），普通浏览器直连只能访问允许跨域的站点；设置 → NanoVM Slim → **联网代理** 可以切直连或填自己的代理前缀（支持 `{url}` 占位）          |
 | 按需工具链 | Python 3（Pyodide，约 12MB，`vm install python` 时下载并缓存）、Node.js 兼容运行时（Web Worker，无需下载）、Git（内置实现，真 git 对象格式，无需下载）                                                                                                                                               |
 | 包管理     | `vm install python`、`vm uninstall python`、`vm list`、`vm info`、`vm mem`、`vm df`；安装进度直接打在终端里，Agent 也能调用                                                                                                                                                                          |
 | 控制台     | 开关（启用、允许模型调用、首次加载、桌面常驻）、内存与虚拟磁盘配额、命令超时、引擎状态、存储位置与用量、镜像导入导出（zip）、重置、工具链安装 / 卸载                                                                                                                                                 |
@@ -950,6 +951,8 @@ API 地址在 [`rspack.config.ts`](rspack.config.ts) 的 `createConfig({ apiOrig
 49. **聊天模式只影响客户端工具**：服务端工具（读链接 / 联网搜索）在四种模式下都一样下发，`仅聊天` 不会关掉它们；模式是全局选择（`chat-demo:chat-mode`），不随会话保存。
 50. **PTC / 创造模式会并发执行同一轮的工具调用**：多个需要确认的工具排队逐个弹窗；创造模式对 NanoVM 工具免确认，模型写错路径、删错文件或装错运行时的代价由用户承担，建议先在不重要的会话里试。
 51. **同一轮里的工具调用会共享一份终端用量**：并发执行的多个 NanoVM 命令都算在同一条回复的工具往返里，费用与上下文按轮累加。
+52. **虚拟机没有真正的 ICMP 与 DNS**：`ping` 是 HTTPS 探测（`HEAD` / `GET` 计时），目标不响应 HTTP 不代表主机不可达；也没有 `nslookup` / `dig`。
+53. **联网绕不过浏览器安全模型**：APK 里的内置代理只服务本应用（token 校验、只监听 127.0.0.1），普通浏览器仍然受 CORS 限制；自定义代理会把目标 URL 发给第三方，请自行判断是否信任。
 
 ---
 

@@ -730,6 +730,7 @@ const ChangelogSetting = () => {
         'changelogV268Keyboard',
         'changelogV268Reset',
         'changelogV268Modes',
+        'changelogV268Net',
         'changelogV268Apk',
       ],
     },

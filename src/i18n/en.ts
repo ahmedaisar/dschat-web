@@ -1421,6 +1421,24 @@ export const en = {
   chatModeOffWorkspace: 'the workspace switch is off',
   chatModeOffNanoVM: 'NanoVM Slim or “let the model call the shell” is off',
   chatModeOffHint: 'Currently off: {items}. Those tools are not sent to the model.',
+  nanovmNet: 'Network proxy',
+  nanovmNetHint:
+    'Direct requests from a browser are limited by CORS. The APK routes through its built-in proxy automatically (no CORS). You can also set your own proxy prefix; {url} is replaced with the target.',
+  nanovmNetAuto: 'Auto (built-in proxy in the APK, direct in browsers)',
+  nanovmNetDirect: 'Direct only',
+  nanovmNetCustom: 'Custom proxy',
+  nanovmNetPlaceholder: 'https://your-proxy.example/?url={url}',
+  nanovmNetStatus: 'Now: {detail}',
+  nanovmNetNative: 'APK built-in proxy (no CORS limit)',
+  nanovmNetNativeOff: 'Direct (limited by CORS)',
+  nanovmNetCustomStatus: 'Custom proxy {url}',
+  nanovmNetCustomEmpty: 'No proxy URL yet',
+  nanovmNetPingHint: 'ping in the terminal probes over HTTPS, not ICMP',
+  nanovmNetCheck: 'Test connection',
+  nanovmNetCheckOk: 'Reachable: HTTP {status} · {ms} ms · {route}',
+  nanovmNetCheckFail: 'Failed: {reason}',
+  nanovmNetInvalid: 'The proxy URL must start with http:// or https://',
+  nanovmNetChecking: 'Testing…',
   settingDialogAsideNanoVMOptionLabel: 'NanoVM Slim',
   changelogV268Title: 'v2.6.8 · 2026-11',
   changelogV268Shell:
@@ -1438,6 +1456,8 @@ export const en = {
     'A four-way chat mode next to the composer: Chat only (no client tools at all), Web agent (browser tools + virtual workspace), PTC (adds NanoVM with batch, parallel calls and 16 rounds) and Creator (24 rounds, self-installed runtimes and new commands inside the VM, VM writes no longer ask). The active mode is also described to the model in system',
   changelogV268Keyboard:
     'The mobile terminal gains a "switch keyboard" button that opens the system input-method picker, so changing keyboards no longer means leaving the terminal; browsers get a shortcut hint instead',
+  changelogV268Net:
+    'VM networking fixed: `wget` / `curl` / `ping` add the scheme, the APK got a local reverse proxy (no WebView CORS), and settings can switch between direct and a custom proxy with a connection test',
   changelogV268Reset:
     'Reset the VM straight from the terminal: a red "Reset" in the desktop header and the mobile toolbar, with a confirmation that clears every file and restarts the engine',
   latestReminderLanguage: 'English',

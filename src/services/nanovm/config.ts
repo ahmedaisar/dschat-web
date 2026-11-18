@@ -25,7 +25,14 @@ export type NanoVMConfig = {
   diskMB: number
   /** 单条命令超时（毫秒） */
   timeoutMs: number
+  /** 联网方式：auto（APK 走内置代理，浏览器直连）/ direct（只用直连）/ custom（走自定义代理前缀） */
+  netMode: NetMode
+  /** 自定义代理前缀，支持 {url} 占位符；没有占位符时把编码后的 URL 拼在后面 */
+  proxyUrl: string
 }
+
+/** 联网方式 */
+export type NetMode = 'auto' | 'direct' | 'custom'
 
 export const MEMORY_MIN_MB = 32
 export const MEMORY_MAX_MB = 2048
@@ -42,6 +49,8 @@ const defaults: NanoVMConfig = {
   memoryMB: 128,
   diskMB: 64,
   timeoutMs: 15_000,
+  netMode: 'auto',
+  proxyUrl: '',
 }
 
 const clamp = (value: number, min: number, max: number) =>
@@ -67,6 +76,11 @@ const read = (): NanoVMConfig => {
       memoryMB: clamp(source.memoryMB ?? defaults.memoryMB, MEMORY_MIN_MB, MEMORY_MAX_MB),
       diskMB: clamp(source.diskMB ?? defaults.diskMB, DISK_MIN_MB, DISK_MAX_MB),
       timeoutMs: clamp(source.timeoutMs ?? defaults.timeoutMs, TIMEOUT_MIN_MS, TIMEOUT_MAX_MS),
+      netMode:
+        source.netMode === 'direct' || source.netMode === 'custom' || source.netMode === 'auto'
+          ? source.netMode
+          : defaults.netMode,
+      proxyUrl: typeof source.proxyUrl === 'string' ? source.proxyUrl.trim().slice(0, 500) : '',
     }
   } catch {
     return { ...defaults }
@@ -102,6 +116,7 @@ export const setNanoVMConfig = (patch: Partial<NanoVMConfig>) => {
   next.memoryMB = clamp(next.memoryMB, MEMORY_MIN_MB, MEMORY_MAX_MB)
   next.diskMB = clamp(next.diskMB, DISK_MIN_MB, DISK_MAX_MB)
   next.timeoutMs = clamp(next.timeoutMs, TIMEOUT_MIN_MS, TIMEOUT_MAX_MS)
+  next.proxyUrl = next.proxyUrl.trim().slice(0, 500)
   write(next)
   syncLimits(next)
   useNanoVMConfig.setState(next)

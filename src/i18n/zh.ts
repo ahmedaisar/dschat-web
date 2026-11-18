@@ -1310,6 +1310,24 @@ export const zh = {
   chatModeOffWorkspace: '工作区开关已关闭',
   chatModeOffNanoVM: 'NanoVM Slim 或「允许模型调用 Shell」已关闭',
   chatModeOffHint: '当前设置：{items}；这些工具不会下发给模型',
+  nanovmNet: '联网代理',
+  nanovmNetHint:
+    '浏览器里直连受 CORS 限制，只能访问允许跨域的站点；APK 会自动走内置代理（不受 CORS 限制）。也可以填自己的代理前缀，支持 {url} 占位。',
+  nanovmNetAuto: '自动（APK 内置代理 / 浏览器直连）',
+  nanovmNetDirect: '只用直连',
+  nanovmNetCustom: '自定义代理',
+  nanovmNetPlaceholder: 'https://your-proxy.example/?url={url}',
+  nanovmNetStatus: '当前：{detail}',
+  nanovmNetNative: 'APK 内置代理（不受 CORS 限制）',
+  nanovmNetNativeOff: '直连（受 CORS 限制）',
+  nanovmNetCustomStatus: '自定义代理 {url}',
+  nanovmNetCustomEmpty: '还没填代理地址',
+  nanovmNetPingHint: '终端里的 ping 是 HTTPS 探测，不是 ICMP',
+  nanovmNetCheck: '测试连通性',
+  nanovmNetCheckOk: '连通：HTTP {status} · {ms} ms · {route}',
+  nanovmNetCheckFail: '失败：{reason}',
+  nanovmNetInvalid: '代理地址要以 http:// 或 https:// 开头',
+  nanovmNetChecking: '测试中…',
   settingDialogAsideNanoVMOptionLabel: 'NanoVM Slim',
   changelogV268Title: 'v2.6.8 · 2026-11',
   changelogV268Shell:
@@ -1327,6 +1345,8 @@ export const zh = {
     '输入栏新增「聊天模式」四档：仅聊天（不下发任何客户端工具）、网页 Agent（浏览器工具 + 虚拟工作区）、PTC（再加 NanoVM，可批量并发调用、16 轮往返）、创造（24 轮，虚拟机里可自行装运行时、写新命令，虚拟机写操作免确认）；模式随 system 一起告诉模型当前能力',
   changelogV268Keyboard:
     '手机端终端新增「切换输入法」：调用系统的输入法选择器，换键盘不用离开终端；浏览器里会提示用系统快捷键',
+  changelogV268Net:
+    '虚拟机联网修复：`wget` / `curl` / `ping` 自动补协议，APK 内新增本地反向代理（不受 WebView CORS 限制），设置里可切换直连 / 自定义代理并测试连通性',
   changelogV268Reset:
     '终端里可直接重置虚拟机：桌面头部与手机工具条新增红色「重置」，二次确认后清空全部文件并重启引擎',
   latestReminderLanguage: '中文',
