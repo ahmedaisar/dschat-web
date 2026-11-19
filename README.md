@@ -77,6 +77,7 @@ Notes:
 - Browser tools work unchanged (they run locally; the model calls them over `tool_calls`).
 - Streaming, context breakdown and the usage ledger work; usage is taken from the final chunk's `usage` when the endpoint returns it (`stream_options.include_usage`).
 - Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
+- Heads-up for OpenRouter `:free` models: they carry tight limits (~20 req/min, ~50/day) and some are restricted to agentic harnesses (HTTP 403) and refuse normal chat clients — use a general-purpose free model or the paid variant (e.g. `thinkingmachines/inkling-2-small`).
 
 ## Quick start
 

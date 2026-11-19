@@ -19,7 +19,9 @@ export class ApiError extends Error {
   constructor(
     readonly kind: ApiErrorKind,
     message: string | TranslationMessage,
-    readonly status?: number
+    readonly status?: number,
+    /** 服务端响应里的 Retry-After 原文（秒数或 HTTP 日期）；429 时才会有 */
+    readonly retryAfter?: string
   ) {
     super(typeof message === 'string' ? message : translate(message.key, message.params))
     this.name = 'ApiError'
@@ -48,7 +50,8 @@ export const readErrorResponse = async (
   } catch {
     // 非 JSON 响应体直接展示原文
   }
-  return new ApiError(kind, message, response.status)
+  const retryAfter = response.headers.get('retry-after') ?? undefined
+  return new ApiError(kind, message, response.status, retryAfter)
 }
 
 /** fetch 封装：断网抛 ApiError('network')，非 2xx 抛 ApiError('http'/'protocol') */

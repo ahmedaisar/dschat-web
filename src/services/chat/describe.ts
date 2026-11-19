@@ -1,5 +1,6 @@
 import { isTranslationKey, translate } from '../../i18n/index.js'
-import { classifyStatus } from '../api/errors.js'
+import { classifyStatus, isAgenticHarnessMessage, retryAfterSeconds } from '../api/errors.js'
+import { isCustomProviderEnabled } from '../api/provider.js'
 import { hasReplyContent } from './reply.js'
 import type { AssistantMessage } from './types.js'
 
@@ -32,16 +33,33 @@ export const describeReply = (reply: AssistantMessage): Notice | null => {
     if (kind === 'network') {
       return { text: translate('commonNetworkErrorToast') }
     }
+    const custom = isCustomProviderEnabled()
     switch (classifyStatus(status)) {
       case 'unauthorized':
         return { text: translate('replyInvalidApiKey'), action: 'apiKey' }
       case 'insufficientBalance':
-        return { text: translate('replyInsufficientBalance'), action: 'topUp' }
+        // 自定义提供商时不跳转 DeepSeek 的充值页（付款方不同），只给出文案
+        return custom
+          ? { text: translate('replyInsufficientBalance') }
+          : { text: translate('replyInsufficientBalance'), action: 'topUp' }
       case 'rateLimited':
+        if (custom) {
+          const seconds = retryAfterSeconds(reply.error.retryAfter)
+          return {
+            text:
+              seconds !== null
+                ? translate('replyRateLimitedRetryAfter', { seconds })
+                : translate('replyRateLimitedCustom'),
+          }
+        }
         return { text: translate('replyRateLimited') }
       case 'serverBusy':
         return { text: translate('completionServerBusyToast') }
       default:
+        // OpenRouter 把个别 :free 型号限定给智能体客户端用（403）：不依赖状态码，只按文案识别
+        if (isAgenticHarnessMessage(reply.error.message)) {
+          return { text: translate('agenticHarnessOnlyModel') }
+        }
         return message ? { text: message } : null
     }
   }

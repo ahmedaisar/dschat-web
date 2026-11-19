@@ -54,6 +54,40 @@ export const isRetryableApiError = (error: unknown): boolean => {
   )
 }
 
+/**
+ * OpenRouter 把部分 :free 型号限定为「agentic harness」使用（403）：
+ * 普通聊天应用/未入驻 openrouter.ai/apps 的客户端会被拒绝，不是参数问题。
+ * 只按文案识别；无论状态码（OpenRouter 用 403，部分代理可能透传为 400/其他）。
+ */
+const AGENTIC_HARNESS_PATTERN = /only available on [^"]*agentic harnesses|agentic harnesses/i
+
+/** 只依赖 {message} 判定，reply.error 等普通对象同样可用 */
+export const isAgenticHarnessMessage = (message: string | undefined | null): boolean =>
+  typeof message === 'string' && AGENTIC_HARNESS_PATTERN.test(message)
+
+/** ApiError 版本；isAgenticHarnessMessage 的薄封装 */
+export const isAgenticHarnessError = (error: unknown): boolean =>
+  isAgenticHarnessMessage(error instanceof ApiError ? error.message : undefined)
+
+/**
+ * Retry-After 原文 → 秒数；支持 delta-seconds 与 HTTP-date。
+ * 解析失败或已过期返回 null。
+ */
+export const retryAfterSeconds = (retryAfter: string | undefined, now = Date.now()): number | null => {
+  if (!retryAfter) {
+    return null
+  }
+  const delta = Number(retryAfter)
+  if (Number.isFinite(delta) && delta >= 0) {
+    return Math.ceil(delta)
+  }
+  const at = Date.parse(retryAfter)
+  if (Number.isFinite(at)) {
+    return Math.max(0, Math.ceil((at - now) / 1000))
+  }
+  return null
+}
+
 /** 服务端判定附件失效的情况：本地有原件时重新上传即可自愈 */
 export type FileErrorCode = 'fileIdMissing' | 'fileDataMissing' | 'invalidFileId'
 

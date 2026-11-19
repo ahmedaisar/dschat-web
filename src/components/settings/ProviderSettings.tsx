@@ -14,7 +14,10 @@ import {
   verifyOpenAICompatible,
 } from '../../services/api/openaiCompatible.js'
 import { ApiError } from '../../services/api/client.js'
-import { classifyApiError } from '../../services/api/errors.js'
+import {
+  classifyApiError,
+  isAgenticHarnessError,
+} from '../../services/api/errors.js'
 import styles from './ProviderSettings.module.css'
 
 const EMPTY = { name: '', baseURL: '', apiKey: '', model: '' }
@@ -62,10 +65,20 @@ export const ProviderSettings = () => {
   }
 
   const failureMessage = (cause: unknown): string => {
+    if (isAgenticHarnessError(cause)) {
+      return t('agenticHarnessOnlyModel')
+    }
+    const classified = classifyApiError(cause)
+    if (classified === 'unauthorized') {
+      return t('apiKeyInvalid')
+    }
+    if (classified === 'rateLimited') {
+      return t('replyRateLimitedCustom')
+    }
+    if (classified === 'insufficientBalance') {
+      return t('replyInsufficientBalance')
+    }
     if (cause instanceof ApiError) {
-      if (classifyApiError(cause) === 'unauthorized') {
-        return t('apiKeyInvalid')
-      }
       return cause.message
     }
     return cause instanceof Error ? cause.message : String(cause)

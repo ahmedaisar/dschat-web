@@ -759,8 +759,14 @@ export const en = {
   customProviderRemove: 'Remove custom provider',
   customProviderRemoved: 'Custom provider removed; switched back to the built-in DeepSeek API',
   customProviderNotes:
-    'Notes: server-side features (web search, read link, title generation) are DeepSeek-specific and are not sent to custom endpoints. Attachments are sent inline: images up to 8 MB as base64, text files up to 512 KB as plain text; other file types are skipped. Server-side thinking and usage prices are estimated.',
+    'Notes: server-side features (web search, read link, title generation) are DeepSeek-specific and are not sent to custom endpoints. Attachments are sent inline: images up to 8 MB as base64, text files up to 512 KB as plain text; other file types are skipped. Server-side thinking and usage prices are estimated. Some :free models are restricted to agentic harnesses and refuse normal chat clients, and free models carry tight per-minute/per-day limits.',
   customSearchDisabledTooltip: 'Smart search runs on DeepSeek servers and is unavailable with a custom provider',
+  agenticHarnessOnlyModel:
+    'This model is restricted to agentic harnesses (coding agents listed on openrouter.ai/apps) and refuses normal chat clients. Pick a different model — e.g. a general-purpose :free model or the paid inkling-2-small — in Settings → Data → Custom OpenAI-compatible provider.',
+  replyRateLimitedCustom:
+    'Rate limited by your provider (OpenRouter free models: ~20 requests/min and 50/day, and the shared upstream pool may be exhausted). Wait a minute, add a few credits to lift the cap, or switch to another model.',
+  replyRateLimitedRetryAfter:
+    'Rate limited by your provider. Try again in about {seconds}s, or switch to another model / add credits.',
   customAttachmentSkipped:
     '{count} attachment(s) skipped: images ≤ 8 MB and text files ≤ 512 KB can be sent inline to a custom provider.',
   historyImport: 'Import chat history',

@@ -117,6 +117,8 @@ export type AssistantMessage = MessageBranch & {
     localMessage?: TranslationMessage
     /** 仅 upload：重新上传是否可能成功（网络、限流、服务端繁忙）；过大、格式不支持为 false */
     retryable?: boolean
+    /** 服务端响应里的 Retry-After 原文（429 时才会有） */
+    retryAfter?: string
   }
 }
 
