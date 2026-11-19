@@ -132,16 +132,15 @@ const appendStream = (id: string, kind: 'stdout' | 'stderr', text: string) => {
   })
 }
 
-/** 结束流式行：之后同类型的输出会新起一行 */
+/**
+ * 结束流式行：之后同类型的输出会新起一行。
+ * stderr 可能在 stdout 之后追加新行，所以不能只清最后一行，
+ * 否则上一条 stdout 会一直带着光标（终端里出现「多个光标」的残影）。
+ */
 const endStream = (id: string) => {
-  patchTab(id, (tab) => {
-    const lines = [...tab.lines]
-    const last = lines.at(-1)
-    if (last?.stream) {
-      lines[lines.length - 1] = { ...last, stream: false }
-    }
-    return { lines }
-  })
+  patchTab(id, (tab) => ({
+    lines: tab.lines.map((line) => (line.stream ? { ...line, stream: false } : line)),
+  }))
 }
 
 // ---------- 面板开关 ----------

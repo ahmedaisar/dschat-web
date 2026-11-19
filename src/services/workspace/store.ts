@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import {
+  isNativeApp as nativeApp,
   opfsClear,
   opfsDeleteFile,
   opfsReadAll,
@@ -60,10 +61,16 @@ export const computeWorkspaceLimits = (
   if (!quota || !Number.isFinite(quota) || quota <= 0) {
     return OPFS_FALLBACK
   }
-  // 最多用 80% 配额；总量不超过 64GB，单文件不超过 256MB（单个文件要整体读入内存）
-  const total = Math.min(64 * GB, Math.max(512 * MB, Math.floor(quota * 0.8)))
-  const file = Math.min(256 * MB, Math.max(64 * MB, Math.floor(total / 32)))
-  return { file, total, files: 2000, source: 'quota' }
+  // 浏览器里最多用 80% 配额（上限 64GB 总量 / 256MB 单文件，单文件要整体读入内存）；
+  // 安卓壳的数据不会被站点清理策略回收，放宽到 90% 配额、单文件最多 2GB。
+  const native = nativeApp()
+  const total = native
+    ? Math.max(1 * GB, Math.floor(quota * 0.9))
+    : Math.min(64 * GB, Math.max(512 * MB, Math.floor(quota * 0.8)))
+  const file = native
+    ? Math.min(2 * GB, Math.max(64 * MB, Math.floor(total / 8)))
+    : Math.min(256 * MB, Math.max(64 * MB, Math.floor(total / 32)))
+  return { file, total, files: native ? 20000 : 2000, source: 'quota' }
 }
 
 export type FileEncoding = 'text' | 'base64'
@@ -692,7 +699,27 @@ export const clearWorkspace = () => {
 }
 
 /** 启动时加载 OPFS 工作区；二进制按 base64 读入内存 */
+/** 安卓壳里默认用 OPFS：localStorage 只有 5–10MB，跨不过「存储文件」这件事 */
+const migrateNativeToOpfs = async (): Promise<void> => {
+  if (!nativeApp() || !opfsSupported() || useWorkspace.getState().mode === 'opfs') {
+    return
+  }
+  const files = useWorkspace.getState().files
+  try {
+    await opfsWriteAll(
+      Object.fromEntries(
+        Object.entries(files).map(([path, file]) => [path, workspaceFileBytes(file)])
+      )
+    )
+    localStorage.setItem(MODE_KEY, 'opfs')
+    useWorkspace.setState({ mode: 'opfs', files: {} })
+  } catch {
+    // 迁移失败就留在本地模式，不丢数据
+  }
+}
+
 export const hydrateWorkspace = async (): Promise<void> => {
+  await migrateNativeToOpfs()
   if (useWorkspace.getState().mode !== 'opfs' || !opfsSupported()) {
     useWorkspace.setState({ hydrated: true })
     return

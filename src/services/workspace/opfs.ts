@@ -128,9 +128,18 @@ export type StorageStatus = {
 }
 
 /** 读取持久化状态与配额；不支持时返回 supported: false */
+/** 是否跑在 Android 壳里：本地服务会给 index.html 注入 nanovm-app meta */
+export const isNativeApp = (): boolean => {
+  if (typeof document === 'undefined') {
+    return false
+  }
+  return document.querySelector('meta[name="nanovm-app"]') !== null
+}
+
 export const readStorageStatus = async (): Promise<StorageStatus> => {
+  const native = isNativeApp()
   if (typeof navigator === 'undefined' || !navigator.storage) {
-    return { supported: false, persisted: false, usage: null, quota: null }
+    return { supported: native, persisted: native, usage: null, quota: null }
   }
   const [persisted, estimate] = await Promise.all([
     navigator.storage.persisted?.().catch(() => false) ?? Promise.resolve(false),
@@ -138,7 +147,8 @@ export const readStorageStatus = async (): Promise<StorageStatus> => {
   ])
   return {
     supported: true,
-    persisted: Boolean(persisted),
+    // 安卓壳的数据由系统管理：清浏览器缓存不会动它，卸载才删
+    persisted: native || Boolean(persisted),
     usage: typeof estimate?.usage === 'number' ? estimate.usage : null,
     quota: typeof estimate?.quota === 'number' ? estimate.quota : null,
   }
@@ -149,6 +159,10 @@ export const readStorageStatus = async (): Promise<StorageStatus> => {
  * 返回最终是否处于持久化状态。
  */
 export const requestPersistentStorage = async (): Promise<boolean> => {
+  // 安卓壳没有「持久化授权」概念：应用数据本来就不会被当作站点数据清理
+  if (isNativeApp()) {
+    return true
+  }
   if (typeof navigator === 'undefined' || !navigator.storage?.persist) {
     return false
   }

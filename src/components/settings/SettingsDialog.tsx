@@ -104,6 +104,7 @@ import { ParamControl } from './ParamControls.js'
 import { StatsSettings } from './StatsSettings.js'
 import { AgentToolsSetting } from './AgentToolsSetting.js'
 import { WorkspaceSetting } from './WorkspaceSetting.js'
+import { UpdateCard } from './UpdateCard.js'
 import { NanoVMConsole } from '../nanovm/NanoVMConsole.js'
 import paramStyles from './ParamControls.module.css'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
@@ -711,6 +712,7 @@ const AboutSetting = () => {
           {link.href}
         </a>
       ))}
+      <UpdateCard />
     </div>
   )
 }
@@ -719,6 +721,16 @@ const AboutSetting = () => {
 const ChangelogSetting = () => {
   const t = useTranslate()
   const groups: { title: TranslationKey; items: TranslationKey[] }[] = [
+    {
+      title: 'changelogV269Title',
+      items: [
+        'changelogV269Update',
+        'changelogV269Storage',
+        'changelogV269Caret',
+        'changelogV269Docs',
+        'changelogV269Apk',
+      ],
+    },
     {
       title: 'changelogV268Title',
       items: [

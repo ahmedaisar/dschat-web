@@ -179,7 +179,8 @@ final class LocalServer implements Closeable {
             String contentType = contentType(path);
             if (contentType.startsWith("text/html") && body != null) {
                 String html = new String(body, StandardCharsets.UTF_8);
-                String meta = "<meta name=\"nanovm-proxy\" content=\"" + proxyToken + "\">";
+                String meta = "<meta name=\"nanovm-proxy\" content=\"" + proxyToken + "\">"
+                    + "<meta name=\"nanovm-app\" content=\"android\">";
                 if (html.contains("<head>")) {
                     html = html.replaceFirst("<head>", "<head>" + meta);
                 } else {

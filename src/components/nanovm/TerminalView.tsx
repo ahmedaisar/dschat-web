@@ -208,6 +208,8 @@ export const TerminalView = ({
   }
 
   const prompt = compact ? `${shortPath(tab.cwd)} $` : promptFor(tab)
+  // 流式光标只画在最后一行：即使中间切过 stdout / stderr，也不会同时出现多个方块
+  const lastLineId = tab.lines.at(-1)?.id
 
   return (
     <div className={styles.terminal}>
@@ -253,7 +255,9 @@ export const TerminalView = ({
               ) : (
                 line.text
               )}
-              {line.stream ? <span className={styles.caret} aria-hidden /> : null}
+              {line.stream && line.id === lastLineId ? (
+                <span className={styles.caret} aria-hidden />
+              ) : null}
             </div>
           ))
         )}

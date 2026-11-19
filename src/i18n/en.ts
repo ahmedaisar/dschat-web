@@ -395,6 +395,18 @@ export const en = {
   workspaceModeUnsupported: 'This browser does not support OPFS; staying on local storage',
   workspaceModeFailed: 'Failed to switch storage',
   workspacePersistState: 'Persistent storage',
+  updateCheck: 'Check for updates',
+  updateChecking: 'Checking…',
+  updateCurrent: 'Current version v{version}',
+  updateLatest: 'You are up to date',
+  updateAvailable: 'New version v{version} is available',
+  updateDownload: 'Download',
+  updateFailed: 'Check failed: {reason}',
+  updateAndroidHint:
+    'On Android download the APK and install it over the current app; settings and chats stay',
+  updateNotes: 'Release notes',
+  updatePublishedAt: 'Published {date}',
+  workspacePersistNative: 'App storage (managed by Android; not cleared with browser data)',
   workspacePersistGranted: 'granted (the browser will not evict it automatically)',
   workspacePersistNotGranted: 'not granted (may be evicted when space runs low)',
   workspacePersistUnsupported: 'unsupported',
@@ -461,7 +473,9 @@ export const en = {
   workspaceSaveFailed_quota:
     'Browser local storage is full: clear some files, or switch to the OPFS file system for much more room',
   workspaceLimitsDynamic: 'Limits: {file} per file, {total} total',
-  workspaceLimitsQuota: 'Derived from the browser quota of {quota}, using up to 80%',
+  workspaceLimitsQuota: 'Derived from the browser quota of {quota}, using up to {percent}%',
+  workspaceLimitsNative:
+    'Derived from the app quota of {quota}, using up to {percent}% (app storage on Android)',
   workspaceLimitsLocal:
     'Browser local storage cannot be expanded (typically 5–10 MB); switch to OPFS for more room',
   workspaceQuotaRefresh: 'Refresh capacity',
@@ -1440,6 +1454,16 @@ export const en = {
   nanovmNetInvalid: 'The proxy URL must start with http:// or https://',
   nanovmNetChecking: 'Testing…',
   settingDialogAsideNanoVMOptionLabel: 'NanoVM Slim',
+  changelogV269Title: 'v2.6.9 · 2026-11',
+  changelogV269Update:
+    'Settings → About now has “Check for updates”: it reads the latest GitHub release and offers the APK directly on Android (or the release page when there is no asset), so no more manual version hunting',
+  changelogV269Caret:
+    'Fixed the ghost cursors in the terminal: the leftover blue block after a streamed command is cleared in one go',
+  changelogV269Storage:
+    'Workspace storage on Android now means app storage: no browser persistence prompt (site data is not evicted anyway), with quotas raised to 90%, 2 GB per file and 20,000 files',
+  changelogV269Docs:
+    'README split into per-chapter files under docs/ (Chinese and English), leaving an index page; fixed the implementation index table that failed to render because of an unescaped `||` and a mismatched separator row',
+  changelogV269Apk: 'Builds the 2.6.9 APK (versionCode 269), signed with xiaohuangbo.jks',
   changelogV268Title: 'v2.6.8 · 2026-11',
   changelogV268Shell:
     'New NanoVM Slim: a WASM Shell Engine with busybox-style commands (ls / cat / grep / sed / awk / tar / curl …). Open it from the sidebar; it docks on the right on desktop and becomes a bottom panel on phones that follows the keyboard',

@@ -1,0 +1,61 @@
+## 10. Known limitations
+
+1. **There is no "off" for `safety_check`**: omitting it equals `low`, which is the lowest level the API offers; the server still runs its default check.
+2. **Server-side alignment remains**: a model-initiated refusal (`stop_reason: 'refusal'`) cannot be cancelled by the client. Anti-retraction only keeps what was already streamed; it cannot make the model continue refused content.
+3. **Historical chain-of-thought is never sent back**: by protocol, the server drops history thinking and the client does not resend it. Editing the thinking therefore affects the UI and the continuation prefix, while only the body applies to ordinary later turns.
+4. **Sampling parameters are constrained in thinking mode**: the server fixes temperature at 1, and Top P below 0.95 is treated as 0.95.
+5. **`max_tokens` includes thinking tokens**: setting it too low can truncate the thinking as well.
+6. **Edits only affect the local context**: they do not re-request the model and do not change what the server already produced. Exports store the edited content; the original snapshot is not exported.
+7. **Attachment limits, key validation, and speech endpoints** still follow the original logic and are independent of the switches described here.
+8. **The lab is not a purely static capability**: it needs the local Python + MCP backend (`mcp-server/`), and a single job can issue a large number of model calls. Start with `limit=1` and small iteration counts.
+9. **A custom prompt overrides the assembly**: once filled, unrestricted mode no longer swaps `system` (it still skips the safety check and allows continuing refused replies). Clear the box to go back to the default pipeline.
+10. **Long-chat compression is lossy**: summaries drop detail, and auto-compression triggers at 80% of the window (about 800k tokens on a 1M window), so manual compression is the practical option. Per-chat system prompts and compression summaries live only in local sessions and are not included in history exports.
+11. **Branch to new chat copies the current visible branch**: other answer versions and drafts are not copied; attachments reuse the original file ids; the new chat starts its statistics at zero and inherited usage is not counted.
+12. **Restore default settings keeps the API key**: it only resets preferences and switches, never chats, attachments or statistics.
+13. **Auto jailbreak and variant races cost extra**: every retry and every variant is a real request; variant races are bounded by the budget cap.
+14. **Cloud model lists depend on the API and network**: a failed fetch falls back to the two built-ins; models without a price entry are estimated at Flash rates with a 128k window, and actual capabilities come from the server.
+15. **Switching models does not rewrite old replies**: old replies keep their model and cost; continuations keep that reply's model, and only new replies use the current choice.
+16. **Auto-extraction costs an extra call**: one Flash request per turn; long-term memory and the memory graph stay on this device and are not exported.
+17. **The memory graph uses local hashed vectors**, not semantic embeddings: retrieval is approximate but needs no external service; changing the dimension recomputes vectors.
+18. **Daily usage only counts chat replies**: MCP lab, races and title generation are not included; costs are estimated from current peak/off-peak rates and may differ slightly from the bill.
+19. **Custom and special locations only affect `latest_reminder`**: they do not change weather, web search or server-side regional behaviour.
+20. **Disguised thinking only covers the previous round**: it is sent as ordinary text, so the server no longer treats it as thinking; token usage rises slightly.
+21. **The relation graph draws at most 80 nodes**: extra nodes are still searched, just not drawn; importing in Replace mode overwrites current long-term memories and graph data, so export a backup first.
+22. **The stream-output switch only controls rendering**: when off, replies are still received over SSE and accumulated, just not shown mid-flight; accumulated content is written back when the page is hidden or closed to avoid loss.
+23. **Search poisoning is not a server-side proxy**: server search runs on the server and the client only sees what the model already consumed; with takeover off it can rewrite display only, not retract this turn’s results.
+24. **Takeover depends on custom results**: with no custom results it does not disable server search (unless a blacklist / whitelist is present); with takeover on the model only sees the configured results and real search does not run.
+25. **Custom time / knowledge cutoff are hints**: they only affect `latest_reminder` and the injected context, not the UI, billing, weather or server region detection, and the model may not fully obey the cutoff.
+26. **Attachment poisoning only affects new / re-uploaded attachments**: server files for messages already sent are not rewritten; attachments in the input box with a local original are re-uploaded on the next send with the current config, while imported files without an original stay as-is and sent history is never rewritten.
+27. **Client-side rewriting is best-effort**: image text overlay needs Canvas, while PDF trailers and image metadata are experimental and not guaranteed to be read; prefer the companion text attachment for PDF / Office.
+28. **Companion text attachments use an attachment slot**: none are generated when the limit is full; restoring defaults only clears the local config and generated companions in drafts, not server or historical attachments.
+29. **Image text overlay re-encodes the image**: GIF / animations become static and GIF / BMP may become PNG; the file trailer skips ZIP-based Office files.
+30. **The Python backend does not run inside the APK**: EasyJailbreak / torch cannot be packed into a normal WebView APK; the bundled backend sources are for reference and the lab must connect to an MCP service on a PC or server.
+31. **The APK is a WebView shell**: browser capabilities such as file downloads depend on the system WebView; the local server occupies port 18765 and shows a startup error if the port is taken.
+32. **Custom chain of thought is prompt guidance, not a real reasoning channel**: with deep thinking off, the card above the reply shows the steps you wrote, not live model reasoning; the model may not follow every step; each request increases input tokens and the text is capped at 4000 characters.
+33. **With deep thinking on the custom chain is experimental**: server-side thinking takes priority and may ignore or rewrite the steps, so results are not guaranteed to match direct injection; the injected card is not repeated and server-side thinking is shown instead.
+34. **Custom chain of thought only applies to chat requests**: race, variant race, long-chat compression and memory extraction use their own system prompts and ignore it; the first chat request that also generates a title still receives it.
+35. **The “Injected chain of thought” card is local display data**: history export does not include it, so an imported archive does not show the card; continue reuses the reply’s snapshot and regenerate reads the current settings.
+36. **Browser tools inherit browser limits**: page fetching is bound by the target site's CORS; notifications, location and clipboard need permissions (notifications are usually unavailable inside the APK WebView and are marked disabled); “open link” can be blocked by popup rules.
+37. **Tool round trips are billed per round**: up to four round trips per reply, each a real request, so tokens and cost accumulate; with the master switch off the model cannot see any tool.
+38. **NanoVM Slim is a browser-side simulation**: not a real Linux kernel — no process isolation, no multi-user permissions, no signals or job control; `&` does not survive, and `kill` / `nice` / device files do not exist. Its files and quotas are local, so clearing site data wipes them.
+39. **The busybox commands are subset implementations**: `awk` has no `printf`, arrays, loops or user functions; `sed` has no `{}` blocks or `r/w/l`; `sort -h/-M/-V`, `grep -A/-B/-C` and `find -mtime/-size/-perm` are missing. Unsupported usage **fails loudly** instead of silently returning the wrong result.
+40. **`npm` and `pip` are not available**: Node.js is a browser-compatible runtime (a `fs` / `path` subset inside a Web Worker) and Python is Pyodide (WASM CPython — pure-Python packages work, C extensions need Pyodide's built-in support). Install real dependencies on the host.
+41. **`curl` / `wget` are subject to CORS**: only targets that allow cross-origin requests work, and failures say whether it was the network, CORS or an HTTP status — never a fake success.
+42. **Scripts in the VM become commands**: a script with the executable bit runs by path or through `$PATH`, with shebangs for `sh` / `bash` / `python3` / `node`; without a shebang it fails like Linux with `Exec format error`. One consequence: `exit 3 | cat` ends the whole script (pipeline stages are not real processes) instead of only the pipeline subshell.
+43. **The first toolchain install needs the network**: Python is about 12 MB (Pyodide) and is cached locally afterwards; Node.js and Git are built in and need no download. Git is local-only — no `clone` / `push` / `pull`.
+44. **Workspace capacity**: in OPFS mode the limits derive from `navigator.storage.estimate()` (up to 80% of the quota, capped at 64 GB total / 256 MB per file) and grow with the quota; localStorage cannot be expanded (typically 5–10 MB, and base64 adds roughly a third), so a full write tells you to switch to OPFS. Export a ZIP before clearing or replacing.
+45. **The workspace is not part of history exports**: history archives keep conversations and images; workspace files and tool cards are not included, and clearing site data loses them.
+46. **OPFS and persistent storage vary by browser**: older WebViews and private modes may not support OPFS, leaving localStorage as the only option; `navigator.storage.persist()` can also be refused, in which case the browser may still evict data when space is low — export a backup for anything important.
+47. **Switching storage overwrites the target backend**: switching to OPFS replaces the OPFS directory with the current files, and switching back overwrites the localStorage copy; export first if in doubt.
+48. **The context breakdown is an estimate**: character weights (1 token per CJK character, 4 characters per token otherwise) differ from server billing; the KPI numbers reported by the server stay authoritative.
+49. **Chat modes only affect client tools**: server tools (read URL / web search) are sent in all four modes, including Chat only; the mode is a global choice (`chat-demo:chat-mode`) and is not stored per session.
+50. **PTC / Creator run the tool calls of one round in parallel**: several tools that need confirmation queue up one dialog at a time; in Creator mode NanoVM tools skip confirmation, so a wrong path, a careless `rm` or a bad install is on the user — try it in a throwaway chat first.
+51. **All tool calls of one round share that round's usage**: parallel NanoVM commands are billed and counted in context per round trip, not separately.
+52. **The VM has no real ICMP or DNS**: `ping` probes over HTTPS (timing a `HEAD` / `GET`), so a host that answers no HTTP is not necessarily down, and there is no `nslookup` / `dig`.
+53. **Networking cannot bypass the browser security model**: the APK's built-in proxy only serves this app (token-checked, bound to 127.0.0.1), while plain browsers stay limited by CORS. A custom proxy sends the target URL to a third party — decide for yourself whether you trust it.
+
+---
+
+---
+
+[← 返回 README](../../README.md) · [全部文档](README.md)

@@ -21,6 +21,7 @@ import {
 } from '../../services/workspace/store.js'
 import { exportWorkspaceZip, readWorkspaceZip } from '../../services/workspace/archive.js'
 import {
+  isNativeApp,
   opfsSupported,
   readStorageStatus,
   requestPersistentStorage,
@@ -75,6 +76,7 @@ const fileKind = (file: WorkspaceFile): 'text' | 'image' | 'binary' => {
 }
 
 export const WorkspaceSetting = () => {
+  const native = isNativeApp()
   const t = useTranslate()
   const isMobile = useIsMobile()
   const locale = useSettings((state) => state.locale)
@@ -240,7 +242,7 @@ export const WorkspaceSetting = () => {
         />
       </div>
 
-      <div className={styles.storage}>
+      <div className={styles.storage} data-section="storage">
         <div className={styles.storageHead}>
           <span className={styles.storageTitle}>{t('workspaceStorageMode')}</span>
           <span className={styles.modeTabs} role="tablist" aria-label={t('workspaceStorageMode')}>
@@ -283,7 +285,8 @@ export const WorkspaceSetting = () => {
                 : !storage.supported
                   ? t('workspacePersistUnsupported')
                   : storage.persisted
-                    ? t('workspacePersistGranted')
+                    ? // APK 里数据由 Android 管理，和浏览器的持久化授权不是一回事
+                      t(isNativeApp() ? 'workspacePersistNative' : 'workspacePersistGranted')
                     : t('workspacePersistNotGranted')}
             </span>
             {storage?.usage !== null && storage?.usage !== undefined ? (
@@ -303,25 +306,30 @@ export const WorkspaceSetting = () => {
             >
               {t('workspaceStorageRefresh')}
             </button>
-            <Button
-              size="s"
-              variant="outlined"
-              disabled={storageBusy || !storage?.supported || storage?.persisted}
-              onClick={() => {
-                setStorageBusy(true)
-                void requestPersistentStorage()
-                  .then(async (granted) => {
-                    await refreshStorage()
-                    showToast({
-                      key: granted ? 'workspacePersistGrantedToast' : 'workspacePersistDeniedToast',
-                      type: granted ? undefined : 'error',
+            {/* APK 里没有「持久化授权」这个概念，按钮点了也没意义，直接不显示 */}
+            {isNativeApp() ? null : (
+              <Button
+                size="s"
+                variant="outlined"
+                disabled={storageBusy || !storage?.supported || storage?.persisted}
+                onClick={() => {
+                  setStorageBusy(true)
+                  void requestPersistentStorage()
+                    .then(async (granted) => {
+                      await refreshStorage()
+                      showToast({
+                        key: granted
+                          ? 'workspacePersistGrantedToast'
+                          : 'workspacePersistDeniedToast',
+                        type: granted ? undefined : 'error',
+                      })
                     })
-                  })
-                  .finally(() => setStorageBusy(false))
-              }}
-            >
-              {t('workspacePersistRequest')}
-            </Button>
+                    .finally(() => setStorageBusy(false))
+                }}
+              >
+                {t('workspacePersistRequest')}
+              </Button>
+            )}
           </div>
         </div>
         {persistError ? (
@@ -358,7 +366,10 @@ export const WorkspaceSetting = () => {
           {' · '}
           {mode === 'opfs'
             ? quota
-              ? t('workspaceLimitsQuota', { quota: formatBytes(quota) })
+              ? t(native ? 'workspaceLimitsNative' : 'workspaceLimitsQuota', {
+                  quota: formatBytes(quota),
+                  percent: native ? 90 : 80,
+                })
               : t('workspaceLimitsFallback')
             : t('workspaceLimitsLocal')}
         </div>
