@@ -1463,6 +1463,8 @@ export const en = {
     'Workspace storage on Android now means app storage: no browser persistence prompt (site data is not evicted anyway), with quotas raised to 90%, 2 GB per file and 20,000 files',
   changelogV269Docs:
     'README split into per-chapter files under docs/ (Chinese and English), leaving an index page; fixed the implementation index table that failed to render because of an unescaped `||` and a mismatched separator row',
+  changelogV269Security:
+    'Merged the upstream security fix: attachment previews are typed by extension (an HTML file disguised as an image can no longer run with this origin), SVGs preview through a data URL and download, and citations / search results / page links only accept http(s)',
   changelogV269Apk: 'Builds the 2.6.9 APK (versionCode 269), signed with xiaohuangbo.jks',
   changelogV268Title: 'v2.6.8 · 2026-11',
   changelogV268Shell:

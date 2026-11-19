@@ -1350,6 +1350,8 @@ export const zh = {
     '安卓端工区改为「应用存储」语义：不再申请浏览器持久化权限（数据本来就不会被站点清理），配额上限放宽到 90%、单文件 2GB、20000 个文件',
   changelogV269Docs:
     'README 拆成 docs/ 下的分册（中英文各一套），首页只留简介与导航；修好实现位置索引表因 `||` 与分隔行错位导致的无法渲染问题',
+  changelogV269Security:
+    '合并上游安全修复：附件预览按后缀决定类型（伪装成图片的 HTML 不会再以本站 origin 执行）、SVG 用 data URL 预览并改为下载、回复里的引用 / 搜索结果 / 页面链接只接受 http(s)',
   changelogV269Apk: '同步构建 2.6.9 APK（versionCode 269），使用 xiaohuangbo.jks 签名',
   changelogV268Title: 'v2.6.8 · 2026-11',
   changelogV268Shell:

@@ -12,7 +12,7 @@
 `android/deepseek-unrestricted-2.6.9.apk`，versionCode 269，使用
 `/home/xiaohuangbo/桌面/xiaohuangbo.jks`（别名 `xiaohuangbo`）签名。
 
-SHA-256：`c2463b59af23ee7f19eb11d1195af2f48dce456191e7ba720192d6afc11d2613`（7.3 MB）。
+SHA-256：`cdadd3a5c1ede891f27666face09fa5e0d238b4a4d3f4a74b85a84c95f3e6791`（7.3 MB）。
 
 ## 构建
 

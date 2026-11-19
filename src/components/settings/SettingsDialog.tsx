@@ -727,6 +727,7 @@ const ChangelogSetting = () => {
         'changelogV269Update',
         'changelogV269Storage',
         'changelogV269Caret',
+        'changelogV269Security',
         'changelogV269Docs',
         'changelogV269Apk',
       ],
