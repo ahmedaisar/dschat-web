@@ -13,6 +13,7 @@ import {
 } from '../attachments.js'
 import { createPoisonSidecar, type AttachmentPoisonConfig } from '../attachmentPoison.js'
 import { useSettings } from '../settings.js'
+import { isCustomProviderEnabled } from '../api/provider.js'
 import type { FileAttachment } from './types.js'
 
 export type DraftAttachment = {
@@ -54,6 +55,10 @@ export const setDraftText = (sessionId: string | null, text: string) =>
   updateDraft(sessionId, (draft) => ({ ...draft, text }))
 
 const upload = (attachment: DraftAttachment, apiKey: string) => {
+  // 自定义提供商没有 Files API：附件不上传，发送时内联到消息里
+  if (isCustomProviderEnabled()) {
+    return
+  }
   // 上传任务负责记录错误，输入框的附件卡片展示失败及重试入口。
   void uploadAttachment(
     apiKey,
@@ -127,6 +132,10 @@ export const restartDraftAttachment = (
   attachmentId: string,
   apiKey: string
 ) => {
+  if (isCustomProviderEnabled()) {
+    // 自定义提供商不上传，不存在需要重新上传的任务
+    return
+  }
   const attachment = getDraft(sessionId).attachments.find((item) => item.id === attachmentId)
   if (attachment) {
     restartUpload(
@@ -146,8 +155,24 @@ export const prepareDraftMessage = (draft: Draft, tasks: Record<string, UploadTa
   if (!text && draft.attachments.length === 0) {
     return null
   }
-  const files: (FileAttachment & { serverId: string; blob: Blob })[] = []
+  // 自定义 OpenAI 兼容端点没有 Files API：附件不上传，发送时内联，serverId 为 null
+  const custom = isCustomProviderEnabled()
+  const files: (FileAttachment & { serverId: string | null; blob: Blob })[] = []
   for (const attachment of draft.attachments) {
+    if (custom) {
+      files.push({
+        id: attachment.id,
+        serverId: null,
+        name: attachment.file.name,
+        size: attachment.file.size,
+        isImage: attachment.isImage,
+        mimeType: resolveMimeType(attachment.file),
+        poison: 'off',
+        blob: attachment.file,
+        ...(attachment.generated ? { generated: true } : {}),
+      })
+      continue
+    }
     const task = tasks[attachment.id]
     if (task?.status !== 'done' || !task.serverId) {
       return null

@@ -59,6 +59,8 @@
 | NanoVM     | 虚拟机文件         | 出厂目录树       | OPFS `chat-demo-nanovm`                    | 不受影响             |
 | NanoVM     | 已装工具链         | 无               | `chat-demo:nanovm-packages`                | 不受影响             |
 | 输入栏     | 聊天模式           | 网页 Agent       | `chat-demo:chat-mode`                      | 不受影响             |
+| 数据管理   | 提供商             | 内置 DeepSeek    | `chat-demo:provider`                       | 不受影响             |
+| 数据管理   | 自定义 OpenAI 兼容提供商 | 空（未启用） | `chat-demo:custom-provider`                | 不受影响             |
 
 各项值在关闭越狱模式后仍按你各自勾选的状态生效。
 

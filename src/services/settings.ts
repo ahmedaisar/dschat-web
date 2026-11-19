@@ -23,11 +23,29 @@ export type Locale = 'zh-CN' | 'en-US'
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
+/** 自定义提供商：任何兼容 OpenAI Chat Completions 协议的端点（BYOK，Key 只存本机） */
+export type CustomProvider = {
+  /** 展示名称，仅用于设置页与提示文案 */
+  name: string
+  /** 端点根地址，可以带或不带 /v1；请求时自动拼接 chat/completions 与 models */
+  baseURL: string
+  apiKey: string
+  /** 模型 id，原样透传给端点 */
+  model: string
+}
+
+/** 当前生效的提供商：deepseek = 官方内置（Anthropic 兼容协议）；custom = 用户自带的 OpenAI 兼容端点 */
+export type ProviderMode = 'deepseek' | 'custom'
+
 /** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、模型参数、提示词开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
   /** 当前模型：内置 flash / v4-pro，或云端列表里的任意 id */
   model: ChatModel
+  /** 生效的提供商模式 */
+  provider: ProviderMode
+  /** 自定义 OpenAI 兼容提供商配置；未填写完整时不会启用 */
+  customProvider: CustomProvider | null
   /** 是否逐字渲染回复；关闭后等完整回复生成完再显示 */
   streamOutput: boolean
   locale: Locale
@@ -129,6 +147,8 @@ type Settings = {
 const KEYS = {
   apiKey: 'chat-demo:api-key',
   model: 'chat-demo:model',
+  provider: 'chat-demo:provider',
+  customProvider: 'chat-demo:custom-provider',
   streamOutput: 'chat-demo:stream-output',
   locale: 'chat-demo:locale',
   location: 'chat-demo:location',
@@ -211,6 +231,60 @@ export const isChineseBrowser = (): boolean =>
 const initialModel = (): ChatModel => {
   const saved = read(KEYS.model)
   return saved !== null && saved.trim() !== '' ? saved.trim() : 'deepseek-flash'
+}
+
+/** 自定义提供商端点：去掉首尾空白；缺 scheme 时补 https://；去掉末尾斜杠。非法时返回 null */
+export const normalizeCustomProviderBaseURL = (raw: string): string | null => {
+  let value = raw.trim()
+  if (value === '') {
+    return null
+  }
+  if (!/^https?:\/\//i.test(value)) {
+    value = `https://${value}`
+  }
+  value = value.replace(/\/+$/, '')
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null
+    }
+    return value
+  } catch {
+    return null
+  }
+}
+
+/** 校验并规范化自定义提供商配置；缺字段或端点非法时返回 null */
+export const normalizeCustomProvider = (value: unknown): CustomProvider | null => {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const name = typeof record.name === 'string' ? record.name.trim() : ''
+  const baseURL = normalizeCustomProviderBaseURL(typeof record.baseURL === 'string' ? record.baseURL : '')
+  const apiKey = typeof record.apiKey === 'string' ? record.apiKey.trim() : ''
+  const model = typeof record.model === 'string' ? record.model.trim() : ''
+  if (!baseURL || !model) {
+    return null
+  }
+  return { name: name || baseURL, baseURL, apiKey, model }
+}
+
+/** 读取保存的自定义提供商；JSON 损坏、缺字段时回落到 null（不启用） */
+const initialCustomProvider = (): CustomProvider | null => {
+  try {
+    return normalizeCustomProvider(JSON.parse(read(KEYS.customProvider) ?? 'null'))
+  } catch {
+    return null
+  }
+}
+
+/** 生效的提供商：custom 只有在配置完整时才生效，否则回落到 deepseek */
+const initialProvider = (): ProviderMode => {
+  if (read(KEYS.provider) !== 'custom') {
+    return 'deepseek'
+  }
+  return initialCustomProvider() ? 'custom' : 'deepseek'
 }
 
 const initialLocale = (): Locale => {
@@ -398,6 +472,8 @@ const initialStmModules = (): string[] => {
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
   model: initialModel(),
+  provider: initialProvider(),
+  customProvider: initialCustomProvider(),
   streamOutput: read(KEYS.streamOutput) !== 'false',
   locale: initialLocale(),
   location: initialLocation(),
@@ -492,6 +568,73 @@ export const setTtsVoice = (ttsVoice: TtsVoice) => {
 export const setApiKey = (apiKey: string | null) => {
   write(KEYS.apiKey, apiKey)
   useSettings.setState({ apiKey })
+}
+
+/** 保存自定义提供商；传 null 表示清除。配置不完整时不会写入 custom 模式 */
+export const setCustomProvider = (provider: CustomProvider | null) => {
+  if (provider === null) {
+    write(KEYS.customProvider, null)
+    const wasCustom = useSettings.getState().provider === 'custom'
+    if (wasCustom) {
+      write(KEYS.provider, 'deepseek')
+      // 恢复为内置默认模型，避免把自定义模型 id 发给 DeepSeek
+      write(KEYS.model, 'deepseek-flash')
+    }
+    useSettings.setState((state) => ({
+      customProvider: null,
+      provider: state.provider === 'custom' ? 'deepseek' : state.provider,
+      ...(state.provider === 'custom' ? { model: 'deepseek-flash' } : {}),
+    }))
+    return
+  }
+  const normalized = normalizeCustomProvider(provider)
+  if (!normalized) {
+    return
+  }
+  // custom 模式下，设置页改模型时同步 settings.model；picker 选中的模型会写回 customProvider.model
+  const previous = useSettings.getState()
+  const modelChanged = previous.customProvider?.model !== normalized.model
+  write(KEYS.customProvider, JSON.stringify(normalized))
+  if (previous.provider === 'custom' && modelChanged) {
+    write(KEYS.model, normalized.model)
+    useSettings.setState({ customProvider: normalized, model: normalized.model })
+    return
+  }
+  useSettings.setState({ customProvider: normalized })
+}
+
+/** 切换生效的提供商；custom 缺少完整配置时不生效。切换时把模型同步为对应端点的可用 id */
+export const setProvider = (provider: ProviderMode) => {
+  if (provider === 'custom' && !useSettings.getState().customProvider) {
+    return
+  }
+  const model =
+    provider === 'custom'
+      ? (useSettings.getState().customProvider?.model ?? 'deepseek-flash')
+      : 'deepseek-flash'
+  write(KEYS.provider, provider)
+  write(KEYS.model, model)
+  useSettings.setState({ provider, model })
+}
+
+/** 更新自定义提供商的模型 id；配置不完整时不写入；当前在 custom 模式时同步设置里的模型 */
+export const setCustomProviderModel = (model: string) => {
+  const next = model.trim()
+  if (!next) {
+    return
+  }
+  const current = useSettings.getState().customProvider
+  if (!current) {
+    return
+  }
+  const updated = { ...current, model: next }
+  write(KEYS.customProvider, JSON.stringify(updated))
+  if (useSettings.getState().provider === 'custom') {
+    write(KEYS.model, next)
+    useSettings.setState({ customProvider: updated, model: next })
+    return
+  }
+  useSettings.setState({ customProvider: updated })
 }
 
 export const setThinking = (thinking: boolean) => {
@@ -772,14 +915,18 @@ export const setAutoCompress = (autoCompress: boolean) => {
  * API Key 是凭据不是偏好，保留；对话、附件、统计等数据不在设置键里，同样不受影响。
  */
 export const resetSettings = () => {
+  // 自定义提供商含有 API Key（凭据而非偏好），与 apiKey 一样保留；生效模式回到默认
   const apiKey = useSettings.getState().apiKey
+  const customProvider = useSettings.getState().customProvider
   for (const key of Object.values(KEYS)) {
-    if (key !== KEYS.apiKey) {
+    if (key !== KEYS.apiKey && key !== KEYS.customProvider) {
       write(key, null)
     }
   }
   useSettings.setState({
     apiKey,
+    customProvider,
+    provider: 'deepseek',
     model: 'deepseek-flash',
     streamOutput: true,
     locale: isChineseBrowser() ? 'zh-CN' : 'en-US',

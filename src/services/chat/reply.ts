@@ -1,11 +1,13 @@
 import type {
   AssistantBlockParam,
   FileBlockParam,
+  InlineFileBlockParam,
   MessageParam,
   MessageStreamEvent,
   OutputBlockStart,
   TextBlockParam,
 } from '../api/types.js'
+import { inlineAttachment } from '../api/inlineFiles.js'
 import { translate } from '../../i18n/index.js'
 import { isPoisonToolId } from '../searchPoison.js'
 import type {
@@ -19,12 +21,40 @@ import type {
 } from './types.js'
 
 /**
- * 文件按 Files API 的 file_id（附件的 serverId）引用：图片用 image 块，其余用 document 块。
- * 发送前 streamReply 会先补齐 serverId；仍为 null 的是本地没有原件的附件，不进入请求。
+ * 文件块：内置（DeepSeek）模式按 Files API 的 file_id（附件的 serverId）引用，图片用 image 块、其余用 document 块；
+ * 自定义 OpenAI 兼容端点没有 Files API，prepareFiles 会把本地附件预读成 data URL，
+ * 图片以下发 base64、文本类文件以内联原文发送；预读失败的附件不进入请求。
+ * 发送前内置模式的 streamReply 会先补齐 serverId；仍为 null 的是本地没有原件的附件，不进入请求。
  */
-const toFileBlocks = (files: FileAttachment[]): FileBlockParam[] =>
-  files.flatMap(({ serverId, isImage }) =>
-    serverId
+const toFileBlocks = (
+  files: FileAttachment[]
+): (FileBlockParam | InlineFileBlockParam)[] =>
+  files.flatMap(({ id, serverId, isImage }): (FileBlockParam | InlineFileBlockParam)[] => {
+    const inline = inlineAttachment(id)
+    if (inline) {
+      if (inline.isImage) {
+        const comma = inline.dataUrl.indexOf(',')
+        const data = comma === -1 ? inline.dataUrl : inline.dataUrl.slice(comma + 1)
+        return [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: inline.mimeType, data },
+          },
+        ]
+      }
+      return [
+        {
+          type: 'text',
+          source: {
+            type: 'text',
+            media_type: 'text/plain',
+            data: inline.text ?? '',
+            name: inline.name,
+          },
+        },
+      ]
+    }
+    return serverId
       ? [
           {
             type: isImage ? 'image' : 'document',
@@ -32,7 +62,7 @@ const toFileBlocks = (files: FileAttachment[]): FileBlockParam[] =>
           },
         ]
       : []
-  )
+  })
 
 const toReplyBlock = (block: OutputBlockStart, now: number): ReplyBlock | null => {
   switch (block.type) {

@@ -59,6 +59,8 @@
 | NanoVM            | VM files                             | Factory tree         | OPFS `chat-demo-nanovm`                    | Unaffected                      |
 | NanoVM            | Installed toolchains                 | None                 | `chat-demo:nanovm-packages`                | Unaffected                      |
 | Composer          | Chat mode                            | Web agent            | `chat-demo:chat-mode`                      | Unaffected                      |
+| Data              | Provider                             | built-in DeepSeek   | `chat-demo:provider`                       | Unaffected                      |
+| Data              | Custom OpenAI-compatible provider    | empty (not active)   | `chat-demo:custom-provider`                | Unaffected                      |
 
 Your individual switch values apply again once unrestricted mode is turned off.
 

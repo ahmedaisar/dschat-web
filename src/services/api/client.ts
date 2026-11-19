@@ -1,6 +1,12 @@
-import { translate, type TranslationMessage } from '../../i18n/index.js'
 import { readMessageEvent } from './parseEvent.js'
 import { readServerSentEvents } from './sse.js'
+import { getCustomProvider } from './provider.js'
+import { streamOpenAICompatibleMessage } from './openaiCompatible.js'
+import {
+  ApiError,
+  request,
+  readErrorResponse,
+} from './transport.js'
 import type {
   ApiErrorBody,
   CreateMessageRequest,
@@ -9,6 +15,10 @@ import type {
   MessageStreamEvent,
 } from './types.js'
 
+// 传输层已抽到 transport.ts；这里原样 re-export，保持既有 import 路径
+export { ApiError, request }
+export type { ApiErrorKind } from './transport.js'
+
 /** 构建期 API 地址，默认 https://api.deepseek.com；本地开发支持开发服务器代理 */
 export const API_ORIGIN = __API_ORIGIN__
 /** Anthropic 兼容接口的前缀 */
@@ -16,71 +26,11 @@ const ANTHROPIC_BASE_URL = `${API_ORIGIN}/anthropic/v1`
 /** 引用 Files API 上传的图片、调用 Anthropic 兼容 Files API 时必须携带 */
 const FILES_BETA = 'files-api-2025-04-14'
 
-export type ApiErrorKind =
-  /** 非 2xx 响应 */
-  | 'http'
-  /** 流中返回的错误帧（如等待生成超时），随后连接关闭 */
-  | 'stream'
-  /** 请求没有到达服务端（断网、跨域被拦截等） */
-  | 'network'
-  /** 流在 message_stop 之前结束 */
-  | 'interrupted'
-  /** 响应不符合协议（如非 SSE 响应） */
-  | 'protocol'
-
-export class ApiError extends Error {
-  readonly localMessage?: TranslationMessage
-
-  constructor(
-    readonly kind: ApiErrorKind,
-    message: string | TranslationMessage,
-    readonly status?: number
-  ) {
-    super(typeof message === 'string' ? message : translate(message.key, message.params))
-    this.name = 'ApiError'
-    this.localMessage = typeof message === 'string' ? undefined : message
-  }
-}
-
 const isErrorBody = (value: unknown): value is ApiErrorBody =>
   typeof value === 'object' &&
   value !== null &&
   'error' in value &&
   typeof (value as ApiErrorBody).error?.message === 'string'
-
-const readErrorResponse = async (
-  response: Response,
-  kind: 'http' | 'protocol' = 'http',
-  fallback = response.statusText
-): Promise<ApiError> => {
-  const text = await response.text().catch(() => '')
-  let message = text || fallback
-  try {
-    const body: unknown = JSON.parse(text)
-    if (isErrorBody(body)) {
-      message = body.error.message
-    }
-  } catch {
-    // 非 JSON 响应体直接展示原文
-  }
-  return new ApiError(kind, message, response.status)
-}
-
-export const request = async (url: string, init: RequestInit): Promise<Response> => {
-  let response: Response
-  try {
-    response = await fetch(url, init)
-  } catch (error) {
-    if (init.signal?.aborted) {
-      throw error
-    }
-    throw new ApiError('network', error instanceof Error ? error.message : String(error))
-  }
-  if (!response.ok) {
-    throw await readErrorResponse(response)
-  }
-  return response
-}
 
 const anthropicHeaders = (apiKey: string, beta: boolean): Record<string, string> => ({
   // DeepSeek 兼容接口的鉴权方式，也可使用 Authorization: Bearer。
@@ -108,6 +58,12 @@ export const uploadFile = async (
   purpose: FilePurpose | null,
   signal?: AbortSignal
 ): Promise<FileObject> => {
+  if (getCustomProvider()) {
+    throw new ApiError(
+      'protocol',
+      'Custom OpenAI-compatible providers do not support the Files API; attach images or text files, they are sent inline with the message'
+    )
+  }
   const form = new FormData()
   if (purpose) {
     form.append('purpose', purpose)
@@ -124,6 +80,10 @@ export const uploadFile = async (
 
 /** DELETE /anthropic/v1/files/{file_id} */
 export const deleteFile = async (apiKey: string, fileId: string): Promise<void> => {
+  if (getCustomProvider()) {
+    // 自定义端点没有 Files API，无需删除
+    return
+  }
   await request(`${ANTHROPIC_BASE_URL}/files/${encodeURIComponent(fileId)}`, {
     method: 'DELETE',
     headers: anthropicHeaders(apiKey, true),
@@ -140,12 +100,18 @@ const hasFile = (body: CreateMessageRequest) =>
 /**
  * POST /anthropic/v1/messages（stream: true），逐个产出流式事件，收到 message_stop 时结束。
  * ping、保活注释与无法解析的内容不产出；中止请求时抛出 signal 的 AbortError。
+ * 启用自定义 OpenAI 兼容提供商时改为 POST /v1/chat/completions（由 openaiCompatible.ts 翻译）。
  */
 export async function* streamMessage(
   apiKey: string,
   body: CreateMessageRequest,
   signal: AbortSignal
 ): AsyncGenerator<MessageStreamEvent> {
+  const custom = getCustomProvider()
+  if (custom) {
+    yield* streamOpenAICompatibleMessage(custom, body, signal)
+    return
+  }
   const response = await request(`${ANTHROPIC_BASE_URL}/messages`, {
     method: 'POST',
     headers: {
@@ -170,7 +136,7 @@ export async function* streamMessage(
       }
     }
     if (isErrorBody(payload)) {
-      throw new ApiError('stream', payload.error.message)
+      throw new ApiError('stream', (payload as ApiErrorBody).error.message)
     }
     if (eventName === 'error') {
       throw new ApiError('stream', data)

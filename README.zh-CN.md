@@ -37,6 +37,7 @@
 - **聊天模式**：仅聊天 / 网页 Agent / PTC / 创造，决定下发哪些客户端工具与往返上限；
 - **统计与计费**：用量账本、上下文分类、按模型计费、服务端搜索免费开关；
 - **安卓端**：APK 构建、应用内更新检测、虚拟机联网内置代理。
+- **BYOK / OpenAI 兼容提供商**：把应用指向任何兼容 Chat Completions 协议的端点并使用你自己的 Key，Key 只存本机浏览器。
 
 ## 文档导航
 
@@ -55,6 +56,25 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 | 9. 运行与构建         | 开发、构建与 Android APK 打包                           | [09-build.md](docs/zh/09-build.md)                     |
 | 10. 已知限制          | 51 条边界与取舍                                         | [10-known-limits.md](docs/zh/10-known-limits.md)       |
 | 11. 许可与致谢        | MIT 许可与上游                                          | [11-license.md](docs/zh/11-license.md)                 |
+
+## BYOK：OpenAI 兼容提供商
+
+默认情况下，本应用使用你在「设置 → 数据管理」中填写的 Key 直接请求 DeepSeek API（Anthropic 兼容协议）。你也可以把所有对话流量指向**任何兼容 OpenAI Chat Completions 协议的端点**——OpenAI、OpenRouter、Groq、Together、DeepSeek、llama.cpp、Ollama（`http://localhost:11434/v1`）、vLLM 等。
+
+设置 → 数据管理 → **自定义 OpenAI 兼容提供商**：
+
+1. 填写显示名称（可选）、**Base URL**（如 `https://api.openai.com/v1`，缺少 `/v1` 后缀会自动补上）、你的 **API Key** 和**模型** id。
+2. 使用「获取模型列表」按钮（调用 `GET {base}/models`），或直接输入模型 id。
+3. 「测试连接」用 `GET /models` 校验 Key，免费。
+4. 打开「启用自定义提供商」。此后所有请求都以 `POST {base}/chat/completions` 发往你的端点；关闭开关即切回内置 DeepSeek API（DeepSeek 的 Key 会保留）。
+
+说明：
+
+- 自定义 Key 只保存在本浏览器的 localStorage（`chat-demo:custom-provider`）中，直接发送给你配置的端点，不经过作者或任何中转服务器。
+- DeepSeek 专有的服务端能力（联网搜索、阅读链接、自动标题、`safety_check`）不会发送给自定义端点；智能搜索开关在此模式下被禁用。
+- 附件以内联方式发送：图片（≤ 8 MB）以 base64 data URL 下发，文本类文件（≤ 512 KB）以原文下发；PDF/DOCX/PPT 等二进制文档会被跳过。
+- 开启思考时透传 `reasoning_effort`；不支持的模型会忽略该字段。
+- 浏览器工具不受影响（工具在本地执行，模型经 `tool_calls` 调用）；流式输出、上下文分类、用量账本正常工作（端点需返回 `usage` 字段，本应用会请求 `stream_options.include_usage`）。
 
 ## 快速开始
 

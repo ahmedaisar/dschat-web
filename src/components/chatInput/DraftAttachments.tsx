@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { memo } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { useUploads, type UploadTask } from '../../services/attachments.js'
+import { isCustomProviderEnabled } from '../../services/api/provider.js'
 import type { DraftAttachment } from '../../services/chat/drafts.js'
 import { IconCloseFill14, IconRefreshOutline16 } from '../base/icons.js'
 import { Tooltip } from '../base/Tooltip.js'
@@ -10,6 +11,8 @@ import { useFileView } from '../files/useFileView.js'
 import styles from './ChatInput.module.css'
 
 const UPLOADING: UploadTask = { status: 'uploading' }
+/** 自定义提供商不上传附件，没有任务时按已就绪展示 */
+const CUSTOM_DONE: UploadTask = { status: 'done', serverId: '', poison: 'off' }
 
 /** 列表只随草稿附件变化更新；每张卡片独立订阅自己的上传状态。 */
 export const DraftAttachments = memo(function DraftAttachments({
@@ -50,7 +53,9 @@ const AttachmentItem = ({
 }) => {
   const t = useTranslate()
   const { image, url, link } = useFileView(item.file, item.file.name)
-  const task = useUploads((state) => state.tasks[item.id] ?? UPLOADING)
+  const task = useUploads((state) =>
+    state.tasks[item.id] ?? (isCustomProviderEnabled() ? CUSTOM_DONE : UPLOADING)
+  )
   const status = task.status
   const error = task.status === 'error' ? t(task.error.key, task.error.params) : undefined
   // 过大、格式不支持等重试无效的失败只提示原因，需删除后再发送

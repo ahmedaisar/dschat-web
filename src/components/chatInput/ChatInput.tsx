@@ -11,6 +11,7 @@ import {
 import { setAutoJailbreak, setSearch, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
+import { isCustomProviderEnabled } from '../../services/api/provider.js'
 import {
   addDraftFiles,
   EMPTY_DRAFT,
@@ -62,6 +63,8 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  // 智能搜索依赖 DeepSeek 服务端工具，自定义提供商下不可用，禁用按钮
+  const customEnabled = useSettings(() => isCustomProviderEnabled())
   const autoJailbreak = useSettings((state) => state.autoJailbreak)
   const attachmentPoisonEnabled = useSettings((state) => state.attachmentPoison.enabled)
   const attachmentPoisonSidecar = useSettings((state) =>
@@ -250,13 +253,19 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             selectedClassName={styles.selected}
             labelClassName={styles.toggleLabel}
           />
-          <Tooltip content={t('deactivatedSearchTooltip')}>
+          <Tooltip content={t(customEnabled ? 'customSearchDisabledTooltip' : 'deactivatedSearchTooltip')}>
             <button
               type="button"
-              className={clsx(styles.toggle, search && styles.selected)}
+              className={clsx(styles.toggle, search && !customEnabled && styles.selected)}
               aria-label={t('search')}
-              aria-pressed={search}
-              onClick={() => setSearch(!search)}
+              aria-pressed={search && !customEnabled}
+              disabled={customEnabled}
+              style={customEnabled ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+              onClick={() => {
+                if (!customEnabled) {
+                  setSearch(!search)
+                }
+              }}
             >
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>

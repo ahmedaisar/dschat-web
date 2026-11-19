@@ -132,7 +132,18 @@ export const buildContextBreakdown = (input: {
           continue
         }
         if (isRecord(block) && block.type === 'text') {
-          breakdown.userMessages += tokensOf(typeof block.text === 'string' ? block.text : '')
+          const source = (block as { source?: unknown }).source
+          if (isRecord(source) && source.type === 'text') {
+            // 内联文本附件：按原文长度估算
+            const data = typeof source.data === 'string' ? source.data : ''
+            breakdown.userMessages += tokensOf(data)
+          } else {
+            breakdown.userMessages += tokensOf(
+              typeof (block as { text?: unknown }).text === 'string'
+                ? ((block as { text: string }).text as string)
+                : ''
+            )
+          }
           continue
         }
         if (isRecord(block) && (block.type === 'image' || block.type === 'document')) {

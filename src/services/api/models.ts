@@ -1,4 +1,5 @@
 import { API_ORIGIN } from './client.js'
+import { modelsUrl } from './provider.js'
 
 /**
  * 模型列表：默认使用内置 DeepSeek Flash / V4 Pro，
@@ -116,30 +117,44 @@ const requestJson = async (url: string, headers: Record<string, string>): Promis
 /**
  * 远端拉取可用模型：先试 OpenAI 兼容的 /models，再试 Anthropic 兼容前缀。
  * 都失败时抛出错误，由调用方退回缓存或内置列表。
+ * 传入 baseURL 时只从该 OpenAI 兼容端点拉取（自定义提供商），不写入共享缓存。
  */
-export const fetchRemoteModels = async (apiKey: string): Promise<ModelOption[]> => {
+export const fetchRemoteModels = async (
+  apiKey: string,
+  baseURL?: string
+): Promise<ModelOption[]> => {
   if (!apiKey.trim()) {
     throw new Error('missing api key')
   }
-  const attempts: Array<() => Promise<unknown>> = [
-    () =>
-      requestJson(`${API_ORIGIN}/models`, {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: 'application/json',
-      }),
-    () =>
-      requestJson(`${API_ORIGIN}/anthropic/v1/models`, {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        Accept: 'application/json',
-      }),
-  ]
+  const attempts: Array<() => Promise<unknown>> = baseURL
+    ? [
+        () =>
+          requestJson(modelsUrl(baseURL), {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: 'application/json',
+          }),
+      ]
+    : [
+        () =>
+          requestJson(`${API_ORIGIN}/models`, {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: 'application/json',
+          }),
+        () =>
+          requestJson(`${API_ORIGIN}/anthropic/v1/models`, {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            Accept: 'application/json',
+          }),
+      ]
   let lastError: unknown = new Error('no endpoint')
   for (const attempt of attempts) {
     try {
       const models = parseModels(await attempt())
       if (models.length > 0) {
-        writeCache(models)
+        if (!baseURL) {
+          writeCache(models)
+        }
         return models
       }
     } catch (error) {

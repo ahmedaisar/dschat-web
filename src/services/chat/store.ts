@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
 import { ApiError, streamMessage } from '../api/client.js'
+import { isCustomProviderEnabled } from '../api/provider.js'
+import {
+  beginInlineAttachments,
+  blobToDataUrl,
+  setInlineAttachment,
+} from '../api/inlineFiles.js'
 import type { ChatModel, CreateMessageRequest, MessageParam } from '../api/types.js'
 import type { SessionCompression } from './types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
@@ -1188,11 +1194,109 @@ const refreshRequest = (sessionId: string, request: Request): Request => {
  * - 历史轮次（仅进入上下文的）中没有 serverId 的附件，多为导入的图片：从最新的消息往前逐张补传，
  *   失败静默跳过，该附件不进入本次请求，下次发送时再试。
  */
+/** 内联图片上限：超限的图片不下发（通用端点没有 12 MB 的远端缓存） */
+const INLINE_IMAGE_MAX_BYTES = 8 * 1024 * 1024
+/** 内联文本附件上限 */
+const INLINE_TEXT_MAX_BYTES = 512 * 1024
+/** 可当作文本读出的扩展名；其余二进制文档（pdf/docx/ppt 等）没有 Files API 可用，跳过 */
+const INLINE_TEXT_EXTS = new Set([
+  'txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yaml', 'yml', 'toml',
+  'ini', 'conf', 'log', 'html', 'htm', 'css', 'js', 'mjs', 'ts', 'tsx', 'jsx', 'py', 'rb', 'go',
+  'rs', 'c', 'h', 'cpp', 'hpp', 'java', 'kt', 'swift', 'sh', 'bash', 'zsh', 'sql', 'lua', 'pl',
+  'php', 'r', 'tex', 'srt', 'vtt', 'env', 'gitignore', 'dockerfile', 'makefile',
+])
+
+const textLikeMime = (mimeType: string): boolean =>
+  mimeType.startsWith('text/') ||
+  /^application\/(json|xml|x-yaml|yaml|toml|javascript|x-javascript|ecmascript|x-sh|sql|rtf)/.test(
+    mimeType
+  )
+
+const extOf = (name: string): string => {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+}
+
+/**
+ * 自定义 OpenAI 兼容端点没有 Files API：把本地附件预读成 data URL / 原文暂存，
+ * toRequestMessages 构造消息时消费；预读失败或超限的附件跳过并提示一次。
+ */
+const stageInlineAttachments = async (
+  sessionId: string,
+  prepared: Request,
+  signal: AbortSignal
+): Promise<void> => {
+  beginInlineAttachments()
+  const files: FileAttachment[] = [
+    ...prepared.history.flatMap((message) =>
+      message.role === 'user' ? message.files : []
+    ),
+    ...prepared.question.files,
+  ]
+  const pending = pendingFiles.get(sessionId) ?? []
+  let skipped = 0
+  for (const file of files) {
+    signal.throwIfAborted()
+    // 本轮提问的附件优先从 pendingFiles 读（IndexedDB 写入可能还没落地），其次读库
+    const pendingBlob = pending.find((item) => item.id === file.id)?.blob
+    const blob = pendingBlob ?? (await db.loadFile(file.id))
+    if (!blob) {
+      skipped += 1
+      continue
+    }
+    if (file.isImage) {
+      if (blob.size > INLINE_IMAGE_MAX_BYTES) {
+        skipped += 1
+        continue
+      }
+      try {
+        setInlineAttachment(file.id, {
+          isImage: true,
+          mimeType: file.mimeType || 'image/png',
+          name: file.name,
+          dataUrl: await blobToDataUrl(blob),
+        })
+      } catch {
+        skipped += 1
+      }
+      continue
+    }
+    if (blob.size > INLINE_TEXT_MAX_BYTES) {
+      skipped += 1
+      continue
+    }
+    const textLike = textLikeMime(file.mimeType) || INLINE_TEXT_EXTS.has(extOf(file.name))
+    if (!textLike) {
+      skipped += 1
+      continue
+    }
+    try {
+      setInlineAttachment(file.id, {
+        isImage: false,
+        mimeType: 'text/plain',
+        name: file.name,
+        dataUrl: '',
+        text: await blob.text(),
+      })
+    } catch {
+      skipped += 1
+    }
+  }
+  if (skipped > 0) {
+    showToast({ key: 'customAttachmentSkipped', type: 'error', params: { count: skipped } })
+  }
+}
+
 const prepareFiles = async (sessionId: string, request: Request, signal: AbortSignal) => {
   const epoch = historyEpoch
   // 服务端判定 file_id 失效时会清掉会话里的 serverId，先用最新消息替换请求快照，
   // 否则快照里仍是旧 id，补传会直接复用它。
   request = refreshRequest(sessionId, request)
+  // 自定义提供商：不走 Files API，附件改为内联
+  if (isCustomProviderEnabled()) {
+    await stageInlineAttachments(sessionId, request, signal)
+    return request
+  }
   const apiKey = useSettings.getState().apiKey ?? ''
   const serverIds = new Map<string, UploadedFile>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId

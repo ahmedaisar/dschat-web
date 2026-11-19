@@ -14,7 +14,8 @@ import {
   readCachedModels,
   type ModelOption,
 } from '../../services/api/models.js'
-import { setModel, useSettings } from '../../services/settings.js'
+import { setCustomProviderModel, setModel, useSettings } from '../../services/settings.js'
+import { isCustomProviderEnabled, getCustomProvider } from '../../services/api/provider.js'
 import { formatMoney, isKnownModel, modelPriceFor } from '../../services/chat/sessionStats.js'
 import { showToast } from '../base/toastState.js'
 import { useTranslate } from '../../i18n/index.js'
@@ -34,15 +35,25 @@ const priceText = (model: string, t: ReturnType<typeof useTranslate>): string =>
   return `${formatMoney(price.cacheHit)} / ${formatMoney(price.cacheMiss)} / ${formatMoney(price.output)}`
 }
 
+/** 自定义提供商：列表只来自其 GET /models；内置的 DeepSeek 模型与缓存都不适用 */
+const customSeedModels = (): ModelOption[] => {
+  const custom = getCustomProvider()
+  return custom ? [{ id: custom.model, label: modelLabel(custom.model), source: 'builtin' }] : []
+}
+
 /**
  * 模型选择卡片：默认内置 Flash / V4 Pro，可从云端 GET /models 拉取并缓存。
  * 选择结果写入设置，下一条消息就用新模型；旧回复保留自己的模型与计费。
+ * 启用自定义 OpenAI 兼容提供商时，列表来自该端点的 /models。
  */
 export const ModelPicker = () => {
   const t = useTranslate()
   const model = useSettings((state) => state.model)
+  const customEnabled = useSettings(() => isCustomProviderEnabled())
   const [open, setOpen] = useState(false)
-  const [models, setModels] = useState<ModelOption[]>(() => mergeModels(readCachedModels() ?? []))
+  const [models, setModels] = useState<ModelOption[]>(() =>
+    isCustomProviderEnabled() ? customSeedModels() : mergeModels(readCachedModels() ?? [])
+  )
   const [loading, setLoading] = useState(false)
   const fetched = useRef(false)
 
@@ -60,7 +71,8 @@ export const ModelPicker = () => {
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
 
   const refresh = useCallback(async (silent = false) => {
-    const apiKey = useSettings.getState().apiKey ?? ''
+    const custom = getCustomProvider()
+    const apiKey = custom?.apiKey ?? useSettings.getState().apiKey ?? ''
     if (!apiKey) {
       if (!silent) {
         showToast({ key: 'modelFetchFailed' })
@@ -69,8 +81,8 @@ export const ModelPicker = () => {
     }
     setLoading(true)
     try {
-      const remote = await fetchRemoteModels(apiKey)
-      setModels(mergeModels(remote))
+      const remote = await fetchRemoteModels(apiKey, custom?.baseURL)
+      setModels(custom ? remote : mergeModels(remote))
     } catch {
       if (!silent) {
         showToast({ key: 'modelFetchFailed' })
@@ -80,16 +92,16 @@ export const ModelPicker = () => {
     }
   }, [])
 
-  // 首次打开且没有缓存时静默拉一次；失败继续用内置列表
+  // 首次打开且没有缓存时静默拉一次；失败继续用现有列表；自定义端点每次打开都重新拉取
   useEffect(() => {
-    if (!open || fetched.current) {
+    if (!open || (fetched.current && !customEnabled)) {
       return
     }
     fetched.current = true
-    if (!readCachedModels()) {
+    if (customEnabled || !readCachedModels()) {
       void refresh(true)
     }
-  }, [open, refresh])
+  }, [open, refresh, customEnabled])
 
   const sourceText = useMemo(() => {
     if (loading) {
@@ -147,6 +159,10 @@ export const ModelPicker = () => {
                     className={clsx(styles.option, item.id === model && styles.active)}
                     onClick={() => {
                       setModel(item.id)
+                      // custom 模式下把选择写回提供商配置，保持与设置页模型字段一致
+                      if (isCustomProviderEnabled()) {
+                        setCustomProviderModel(item.id)
+                      }
                       setOpen(false)
                     }}
                   >

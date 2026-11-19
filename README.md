@@ -37,6 +37,7 @@
 - **Chat modes**: Chat only / Web agent / PTC / Creator decide which client tools and round limit apply;
 - **Statistics and billing**: usage ledger, context breakdown, per-model pricing and the free server-search switch;
 - **Android**: APK builds, in-app update check and a built-in network proxy for the VM.
+- **BYOK / OpenAI-compatible providers**: point the app at any Chat Completions-compatible endpoint with your own key; keys stay in your browser.
 
 ## Documentation
 
@@ -55,6 +56,27 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 | 9. Run and build                | Development, production build and the Android APK                    | [09-build.md](docs/en/09-build.md)                     |
 | 10. Known limitations           | The 51 boundaries and trade-offs                                     | [10-known-limits.md](docs/en/10-known-limits.md)       |
 | 11. License and credits         | MIT and upstream                                                     | [11-license.md](docs/en/11-license.md)                 |
+
+## BYOK: OpenAI-compatible providers
+
+By default the app talks to the DeepSeek API (Anthropic-compatible protocol) using the key you enter in Settings → Data. You can instead route all chat traffic to **any endpoint that implements OpenAI Chat Completions** — OpenAI, OpenRouter, Groq, Together, DeepSeek, llama.cpp, Ollama (`http://localhost:11434/v1`), vLLM, etc.
+
+Settings → Data → **Custom OpenAI-compatible provider**:
+
+1. Enter a display name (optional), the **Base URL** (`https://api.openai.com/v1`; a missing `/v1` suffix is added automatically), your **API key** and the **model** id.
+2. Use **Fetch models** (calls `GET {base}/models`) or type the model id directly.
+3. **Test connection** verifies the key against `GET /models` at no cost.
+4. Flip **Use custom provider** on. Every request now goes to your endpoint as `POST {base}/chat/completions`; switch it off to fall back to the built-in DeepSeek API (your DeepSeek key is kept).
+
+Notes:
+
+- Your custom key is stored in this browser's localStorage only (`chat-demo:custom-provider`) and is sent directly to the endpoint you configure — never to the author or any relay.
+- DeepSeek-specific server features (web search, read link, title generation, `safety_check`) are not sent to custom endpoints; the smart-search toggle is disabled there.
+- Attachments are sent inline: images (≤ 8 MB) as base64 data URLs, text-like files (≤ 512 KB) as plain text. PDF/DOCX/PPT and other binary documents are skipped.
+- `reasoning_effort` is forwarded when the model has thinking enabled; models without reasoning support ignore it.
+- Browser tools work unchanged (they run locally; the model calls them over `tool_calls`).
+- Streaming, context breakdown and the usage ledger work; usage is taken from the final chunk's `usage` when the endpoint returns it (`stream_options.include_usage`).
+- Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
 
 ## Quick start
 

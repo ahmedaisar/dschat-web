@@ -146,6 +146,17 @@ export type FileBlockParam = {
   source: { type: 'file'; file_id: string }
 }
 
+/**
+ * 内联附件块：自定义 OpenAI 兼容提供商没有 Files API，
+ * 图片以 data URL 下发、文本类文件以原文内联，仅客户端这一侧使用。
+ */
+export type InlineFileBlockParam = {
+  type: 'image' | 'text'
+  source:
+    | { type: 'base64'; media_type: string; data: string }
+    | { type: 'text'; media_type: 'text/plain'; data: string; name: string }
+}
+
 /** 接口接受的调用块；历史只回传 kind 为 read_link 的调用 */
 export type ServerToolUseBlockParam = Pick<
   ServerToolUseBlock,
@@ -188,7 +199,10 @@ export type MessageParam =
   | { role: 'latest_reminder'; content: string }
   | {
       role: 'user'
-      content: string | (FileBlockParam | TextBlockParam)[] | ToolResultBlockParam[]
+      content:
+        | string
+        | (FileBlockParam | InlineFileBlockParam | TextBlockParam)[]
+        | ToolResultBlockParam[]
     }
   | { role: 'assistant'; content: AssistantBlockParam[] }
 
