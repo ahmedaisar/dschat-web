@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslate } from '../../i18n/index.js'
-import { IconCloseOutline16 } from './icons.js'
+import { IconCloseOutline16, IconSearchOutline16 } from './icons.js'
 import { IconButton } from './IconButton.js'
 import styles from './Modal.module.css'
 
@@ -17,6 +17,9 @@ export const Modal = ({
   closable = false,
   className,
   mainClassName,
+  searchValue,
+  onSearchChange,
+  searchPlaceholder,
   onClose,
 }: {
   title: ReactNode
@@ -27,9 +30,16 @@ export const Modal = ({
   className?: string
   /** 内容区的 class */
   mainClassName?: string
+  /** 可选的受控搜索词；传入后在标题下显示搜索输入框 */
+  searchValue?: string
+  /** 搜索词变化回调；必须与 searchValue 一起传入 */
+  onSearchChange?: (value: string) => void
+  /** 搜索框占位文案，默认使用本地化的“搜索” */
+  searchPlaceholder?: string
   onClose: () => void
 }) => {
   const t = useTranslate()
+  const showSearch = searchValue !== undefined && onSearchChange !== undefined
   const titleId = useId()
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -73,6 +83,18 @@ export const Modal = ({
             />
           ) : null}
         </div>
+        {showSearch ? (
+          <label className={styles.search}>
+            <IconSearchOutline16 />
+            <input
+              type="search"
+              value={searchValue}
+              placeholder={searchPlaceholder ?? t('search')}
+              aria-label={searchPlaceholder ?? t('search')}
+              onChange={(event) => onSearchChange(event.target.value)}
+            />
+          </label>
+        ) : null}
         {children ? <div className={clsx(styles.main, mainClassName)}>{children}</div> : null}
         {footer ? <div className={styles.footer}>{footer}</div> : null}
       </div>
