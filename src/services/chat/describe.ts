@@ -1,6 +1,6 @@
 import { isTranslationKey, translate } from '../../i18n/index.js'
 import { classifyStatus, isAgenticHarnessMessage, retryAfterSeconds } from '../api/errors.js'
-import { isCustomProviderEnabled } from '../api/provider.js'
+import { getCustomProvider } from '../api/provider.js'
 import { hasReplyContent } from './reply.js'
 import type { AssistantMessage } from './types.js'
 
@@ -33,7 +33,8 @@ export const describeReply = (reply: AssistantMessage): Notice | null => {
     if (kind === 'network') {
       return { text: translate('commonNetworkErrorToast') }
     }
-    const custom = isCustomProviderEnabled()
+    const customProvider = getCustomProvider()
+    const custom = customProvider !== null
     switch (classifyStatus(status)) {
       case 'unauthorized':
         return { text: translate('replyInvalidApiKey'), action: 'apiKey' }
@@ -49,7 +50,9 @@ export const describeReply = (reply: AssistantMessage): Notice | null => {
             text:
               seconds !== null
                 ? translate('replyRateLimitedRetryAfter', { seconds })
-                : translate('replyRateLimitedCustom'),
+                : translate('replyRateLimitedCustom', {
+                    provider: customProvider?.name || 'configured provider',
+                  }),
           }
         }
         return { text: translate('replyRateLimited') }

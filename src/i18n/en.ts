@@ -779,7 +779,7 @@ export const en = {
   agenticHarnessOnlyModel:
     'This model is restricted to agentic harnesses (coding agents listed on openrouter.ai/apps) and refuses normal chat clients. Pick a different model — e.g. a general-purpose :free model or the paid inkling-2-small — in Settings → Data → Custom OpenAI-compatible provider.',
   replyRateLimitedCustom:
-    'Rate limited by your provider (OpenRouter free models: ~20 requests/min and 50/day, and the shared upstream pool may be exhausted). Wait a minute, add a few credits to lift the cap, or switch to another model.',
+    'Rate limited by {provider}. Wait a minute, check that provider’s quota or billing, or switch to another model.',
   replyRateLimitedRetryAfter:
     'Rate limited by your provider. Try again in about {seconds}s, or switch to another model / add credits.',
   customAttachmentSkipped:

@@ -707,7 +707,7 @@ export const zh = {
   agenticHarnessOnlyModel:
     '该模型仅限 agentic harness（openrouter.ai/apps 上列出的编程智能体）使用，会拒绝普通聊天客户端。请换用其他模型（例如通用的 :free 模型，或付费版 inkling-2-small），可在「设置 → 数据管理 → 自定义 OpenAI 兼容提供商」中修改。',
   replyRateLimitedCustom:
-    '被提供商限流了（OpenRouter 免费模型：约 20 次/分钟、50 次/天，且上游共享池也可能被打满）。等一分钟再试、充值提额，或更换模型。',
+    '提供商 {provider} 触发了速率限制。请稍等片刻，检查该提供商的配额或账单，或更换模型。',
   replyRateLimitedRetryAfter:
     '被提供商限流。约 {seconds} 秒后可重试，或更换模型 / 充值提额。',
   customAttachmentSkipped:
