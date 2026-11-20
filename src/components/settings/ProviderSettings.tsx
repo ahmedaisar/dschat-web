@@ -69,7 +69,17 @@ export const ProviderSettings = () => {
     })
   }, [])
 
-  const useOpenAIPreset = () => update(OPENAI_PRESET)
+  const useOpenAIPreset = () => {
+    const next = { ...draft, ...OPENAI_PRESET }
+    const nextProvider = normalizeCustomProvider(next)
+    setDraft(next)
+    if (nextProvider) {
+      setCustomProvider(nextProvider)
+      if (next.apiKey.trim()) {
+        setProvider('custom')
+      }
+    }
+  }
 
   const toggle = (value: boolean) => {
     if (value) {
