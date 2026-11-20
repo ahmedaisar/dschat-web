@@ -5,6 +5,7 @@ import { useIsMobile, useMobileViewport, usePreventPageScroll } from './viewport
 import {
   bindChatPersistence,
   initChat,
+  newChat,
   retrySaveSessions,
   selectSession,
   useChatStore,
@@ -24,6 +25,7 @@ import { closeLab, useLab } from '../services/lab/labStore.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
+import { navigate, newConversationPath, useAppRoute } from '../services/routing.js'
 import { Button } from '../components/base/Button.js'
 import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
@@ -34,6 +36,7 @@ import styles from './App.module.css'
 
 export const App = () => {
   const t = useTranslate()
+  const route = useAppRoute()
   const isMobile = useIsMobile()
   const locale = useSettings((state) => state.locale)
   // 移动端侧边栏以独立抽屉管理开合状态
@@ -55,6 +58,7 @@ export const App = () => {
     state.activeId === null ? false : Object.hasOwn(state.streaming, state.activeId)
   )
   const activeId = useChatStore((state) => state.activeId)
+  const sessions = useChatStore((state) => state.sessions)
   const labOpen = useLab((state) => state.open)
 
   usePreventPageScroll(isMobile)
@@ -79,6 +83,34 @@ export const App = () => {
     // 首次打开先在设置里输入 API Key
     ensureApiKey()
   }, [])
+
+  // URL 是会话的入口；本地 IndexedDB 仍是内容来源。首次加载或浏览器前进/后退时，
+  // 只应用 URL 到 store，不再次写入历史，避免 popstate 与 pushState 互相触发。
+  useEffect(() => {
+    if (!ready) {
+      return
+    }
+    if (route.kind === 'unknown') {
+      navigate(newConversationPath(), true)
+      return
+    }
+    if (route.kind === 'new') {
+      if (window.location.pathname !== newConversationPath()) {
+        navigate(newConversationPath(), true)
+      }
+      if (activeId !== null) {
+        newChat({ syncRoute: false })
+      }
+      return
+    }
+    if (!sessions.some((item) => item.id === route.id)) {
+      navigate(newConversationPath(), true)
+      return
+    }
+    if (activeId !== route.id) {
+      selectSession(route.id, { syncRoute: false })
+    }
+  }, [activeId, ready, route, sessions])
 
   return (
     <>

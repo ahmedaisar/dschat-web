@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { translate } from '../../i18n/index.js'
+import { conversationPath, navigate, newConversationPath } from '../routing.js'
 import { ApiError, streamMessage } from '../api/client.js'
 import { isCustomProviderEnabled } from '../api/provider.js'
 import {
@@ -547,10 +548,13 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
  */
 let pendingSystemPrompt: string | null = null
 
-export const newChat = (options?: { systemPrompt?: string | null }) => {
+export const newChat = (options?: { systemPrompt?: string | null; syncRoute?: boolean }) => {
   if (!get().importingHistory) {
     pendingSystemPrompt = options?.systemPrompt?.trim() ? options.systemPrompt.trim() : null
     set({ activeId: null })
+    if (options?.syncRoute !== false) {
+      navigate(newConversationPath())
+    }
     trimSessionCache()
   }
 }
@@ -647,6 +651,7 @@ export const forkSession = (sessionId: string): string | null => {
     activeId: session.id,
   }))
   persist(session.id)
+  navigate(conversationPath(session.id))
   trimSessionCache()
   return session.id
 }
@@ -707,15 +712,19 @@ export const createSeededChat = (seed: SeededChat): string | null => {
     activeId: session.id,
   }))
   persist(session.id)
+  navigate(conversationPath(session.id))
   trimSessionCache()
   return session.id
 }
 
-export const selectSession = (id: string) => {
+export const selectSession = (id: string, options?: { syncRoute?: boolean }) => {
   if (!get().importingHistory && get().sessions.some((session) => session.id === id)) {
     pendingSystemPrompt = null
     touchSession(id)
     set({ activeId: id })
+    if (options?.syncRoute !== false) {
+      navigate(conversationPath(id))
+    }
     void ensureSessionLoaded(id)
     trimSessionCache()
   }
@@ -774,6 +783,7 @@ const removeSessionData = async (id: string): Promise<boolean> => {
     unsavedSessions.delete(id)
     pendingFiles.delete(id)
     clearDraft(id)
+    const deletedActive = get().activeId === id
     set((state) => ({
       sessions: state.sessions.filter((session) => session.id !== id),
       sessionCache: Object.fromEntries(
@@ -787,6 +797,9 @@ const removeSessionData = async (id: string): Promise<boolean> => {
       ),
       activeId: state.activeId === id ? null : state.activeId,
     }))
+    if (deletedActive) {
+      navigate(newConversationPath())
+    }
     return true
   } catch (error) {
     db.reportStorageError('delete session')(error)
@@ -862,6 +875,7 @@ export const sendMessage = (targetSessionId: string | null) => {
       sessionCache: { ...state.sessionCache, [session.id]: session },
       activeId: session.id,
     }))
+    navigate(conversationPath(session.id))
   }
   const current = getSession(sessionId)
   if (!current) {

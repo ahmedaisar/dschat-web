@@ -2,5 +2,6 @@
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "rewrites": [{ "source": "/c/(.*)", "destination": "/" }]
 }
