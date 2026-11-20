@@ -3,7 +3,12 @@ import { useState } from 'react'
 import { useTranslate, type TranslationKey } from '../../i18n/index.js'
 import type { ToolArtifact } from '../../services/agent/tools.js'
 import { summarizeToolInput, toolDuration, type ChatToolCall } from '../../services/agent/types.js'
-import { IconCheckOutline16, IconWarningOutline16, IconDownloadOutline16 } from '../base/icons.js'
+import {
+  IconCheckOutline16,
+  IconWarningOutline16,
+  IconDownloadOutline16,
+  IconRightUpOutline14,
+} from '../base/icons.js'
 import styles from './ToolCallCards.module.css'
 
 /**
@@ -40,6 +45,31 @@ const DownloadButton = ({ artifact }: { artifact: ToolArtifact }) => {
   )
 }
 
+const OpenWidgetButton = ({ artifact }: { artifact: ToolArtifact }) => {
+  const t = useTranslate()
+  const open = () => {
+    const blob = new Blob([artifact.text], { type: artifact.mime || 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const tab = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!tab) {
+      URL.revokeObjectURL(url)
+      return
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+  return (
+    <button
+      type="button"
+      className={styles.artifactIconButton}
+      aria-label={t('toolArtifactOpen')}
+      title={t('toolArtifactOpen')}
+      onClick={open}
+    >
+      <IconRightUpOutline14 />
+    </button>
+  )
+}
+
 const ArtifactCard = ({ artifact }: { artifact: ToolArtifact }) => {
   const t = useTranslate()
   const [open, setOpen] = useState(false)
@@ -54,6 +84,7 @@ const ArtifactCard = ({ artifact }: { artifact: ToolArtifact }) => {
           loading="lazy"
         />
         <div className={styles.widgetActions}>
+          <OpenWidgetButton artifact={artifact} />
           <DownloadButton artifact={artifact} />
         </div>
       </div>

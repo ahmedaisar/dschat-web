@@ -220,8 +220,28 @@
 .widgetActions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
   padding: 6px 8px;
   border-top: 1px solid var(--dsw-alias-border-l2);
+}
+
+.artifactIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-brand-text);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
 }
 
 @media not all and (min-width: 768px) {

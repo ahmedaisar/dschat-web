@@ -492,6 +492,7 @@ export const zh = {
   toolArtifactPreview: '预览',
   toolArtifactHide: '收起',
   toolArtifactDownload: '下载',
+  toolArtifactOpen: '在新标签页打开预览',
   toolApprovalTitle: '工具执行确认',
   toolApprovalLead: '模型请求执行「{tool}」，请确认参数后再决定是否允许。',
   toolApprovalAllow: '允许',

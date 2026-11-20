@@ -556,6 +556,7 @@ export const en = {
   toolArtifactPreview: 'Preview',
   toolArtifactHide: 'Hide',
   toolArtifactDownload: 'Download',
+  toolArtifactOpen: 'Open preview in new tab',
   toolApprovalTitle: 'Confirm tool call',
   toolApprovalLead: 'The model wants to run “{tool}”. Review the input before allowing it.',
   toolApprovalAllow: 'Allow',
