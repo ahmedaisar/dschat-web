@@ -15,12 +15,13 @@ export default async function handler(req: Request, res: Response) {
       return json(res, 400, { error: 'Invalid or expired ChatGPT sign-in state' })
     }
     const returnedClientId = typeof query.client_id === 'string' ? query.client_id : transaction.clientId
-    if (returnedClientId !== transaction.clientId) {
-      return json(res, 400, { error: 'ChatGPT returned an unexpected client id' })
+    const clientId = transaction.clientId === 'dynamic_agent_client' ? returnedClientId : transaction.clientId
+    if (!clientId || clientId === 'dynamic_agent_client' || (transaction.clientId !== 'dynamic_agent_client' && returnedClientId !== transaction.clientId)) {
+      return json(res, 400, { error: 'ChatGPT did not return a valid issued client id' })
     }
     const body = await exchangeCode(new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: transaction.clientId,
+      client_id: clientId,
       code,
       code_verifier: transaction.verifier,
       redirect_uri: transaction.redirectUri,
@@ -37,7 +38,7 @@ export default async function handler(req: Request, res: Response) {
       accessToken: body.access_token,
       ...(typeof body.refresh_token === 'string' ? { refreshToken: body.refresh_token } : {}),
       expiresAt: Date.now() + body.expires_in * 1000,
-      clientId: transaction.clientId,
+      clientId,
       scope,
     }
     res.setHeader('Set-Cookie', [

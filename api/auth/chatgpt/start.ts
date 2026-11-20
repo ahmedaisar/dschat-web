@@ -6,8 +6,9 @@ type Response = { setHeader: (name: string, value: string) => void; redirect: (s
 
 export default function handler(req: Request, res: Response) {
   try {
-    const clientId = process.env.OPENAI_SIWC_CLIENT_ID
-    if (!clientId) return json(res, 503, { error: 'ChatGPT login is not configured on this deployment' })
+    // OpenAI's documented open-source flow accepts dynamic_agent_client for
+    // first registration and returns the issued client id in the callback.
+    const clientId = process.env.OPENAI_SIWC_CLIENT_ID || 'dynamic_agent_client'
     const state = randomBytes(32).toString('base64url')
     const verifier = randomBytes(32).toString('base64url')
     const challenge = createHash('sha256').update(verifier).digest('base64url')
