@@ -1,5 +1,6 @@
 export type ChatGPTSessionStatus = {
   connected: boolean
+  configured?: boolean
   expiresAt?: number
   scope?: string
 }

@@ -697,6 +697,9 @@ export const zh = {
   chatgptSubscriptionDescription:
     '使用 ChatGPT 账户登录，以使用符合条件的套餐用量；部署必须配置 OpenAI SIWC OAuth 才能使用。',
   chatgptSignIn: '使用 ChatGPT 登录',
+  chatgptHostedUnavailable: '托管版不可用',
+  chatgptHostedUnavailableDescription:
+    'OpenAI 目前仅向本地开源工具和获选的托管合作伙伴提供 ChatGPT 套餐共享。此 Vercel 部署尚未获批，请使用 OpenAI API Key，或向 OpenAI 申请托管访问权限。',
   chatgptUsePlan: '使用 ChatGPT 套餐',
   chatgptSignOut: '退出登录',
   chatgptSubscriptionLearnMore: '查看 OpenAI 集成要求',

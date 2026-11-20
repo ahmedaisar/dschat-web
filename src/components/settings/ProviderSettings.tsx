@@ -44,6 +44,7 @@ export const ProviderSettings = () => {
   const [testing, setTesting] = useState(false)
   const [fetching, setFetching] = useState(false)
   const [chatGPTConnected, setChatGPTConnected] = useState(false)
+  const [chatGPTConfigured, setChatGPTConfigured] = useState(false)
   const [chatGPTBusy, setChatGPTBusy] = useState(false)
 
   const update = (patch: Partial<typeof EMPTY>) => {
@@ -62,7 +63,10 @@ export const ProviderSettings = () => {
   const complete = normalized !== null
 
   useEffect(() => {
-    void getChatGPTSession().then((session) => setChatGPTConnected(session.connected))
+    void getChatGPTSession().then((session) => {
+      setChatGPTConnected(session.connected)
+      setChatGPTConfigured(session.configured === true)
+    })
   }, [])
 
   const useOpenAIPreset = () => update(OPENAI_PRESET)
@@ -251,7 +255,11 @@ export const ProviderSettings = () => {
         <div className={styles.note}>{t('customProviderNotes')}</div>
         <div className={styles.subscriptionNotice}>
           <strong>{t('chatgptSubscriptionTitle')}</strong>
-          <span>{t('chatgptSubscriptionDescription')}</span>
+          <span>
+            {chatGPTConfigured
+              ? t('chatgptSubscriptionDescription')
+              : t('chatgptHostedUnavailableDescription')}
+          </span>
           <div className={styles.row}>
             {chatGPTConnected ? (
               <>
@@ -272,8 +280,8 @@ export const ProviderSettings = () => {
                 </Button>
               </>
             ) : (
-              <Button size="s" onClick={connectChatGPT}>
-                {t('chatgptSignIn')}
+              <Button size="s" disabled={!chatGPTConfigured} onClick={connectChatGPT}>
+                {chatGPTConfigured ? t('chatgptSignIn') : t('chatgptHostedUnavailable')}
               </Button>
             )}
           </div>

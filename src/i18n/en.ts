@@ -769,6 +769,9 @@ export const en = {
   chatgptSubscriptionDescription:
     'Sign in with your ChatGPT account to use eligible plan usage. This requires the deployment to have OpenAI SIWC OAuth configuration.',
   chatgptSignIn: 'Continue with ChatGPT',
+  chatgptHostedUnavailable: 'Unavailable on hosted app',
+  chatgptHostedUnavailableDescription:
+    'OpenAI currently limits ChatGPT plan sharing to local open-source tools and selected hosted partners. This Vercel deployment is not approved, so use an OpenAI API key or request hosted access from OpenAI.',
   chatgptUsePlan: 'Use ChatGPT plan',
   chatgptSignOut: 'Sign out',
   chatgptSubscriptionLearnMore: 'Read OpenAI integration requirements',

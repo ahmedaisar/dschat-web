@@ -76,7 +76,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 - 开启思考时透传 `reasoning_effort`；不支持的模型会忽略该字段。
 - 浏览器工具不受影响（工具在本地执行，模型经 `tool_calls` 调用）；流式输出、上下文分类、用量账本正常工作（端点需返回 `usage` 字段，本应用会请求 `stream_options.include_usage`）。
 - 关于 OpenRouter 的 `:free` 模型：限额较紧（约 20 次/分钟、50 次/天），部分模型仅限 agentic harness（编程智能体，返回 HTTP 403），会拒绝普通聊天客户端——请使用通用的免费模型，或付费版（如 `thinkingmachines/inkling-2-small`）。
-- 配置 OpenAI Sign in with ChatGPT 后可使用 ChatGPT 订阅登录：在 Vercel 设置 `OPENAI_SIWC_CLIENT_ID` 与 `OPENAI_SIWC_SESSION_SECRET`（至少 32 个随机字符），并向 OpenAI 注册回调地址 `https://<你的域名>/api/auth/chatgpt/callback`。应用通过加密 HttpOnly 会话 Cookie 保存令牌，并由服务端代理 Responses API；ChatGPT Plus/Pro 与普通 API 计费仍然分开。
+- ChatGPT 套餐共享目前仅向本地开源工具和获选的托管合作伙伴开放。此 Vercel 部署尚未获批，且本地 `dynamic_agent_client` 流程要求 loopback 回调；请在此应用中使用 OpenAI API Key，或向 OpenAI 申请托管 SIWC 访问权限。ChatGPT Plus/Pro 与普通 API 计费仍然分开。
 
 ## 快速开始
 
