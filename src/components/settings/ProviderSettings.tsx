@@ -54,6 +54,12 @@ export const ProviderSettings = () => {
       const normalized = normalizeCustomProvider(next)
       if (normalized) {
         setCustomProvider(normalized)
+        if (
+          next.apiKey.trim() &&
+          next.baseURL.trim().replace(/\/$/, '') === 'https://api.openai.com/v1'
+        ) {
+          setProvider('custom')
+        }
       }
       return next
     })
