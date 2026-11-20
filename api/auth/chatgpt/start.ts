@@ -6,16 +6,20 @@ type Response = { setHeader: (name: string, value: string) => void; redirect: (s
 
 export default function handler(req: Request, res: Response) {
   try {
-    // OpenAI's documented open-source flow accepts dynamic_agent_client for
-    // first registration and returns the issued client id in the callback.
-    const clientId = process.env.OPENAI_SIWC_CLIENT_ID || 'dynamic_agent_client'
+    const clientId = process.env.OPENAI_SIWC_CLIENT_ID
+    if (!clientId) {
+      return json(res, 503, {
+        error:
+          'Hosted ChatGPT login requires an OpenAI-issued OPENAI_SIWC_CLIENT_ID with this callback URL registered',
+      })
+    }
     const state = randomBytes(32).toString('base64url')
     const verifier = randomBytes(32).toString('base64url')
     const challenge = createHash('sha256').update(verifier).digest('base64url')
     const returnTo = typeof req.query?.return_to === 'string' && req.query.return_to.startsWith('/') ? req.query.return_to : '/c/new'
     const redirectUri = `${originFor(req)}/api/auth/chatgpt/callback`
     const url = new URL(AUTHORIZATION_ENDPOINT)
-    url.search = new URLSearchParams({
+    const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
       redirect_uri: redirectUri,
@@ -25,7 +29,11 @@ export default function handler(req: Request, res: Response) {
       nonce: randomBytes(32).toString('base64url'),
       code_challenge_method: 'S256',
       code_challenge: challenge,
-    }).toString()
+    })
+    if (clientId === 'dynamic_agent_client') {
+      params.set('agent_name_hint', 'chat-demo-unrestricted')
+    }
+    url.search = params.toString()
     res.setHeader('Set-Cookie', cookie('chatgpt_oauth', seal({ state, verifier, returnTo, clientId, redirectUri }), 600))
     res.redirect(302, url.toString())
   } catch (error) {
