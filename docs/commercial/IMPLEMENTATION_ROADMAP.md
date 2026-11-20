@@ -28,7 +28,7 @@ Status: **Phase 0 — in progress. No commercial application code changed yet.**
 
 **Risks:** static-only GitHub Pages cannot host server routes; Vercel framework/runtime/SSE/PostgreSQL connectivity must be verified. Email and OAuth require configured provider accounts.
 
-**Status:** Not started.
+**Status:** Foundation slice implemented: server-only configuration reader, safe liveness endpoint at `/api/health`, API boundary documentation, `.env.example`, and API inclusion in TypeScript/lint checks. Authentication, database, sessions and ownership are not implemented yet.
 
 ## Phase 2 — Billing and credit engine
 
