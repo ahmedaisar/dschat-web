@@ -8,6 +8,8 @@ export const zh = {
   forkFailed: '当前无法分支：请等待生成结束或导入完成',
   forkTitleSuffix: '（分支）',
   modelSelect: '模型',
+  modelSearchPlaceholder: '搜索模型…',
+  modelSearchEmpty: '没有匹配的模型',
   modelFetch: '从云端获取',
   modelFetching: '获取中…',
   modelFetchFailed: '无法获取云端模型，已使用内置列表',

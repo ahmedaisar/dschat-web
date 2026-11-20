@@ -6,6 +6,7 @@ import {
   IconCheckedOutline14,
   IconChevronDownOutline14,
   IconRefreshOutline16,
+  IconSearchOutline16,
 } from '../base/icons.js'
 import {
   BUILTIN_MODELS,
@@ -55,6 +56,7 @@ export const ModelPicker = () => {
     isCustomProviderEnabled() ? customSeedModels() : mergeModels(readCachedModels() ?? [])
   )
   const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState('')
   const fetched = useRef(false)
 
   const { anchorRef, floatingRef, position } = useAnchoredPosition<
@@ -103,6 +105,16 @@ export const ModelPicker = () => {
     }
   }, [open, refresh, customEnabled])
 
+  const filteredModels = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase()
+    if (!normalized) {
+      return models
+    }
+    return models.filter((item) =>
+      `${item.label} ${item.id}`.toLocaleLowerCase().includes(normalized)
+    )
+  }, [models, query])
+
   const sourceText = useMemo(() => {
     if (loading) {
       return t('modelFetching')
@@ -149,8 +161,20 @@ export const ModelPicker = () => {
                   {loading ? t('modelFetching') : t('modelFetch')}
                 </button>
               </div>
+              <label className={styles.search}>
+                <IconSearchOutline16 />
+                <input
+                  type="search"
+                  value={query}
+                  placeholder={t('modelSearchPlaceholder')}
+                  aria-label={t('modelSearchPlaceholder')}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  autoFocus
+                />
+              </label>
               <div className={styles.list}>
-                {models.map((item) => (
+                {filteredModels.map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -179,6 +203,9 @@ export const ModelPicker = () => {
                     {item.id === model ? <IconCheckedOutline14 /> : null}
                   </button>
                 ))}
+                {filteredModels.length === 0 ? (
+                  <div className={styles.empty}>{t('modelSearchEmpty')}</div>
+                ) : null}
               </div>
               <div className={styles.foot}>
                 <span>{sourceText}</span>

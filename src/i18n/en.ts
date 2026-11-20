@@ -10,6 +10,8 @@ export const en = {
   forkFailed: 'Cannot branch right now: wait for generation or import to finish',
   forkTitleSuffix: ' (branch)',
   modelSelect: 'Model',
+  modelSearchPlaceholder: 'Search models…',
+  modelSearchEmpty: 'No matching models',
   modelFetch: 'Fetch from cloud',
   modelFetching: 'Fetching…',
   modelFetchFailed: 'Could not fetch cloud models; using built-ins',
