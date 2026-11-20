@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { showToast } from '../base/toastState.js'
 import { Button } from '../base/Button.js'
 import { Switch } from '../base/Switch.js'
@@ -14,7 +14,6 @@ import {
   verifyOpenAICompatible,
 } from '../../services/api/openaiCompatible.js'
 import { ApiError } from '../../services/api/client.js'
-import { getChatGPTSession, logoutChatGPT, startChatGPTLogin } from '../../services/api/chatgpt.js'
 import {
   classifyApiError,
   isAgenticHarnessError,
@@ -22,11 +21,18 @@ import {
 import styles from './ProviderSettings.module.css'
 
 const EMPTY = { name: '', baseURL: '', apiKey: '', model: '' }
-const OPENAI_PRESET = {
-  name: 'OpenAI',
-  baseURL: 'https://api.openai.com/v1',
-  model: 'gpt-4o-mini',
-}
+const PROVIDER_PRESETS = {
+  openai: {
+    name: 'OpenAI',
+    baseURL: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+  },
+  ollamaCloud: {
+    name: 'Ollama Cloud',
+    baseURL: 'https://ollama.com/v1',
+    model: 'qwen3-coder:480b-cloud',
+  },
+} as const
 const MODEL_LIST_ID = 'custom-provider-model-list'
 
 /**
@@ -43,9 +49,6 @@ export const ProviderSettings = () => {
   const [models, setModels] = useState<string[]>([])
   const [testing, setTesting] = useState(false)
   const [fetching, setFetching] = useState(false)
-  const [chatGPTConnected, setChatGPTConnected] = useState(false)
-  const [chatGPTConfigured, setChatGPTConfigured] = useState(false)
-  const [chatGPTBusy, setChatGPTBusy] = useState(false)
 
   const update = (patch: Partial<typeof EMPTY>) => {
     setDraft((previous) => {
@@ -56,7 +59,7 @@ export const ProviderSettings = () => {
         setCustomProvider(normalized)
         if (
           next.apiKey.trim() &&
-          next.baseURL.trim().replace(/\/$/, '') === 'https://api.openai.com/v1'
+          Object.values(PROVIDER_PRESETS).some((preset) => preset.baseURL === next.baseURL.trim())
         ) {
           setProvider('custom')
         }
@@ -67,16 +70,16 @@ export const ProviderSettings = () => {
 
   const normalized = normalizeCustomProvider(draft)
   const complete = normalized !== null
+  const selectedPreset =
+    draft.baseURL === PROVIDER_PRESETS.openai.baseURL
+      ? 'openai'
+      : draft.baseURL === PROVIDER_PRESETS.ollamaCloud.baseURL
+        ? 'ollamaCloud'
+        : ''
 
-  useEffect(() => {
-    void getChatGPTSession().then((session) => {
-      setChatGPTConnected(session.connected)
-      setChatGPTConfigured(session.configured === true)
-    })
-  }, [])
-
-  const useOpenAIPreset = () => {
-    const next = { ...draft, ...OPENAI_PRESET }
+  const selectPreset = (presetId: keyof typeof PROVIDER_PRESETS) => {
+    const preset = PROVIDER_PRESETS[presetId]
+    const next = { ...draft, ...preset }
     const nextProvider = normalizeCustomProvider(next)
     setDraft(next)
     if (nextProvider) {
@@ -160,23 +163,6 @@ export const ProviderSettings = () => {
     showToast({ key: 'customProviderRemoved' })
   }
 
-  const connectChatGPT = () => {
-    startChatGPTLogin()
-  }
-
-  const disconnectChatGPT = async () => {
-    setChatGPTBusy(true)
-    try {
-      await logoutChatGPT()
-      setChatGPTConnected(false)
-      if (provider === 'chatgpt') {
-        setProvider('deepseek')
-      }
-    } finally {
-      setChatGPTBusy(false)
-    }
-  }
-
   return (
     <div className={styles.block}>
       <div className={styles.text}>
@@ -193,10 +179,25 @@ export const ProviderSettings = () => {
       </div>
       <div className={styles.form}>
         <div className={styles.preset}>
-          <Button variant="outlined" size="s" onClick={useOpenAIPreset}>
-            {t('openaiUsePreset')}
-          </Button>
-          <span>{t('openaiPresetDescription')}</span>
+          <label className={styles.fieldLabel} htmlFor="provider-preset">
+            {t('providerPreset')}
+          </label>
+          <select
+            id="provider-preset"
+            className={styles.input}
+            value={selectedPreset}
+            onChange={(event) => {
+              const value = event.target.value as keyof typeof PROVIDER_PRESETS
+              if (value) {
+                selectPreset(value)
+              }
+            }}
+          >
+            <option value="">{t('providerPresetPlaceholder')}</option>
+            <option value="openai">OpenAI</option>
+            <option value="ollamaCloud">Ollama Cloud</option>
+          </select>
+          <span>{t('providerPresetDescription')}</span>
         </div>
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{t('customProviderName')}</span>
@@ -236,6 +237,9 @@ export const ProviderSettings = () => {
             value={draft.apiKey}
             onChange={(event) => update({ apiKey: event.target.value })}
           />
+          {selectedPreset === 'ollamaCloud' ? (
+            <span className={styles.fieldHint}>{t('ollamaCloudApiKeyHint')}</span>
+          ) : null}
         </div>
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{t('customProviderModel')}</span>
@@ -269,42 +273,6 @@ export const ProviderSettings = () => {
           ) : null}
         </div>
         <div className={styles.note}>{t('customProviderNotes')}</div>
-        <div className={styles.subscriptionNotice}>
-          <strong>{t('chatgptSubscriptionTitle')}</strong>
-          <span>
-            {chatGPTConfigured
-              ? t('chatgptSubscriptionDescription')
-              : t('chatgptHostedUnavailableDescription')}
-          </span>
-          <div className={styles.row}>
-            {chatGPTConnected ? (
-              <>
-                <Button
-                  size="s"
-                  disabled={provider === 'chatgpt'}
-                  onClick={() => setProvider('chatgpt')}
-                >
-                  {t('chatgptUsePlan')}
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="s"
-                  disabled={chatGPTBusy}
-                  onClick={() => void disconnectChatGPT()}
-                >
-                  {t('chatgptSignOut')}
-                </Button>
-              </>
-            ) : (
-              <Button size="s" disabled={!chatGPTConfigured} onClick={connectChatGPT}>
-                {chatGPTConfigured ? t('chatgptSignIn') : t('chatgptHostedUnavailable')}
-              </Button>
-            )}
-          </div>
-          <a href="https://developers.openai.com/siwc" target="_blank" rel="noreferrer">
-            {t('chatgptSubscriptionLearnMore')}
-          </a>
-        </div>
       </div>
     </div>
   )

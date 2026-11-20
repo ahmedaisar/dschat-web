@@ -37,7 +37,7 @@ export const closeSettings = () => useSettingsDialog.setState({ open: false })
  */
 export const ensureApiKey = () => {
   const { apiKey, provider, customProvider } = useSettings.getState()
-  if (provider === 'chatgpt' || (provider === 'custom' ? customProvider !== null : !!apiKey)) {
+  if (provider === 'custom' ? customProvider !== null : !!apiKey) {
     return true
   }
   openSettings('data')

@@ -763,18 +763,12 @@ export const en = {
   customProviderRemoved: 'Custom provider removed; switched back to the built-in DeepSeek API',
   customProviderNotes:
     'Notes: server-side features (web search, read link, title generation) are DeepSeek-specific and are not sent to custom endpoints. Attachments are sent inline: images up to 8 MB as base64, text files up to 512 KB as plain text; other file types are skipped. Server-side thinking and usage prices are estimated. Some :free models are restricted to agentic harnesses and refuse normal chat clients, and free models carry tight per-minute/per-day limits.',
-  openaiUsePreset: 'Use OpenAI defaults',
-  openaiPresetDescription: 'Sets api.openai.com, keeps your key, and suggests gpt-4o-mini.',
-  chatgptSubscriptionTitle: 'ChatGPT subscription login',
-  chatgptSubscriptionDescription:
-    'Sign in with your ChatGPT account to use eligible plan usage. This requires the deployment to have OpenAI SIWC OAuth configuration.',
-  chatgptSignIn: 'Continue with ChatGPT',
-  chatgptHostedUnavailable: 'Unavailable on hosted app',
-  chatgptHostedUnavailableDescription:
-    'OpenAI currently limits ChatGPT plan sharing to local open-source tools and selected hosted partners. This Vercel deployment is not approved, so use an OpenAI API key or request hosted access from OpenAI.',
-  chatgptUsePlan: 'Use ChatGPT plan',
-  chatgptSignOut: 'Sign out',
-  chatgptSubscriptionLearnMore: 'Read OpenAI integration requirements',
+  providerPreset: 'Provider preset',
+  providerPresetPlaceholder: 'Choose a provider…',
+  providerPresetDescription:
+    'Select a preset to fill its endpoint and preferred model. Your existing API key is preserved; change the key and model if needed.',
+  ollamaCloudApiKeyHint:
+    'Create an Ollama Cloud API key at ollama.com/settings/keys. Cloud models use https://ollama.com/v1.',
   customSearchDisabledTooltip: 'Smart search runs on DeepSeek servers and is unavailable with a custom provider',
   agenticHarnessOnlyModel:
     'This model is restricted to agentic harnesses (coding agents listed on openrouter.ai/apps) and refuses normal chat clients. Pick a different model — e.g. a general-purpose :free model or the paid inkling-2-small — in Settings → Data → Custom OpenAI-compatible provider.',

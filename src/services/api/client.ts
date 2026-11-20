@@ -2,8 +2,6 @@ import { readMessageEvent } from './parseEvent.js'
 import { readServerSentEvents } from './sse.js'
 import { getCustomProvider } from './provider.js'
 import { streamOpenAICompatibleMessage } from './openaiCompatible.js'
-import { isChatGPTProviderEnabled } from './provider.js'
-import { streamChatGPTMessage } from './chatgptResponses.js'
 import {
   ApiError,
   request,
@@ -112,10 +110,6 @@ export async function* streamMessage(
   const custom = getCustomProvider()
   if (custom) {
     yield* streamOpenAICompatibleMessage(custom, body, signal)
-    return
-  }
-  if (isChatGPTProviderEnabled()) {
-    yield* streamChatGPTMessage(body, signal)
     return
   }
   const response = await request(`${ANTHROPIC_BASE_URL}/messages`, {

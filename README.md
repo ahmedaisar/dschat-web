@@ -63,7 +63,7 @@ By default the app talks to the DeepSeek API (Anthropic-compatible protocol) usi
 
 Settings → Data → **OpenAI / custom-compatible provider**:
 
-1. Click **Use OpenAI defaults** to fill `https://api.openai.com/v1` and suggest `gpt-4o-mini`, then enter your **API key** and model id. You can also configure any compatible endpoint manually (a missing `/v1` suffix is added automatically).
+1. Choose a **Provider preset** such as OpenAI or Ollama Cloud. The preset fills the endpoint and preferred model while preserving your existing API key; replace the API key and model when needed. You can also configure any compatible endpoint manually (a missing `/v1` suffix is added automatically).
 2. Use **Fetch models** (calls `GET {base}/models`) or type the model id directly.
 3. **Test connection** verifies the key against `GET /models` at no cost.
 4. Flip **Use custom provider** on. Every request now goes to your endpoint as `POST {base}/chat/completions`; switch it off to fall back to the built-in DeepSeek API (your DeepSeek key is kept).
@@ -78,7 +78,7 @@ Notes:
 - Streaming, context breakdown and the usage ledger work; usage is taken from the final chunk's `usage` when the endpoint returns it (`stream_options.include_usage`).
 - Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
 - Heads-up for OpenRouter `:free` models: they carry tight limits (~20 req/min, ~50/day) and some are restricted to agentic harnesses (HTTP 403) and refuse normal chat clients — use a general-purpose free model or the paid variant (e.g. `thinkingmachines/inkling-2-small`).
-- ChatGPT plan sharing is currently available to local open-source tools and selected hosted partners. This Vercel deployment is not an approved hosted partner, and the local `dynamic_agent_client` flow requires a loopback callback; use an OpenAI API key here or request hosted SIWC access from OpenAI. ChatGPT Plus/Pro and ordinary API billing remain separate.
+- Ollama Cloud uses `https://ollama.com/v1`; create a key at https://ollama.com/settings/keys. The default cloud preset is `qwen3-coder:480b-cloud`, and you can fetch the models available to your account.
 
 ## Quick start
 
