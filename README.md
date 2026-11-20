@@ -63,7 +63,7 @@ By default the app talks to the DeepSeek API (Anthropic-compatible protocol) usi
 
 Settings → Data → **OpenAI / custom-compatible provider**:
 
-1. Choose a **Provider preset** such as OpenAI or Ollama Cloud. The preset fills the endpoint and preferred model while preserving your existing API key; replace the API key and model when needed. You can also configure any compatible endpoint manually (a missing `/v1` suffix is added automatically).
+1. Choose a **Provider preset** such as OpenAI, Ollama Cloud, or OpenRouter. The preset fills the endpoint and preferred model while preserving your existing API key; replace the API key and model when needed. You can also configure any compatible endpoint manually (a missing `/v1` suffix is added automatically).
 2. Use **Fetch models** (calls `GET {base}/models`) or type the model id directly.
 3. **Test connection** verifies the key against `GET /models` at no cost.
 4. Flip **Use custom provider** on. Every request now goes to your endpoint as `POST {base}/chat/completions`; switch it off to fall back to the built-in DeepSeek API (your DeepSeek key is kept).
@@ -79,6 +79,7 @@ Notes:
 - Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
 - Heads-up for OpenRouter `:free` models: they carry tight limits (~20 req/min, ~50/day) and some are restricted to agentic harnesses (HTTP 403) and refuse normal chat clients — use a general-purpose free model or the paid variant (e.g. `thinkingmachines/inkling-2-small`).
 - Ollama Cloud uses `https://ollama.com/v1`; create a key at https://ollama.com/settings/keys. The default cloud preset is `qwen3-coder:480b-cloud`, and you can fetch the models available to your account.
+- OpenRouter uses `https://openrouter.ai/api/v1`; create a key at https://openrouter.ai/settings/keys. Its preset defaults to `openai/gpt-4o-mini`; you can fetch or select another model.
 
 ## Quick start
 

@@ -697,6 +697,8 @@ export const zh = {
     '选择预设以填写端点和首选模型。现有 API Key 会保留；如有需要可修改 Key 和模型。',
   ollamaCloudApiKeyHint:
     '请在 ollama.com/settings/keys 创建 Ollama Cloud API Key。云端模型使用 https://ollama.com/v1。',
+  openrouterApiKeyHint:
+    '请在 openrouter.ai/settings/keys 创建 OpenRouter API Key。默认模型为 openai/gpt-4o-mini。',
   customSearchDisabledTooltip: '智能搜索由 DeepSeek 服务端提供，自定义提供商下不可用',
   agenticHarnessOnlyModel:
     '该模型仅限 agentic harness（openrouter.ai/apps 上列出的编程智能体）使用，会拒绝普通聊天客户端。请换用其他模型（例如通用的 :free 模型，或付费版 inkling-2-small），可在「设置 → 数据管理 → 自定义 OpenAI 兼容提供商」中修改。',

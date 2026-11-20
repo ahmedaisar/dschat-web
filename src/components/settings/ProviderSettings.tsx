@@ -32,6 +32,11 @@ const PROVIDER_PRESETS = {
     baseURL: 'https://ollama.com/v1',
     model: 'qwen3-coder:480b-cloud',
   },
+  openrouter: {
+    name: 'OpenRouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    model: 'openai/gpt-4o-mini',
+  },
 } as const
 const MODEL_LIST_ID = 'custom-provider-model-list'
 
@@ -75,7 +80,9 @@ export const ProviderSettings = () => {
       ? 'openai'
       : draft.baseURL === PROVIDER_PRESETS.ollamaCloud.baseURL
         ? 'ollamaCloud'
-        : ''
+        : draft.baseURL === PROVIDER_PRESETS.openrouter.baseURL
+          ? 'openrouter'
+          : ''
 
   const selectPreset = (presetId: keyof typeof PROVIDER_PRESETS) => {
     const preset = PROVIDER_PRESETS[presetId]
@@ -196,6 +203,7 @@ export const ProviderSettings = () => {
             <option value="">{t('providerPresetPlaceholder')}</option>
             <option value="openai">OpenAI</option>
             <option value="ollamaCloud">Ollama Cloud</option>
+            <option value="openrouter">OpenRouter</option>
           </select>
           <span>{t('providerPresetDescription')}</span>
         </div>
@@ -239,6 +247,8 @@ export const ProviderSettings = () => {
           />
           {selectedPreset === 'ollamaCloud' ? (
             <span className={styles.fieldHint}>{t('ollamaCloudApiKeyHint')}</span>
+          ) : selectedPreset === 'openrouter' ? (
+            <span className={styles.fieldHint}>{t('openrouterApiKeyHint')}</span>
           ) : null}
         </div>
         <div className={styles.field}>

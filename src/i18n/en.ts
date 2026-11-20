@@ -769,6 +769,8 @@ export const en = {
     'Select a preset to fill its endpoint and preferred model. Your existing API key is preserved; change the key and model if needed.',
   ollamaCloudApiKeyHint:
     'Create an Ollama Cloud API key at ollama.com/settings/keys. Cloud models use https://ollama.com/v1.',
+  openrouterApiKeyHint:
+    'Create an OpenRouter API key at openrouter.ai/settings/keys. The default model is openai/gpt-4o-mini.',
   customSearchDisabledTooltip: 'Smart search runs on DeepSeek servers and is unavailable with a custom provider',
   agenticHarnessOnlyModel:
     'This model is restricted to agentic harnesses (coding agents listed on openrouter.ai/apps) and refuses normal chat clients. Pick a different model — e.g. a general-purpose :free model or the paid inkling-2-small — in Settings → Data → Custom OpenAI-compatible provider.',

@@ -63,7 +63,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 
 设置 → 数据管理 → **OpenAI / 自定义兼容提供商**：
 
-1. 从「提供商预设」中选择 OpenAI 或 Ollama Cloud。预设会填写端点和首选模型，并保留现有 API Key；需要时只替换 API Key 和模型。也可以手动配置其他兼容端点（缺少 `/v1` 后缀会自动补上）。
+1. 从「提供商预设」中选择 OpenAI、Ollama Cloud 或 OpenRouter。预设会填写端点和首选模型，并保留现有 API Key；需要时只替换 API Key 和模型。也可以手动配置其他兼容端点（缺少 `/v1` 后缀会自动补上）。
 2. 使用「获取模型列表」按钮（调用 `GET {base}/models`），或直接输入模型 id。
 3. 「测试连接」用 `GET /models` 校验 Key，免费。
 4. 打开「启用自定义提供商」。此后所有请求都以 `POST {base}/chat/completions` 发往你的端点；关闭开关即切回内置 DeepSeek API（DeepSeek 的 Key 会保留）。
@@ -77,6 +77,7 @@ README 已经拆成 `docs/zh/` 下的分册，首页只保留简介与入口；�
 - 浏览器工具不受影响（工具在本地执行，模型经 `tool_calls` 调用）；流式输出、上下文分类、用量账本正常工作（端点需返回 `usage` 字段，本应用会请求 `stream_options.include_usage`）。
 - 关于 OpenRouter 的 `:free` 模型：限额较紧（约 20 次/分钟、50 次/天），部分模型仅限 agentic harness（编程智能体，返回 HTTP 403），会拒绝普通聊天客户端——请使用通用的免费模型，或付费版（如 `thinkingmachines/inkling-2-small`）。
 - Ollama Cloud 使用 `https://ollama.com/v1`；请在 https://ollama.com/settings/keys 创建 Key。云端预设模型为 `qwen3-coder:480b-cloud`，也可以获取你账户可用的模型列表。
+- OpenRouter 使用 `https://openrouter.ai/api/v1`；请在 https://openrouter.ai/settings/keys 创建 Key。预设模型为 `openai/gpt-4o-mini`，也可以获取或选择其他模型。
 
 ## 快速开始
 
