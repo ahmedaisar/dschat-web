@@ -21,6 +21,11 @@ import {
 import styles from './ProviderSettings.module.css'
 
 const EMPTY = { name: '', baseURL: '', apiKey: '', model: '' }
+const OPENAI_PRESET = {
+  name: 'OpenAI',
+  baseURL: 'https://api.openai.com/v1',
+  model: 'gpt-4o-mini',
+}
 const MODEL_LIST_ID = 'custom-provider-model-list'
 
 /**
@@ -52,6 +57,8 @@ export const ProviderSettings = () => {
 
   const normalized = normalizeCustomProvider(draft)
   const complete = normalized !== null
+
+  const useOpenAIPreset = () => update(OPENAI_PRESET)
 
   const toggle = (value: boolean) => {
     if (value) {
@@ -141,6 +148,12 @@ export const ProviderSettings = () => {
         />
       </div>
       <div className={styles.form}>
+        <div className={styles.preset}>
+          <Button variant="outlined" size="s" onClick={useOpenAIPreset}>
+            {t('openaiUsePreset')}
+          </Button>
+          <span>{t('openaiPresetDescription')}</span>
+        </div>
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{t('customProviderName')}</span>
           <input
@@ -212,6 +225,13 @@ export const ProviderSettings = () => {
           ) : null}
         </div>
         <div className={styles.note}>{t('customProviderNotes')}</div>
+        <div className={styles.subscriptionNotice}>
+          <strong>{t('chatgptSubscriptionTitle')}</strong>
+          <span>{t('chatgptSubscriptionUnavailable')}</span>
+          <a href="https://developers.openai.com/siwc" target="_blank" rel="noreferrer">
+            {t('chatgptSubscriptionLearnMore')}
+          </a>
+        </div>
       </div>
     </div>
   )

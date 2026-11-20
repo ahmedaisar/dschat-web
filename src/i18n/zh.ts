@@ -666,9 +666,9 @@ export const zh = {
   confirm: '确定',
   apiKeyInvalid: 'API Key 无效，请检查后重试',
   apiKeyVerificationFailed: '校验失败：{message}',
-  customProviderTitle: '自定义 OpenAI 兼容提供商',
+  customProviderTitle: 'OpenAI / 自定义兼容提供商',
   customProviderDescription:
-    '把本应用指向任何兼容 OpenAI Chat Completions 协议的端点（OpenAI、OpenRouter、Groq、Together、DeepSeek、llama.cpp、Ollama 等）。API Key 只保存在本浏览器里，直接发送给该端点，不经过任何其他服务器。',
+    '使用 OpenAI API Key，或把本应用指向任何兼容端点（OpenRouter、Groq、Together、DeepSeek、llama.cpp、Ollama 等）。Key 只保存在本浏览器里，直接发送给该端点，不经过任何其他服务器。',
   customProviderEnable: '启用自定义提供商',
   customProviderEnableDescription: '启用后请求将发往你的端点，而不是内置的 DeepSeek API；模型、密钥与请求格式都以自定义端点为准。',
   customProviderName: '显示名称',
@@ -691,6 +691,12 @@ export const zh = {
   customProviderRemoved: '已删除自定义提供商，已切回内置 DeepSeek API',
   customProviderNotes:
     '说明：服务端能力（联网搜索、阅读链接、自动标题）是 DeepSeek 专有的，不会发送给自定义端点。附件以内联方式发送：图片（≤ 8 MB）以 base64 下发，文本文件（≤ 512 KB）以原文下发，其余类型会被跳过。思考用量与价格估算仅供参考。部分 :free 模型仅限 agentic harness（编程智能体）使用，会拒绝普通聊天客户端；免费模型的每分钟/每天限额较紧。',
+  openaiUsePreset: '使用 OpenAI 默认配置',
+  openaiPresetDescription: '设置为 api.openai.com，保留你的 Key，并建议使用 gpt-4o-mini。',
+  chatgptSubscriptionTitle: 'ChatGPT 订阅登录',
+  chatgptSubscriptionUnavailable:
+    '当前托管版浏览器应用不能安全地直接使用 ChatGPT 订阅。OpenAI 的套餐共享需要获批的 Sign in with ChatGPT OAuth/PKCE 集成、后端或本地伴侣程序，以及 Responses API。ChatGPT Plus/Pro 与 API 计费是分开的。',
+  chatgptSubscriptionLearnMore: '查看 OpenAI 集成要求',
   customSearchDisabledTooltip: '智能搜索由 DeepSeek 服务端提供，自定义提供商下不可用',
   agenticHarnessOnlyModel:
     '该模型仅限 agentic harness（openrouter.ai/apps 上列出的编程智能体）使用，会拒绝普通聊天客户端。请换用其他模型（例如通用的 :free 模型，或付费版 inkling-2-small），可在「设置 → 数据管理 → 自定义 OpenAI 兼容提供商」中修改。',

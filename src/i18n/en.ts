@@ -738,9 +738,9 @@ export const en = {
   confirm: 'Confirm',
   apiKeyInvalid: 'Invalid API Key. Please check it and try again.',
   apiKeyVerificationFailed: 'Verification failed: {message}',
-  customProviderTitle: 'Custom OpenAI-compatible provider',
+  customProviderTitle: 'OpenAI / custom-compatible provider',
   customProviderDescription:
-    'Point the app at any OpenAI Chat Completions-compatible endpoint (OpenAI, OpenRouter, Groq, Together, DeepSeek, llama.cpp, Ollama, etc.). Your API key is stored only in this browser and is sent directly to the endpoint — it never passes through any other server.',
+    'Use OpenAI with an API key, or point the app at any compatible endpoint (OpenRouter, Groq, Together, DeepSeek, llama.cpp, Ollama, etc.). Your key is stored only in this browser and is sent directly to the endpoint — it never passes through any other server.',
   customProviderEnable: 'Use custom provider',
   customProviderEnableDescription: 'When enabled, requests go to your endpoint instead of the built-in DeepSeek API. Models, keys and request format follow the custom endpoint.',
   customProviderName: 'Display name',
@@ -763,6 +763,12 @@ export const en = {
   customProviderRemoved: 'Custom provider removed; switched back to the built-in DeepSeek API',
   customProviderNotes:
     'Notes: server-side features (web search, read link, title generation) are DeepSeek-specific and are not sent to custom endpoints. Attachments are sent inline: images up to 8 MB as base64, text files up to 512 KB as plain text; other file types are skipped. Server-side thinking and usage prices are estimated. Some :free models are restricted to agentic harnesses and refuse normal chat clients, and free models carry tight per-minute/per-day limits.',
+  openaiUsePreset: 'Use OpenAI defaults',
+  openaiPresetDescription: 'Sets api.openai.com, keeps your key, and suggests gpt-4o-mini.',
+  chatgptSubscriptionTitle: 'ChatGPT subscription login',
+  chatgptSubscriptionUnavailable:
+    'This hosted browser app cannot safely use a ChatGPT subscription directly. OpenAI plan sharing requires an approved Sign in with ChatGPT integration with OAuth/PKCE, backend or local companion support, and the Responses API. ChatGPT Plus/Pro and API billing are separate.',
+  chatgptSubscriptionLearnMore: 'Read OpenAI integration requirements',
   customSearchDisabledTooltip: 'Smart search runs on DeepSeek servers and is unavailable with a custom provider',
   agenticHarnessOnlyModel:
     'This model is restricted to agentic harnesses (coding agents listed on openrouter.ai/apps) and refuses normal chat clients. Pick a different model — e.g. a general-purpose :free model or the paid inkling-2-small — in Settings → Data → Custom OpenAI-compatible provider.',

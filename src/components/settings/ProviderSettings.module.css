@@ -50,6 +50,16 @@
   border-top: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
 }
 
+.preset {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -97,8 +107,21 @@
   flex-wrap: wrap;
 }
 
-.note {
+.note,
+.subscriptionNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   padding: 8px 10px;
   border: 1px dashed var(--dsw-alias-border-l2);
   border-radius: 8px;
+}
+
+.subscriptionNotice {
+  border-color: color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent);
+
+  a {
+    color: var(--dsw-alias-brand-text);
+    text-decoration: underline;
+  }
 }

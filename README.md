@@ -61,9 +61,9 @@ The README is now split into chapters under `docs/en/`; this page keeps the intr
 
 By default the app talks to the DeepSeek API (Anthropic-compatible protocol) using the key you enter in Settings → Data. You can instead route all chat traffic to **any endpoint that implements OpenAI Chat Completions** — OpenAI, OpenRouter, Groq, Together, DeepSeek, llama.cpp, Ollama (`http://localhost:11434/v1`), vLLM, etc.
 
-Settings → Data → **Custom OpenAI-compatible provider**:
+Settings → Data → **OpenAI / custom-compatible provider**:
 
-1. Enter a display name (optional), the **Base URL** (`https://api.openai.com/v1`; a missing `/v1` suffix is added automatically), your **API key** and the **model** id.
+1. Click **Use OpenAI defaults** to fill `https://api.openai.com/v1` and suggest `gpt-4o-mini`, then enter your **API key** and model id. You can also configure any compatible endpoint manually (a missing `/v1` suffix is added automatically).
 2. Use **Fetch models** (calls `GET {base}/models`) or type the model id directly.
 3. **Test connection** verifies the key against `GET /models` at no cost.
 4. Flip **Use custom provider** on. Every request now goes to your endpoint as `POST {base}/chat/completions`; switch it off to fall back to the built-in DeepSeek API (your DeepSeek key is kept).
@@ -78,6 +78,7 @@ Notes:
 - Streaming, context breakdown and the usage ledger work; usage is taken from the final chunk's `usage` when the endpoint returns it (`stream_options.include_usage`).
 - Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
 - Heads-up for OpenRouter `:free` models: they carry tight limits (~20 req/min, ~50/day) and some are restricted to agentic harnesses (HTTP 403) and refuse normal chat clients — use a general-purpose free model or the paid variant (e.g. `thinkingmachines/inkling-2-small`).
+- ChatGPT Plus/Pro subscription login is not equivalent to an API key. OpenAI’s official plan-sharing flow requires an approved Sign in with ChatGPT OAuth/PKCE integration with backend or local-companion support and the Responses API; this hosted static browser app currently supports OpenAI through API keys.
 
 ## Quick start
 
