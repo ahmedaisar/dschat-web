@@ -35,7 +35,7 @@ export type CustomProvider = {
 }
 
 /** 当前生效的提供商：deepseek = 官方内置（Anthropic 兼容协议）；custom = 用户自带的 OpenAI 兼容端点 */
-export type ProviderMode = 'deepseek' | 'custom'
+export type ProviderMode = 'deepseek' | 'custom' | 'chatgpt'
 
 /** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、模型参数、提示词开关、侧边栏收起状态 */
 type Settings = {
@@ -281,7 +281,11 @@ const initialCustomProvider = (): CustomProvider | null => {
 
 /** 生效的提供商：custom 只有在配置完整时才生效，否则回落到 deepseek */
 const initialProvider = (): ProviderMode => {
-  if (read(KEYS.provider) !== 'custom') {
+  const saved = read(KEYS.provider)
+  if (saved === 'chatgpt') {
+    return 'chatgpt'
+  }
+  if (saved !== 'custom') {
     return 'deepseek'
   }
   return initialCustomProvider() ? 'custom' : 'deepseek'
@@ -611,7 +615,9 @@ export const setProvider = (provider: ProviderMode) => {
   const model =
     provider === 'custom'
       ? (useSettings.getState().customProvider?.model ?? 'deepseek-flash')
-      : 'deepseek-flash'
+      : provider === 'chatgpt'
+        ? 'gpt-4.1-mini'
+        : 'deepseek-flash'
   write(KEYS.provider, provider)
   write(KEYS.model, model)
   useSettings.setState({ provider, model })

@@ -694,8 +694,11 @@ export const zh = {
   openaiUsePreset: '使用 OpenAI 默认配置',
   openaiPresetDescription: '设置为 api.openai.com，保留你的 Key，并建议使用 gpt-4o-mini。',
   chatgptSubscriptionTitle: 'ChatGPT 订阅登录',
-  chatgptSubscriptionUnavailable:
-    '当前托管版浏览器应用不能安全地直接使用 ChatGPT 订阅。OpenAI 的套餐共享需要获批的 Sign in with ChatGPT OAuth/PKCE 集成、后端或本地伴侣程序，以及 Responses API。ChatGPT Plus/Pro 与 API 计费是分开的。',
+  chatgptSubscriptionDescription:
+    '使用 ChatGPT 账户登录，以使用符合条件的套餐用量；部署必须配置 OpenAI SIWC OAuth 才能使用。',
+  chatgptSignIn: '使用 ChatGPT 登录',
+  chatgptUsePlan: '使用 ChatGPT 套餐',
+  chatgptSignOut: '退出登录',
   chatgptSubscriptionLearnMore: '查看 OpenAI 集成要求',
   customSearchDisabledTooltip: '智能搜索由 DeepSeek 服务端提供，自定义提供商下不可用',
   agenticHarnessOnlyModel:

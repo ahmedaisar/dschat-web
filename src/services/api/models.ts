@@ -1,5 +1,6 @@
 import { API_ORIGIN } from './client.js'
 import { modelsUrl } from './provider.js'
+import { fetchChatGPTModels } from './chatgpt.js'
 
 /**
  * 模型列表：默认使用内置 DeepSeek Flash / V4 Pro，
@@ -119,6 +120,9 @@ const requestJson = async (url: string, headers: Record<string, string>): Promis
  * 都失败时抛出错误，由调用方退回缓存或内置列表。
  * 传入 baseURL 时只从该 OpenAI 兼容端点拉取（自定义提供商），不写入共享缓存。
  */
+export const fetchChatGPTRemoteModels = async (): Promise<ModelOption[]> =>
+  parseModels(await fetchChatGPTModels())
+
 export const fetchRemoteModels = async (
   apiKey: string,
   baseURL?: string

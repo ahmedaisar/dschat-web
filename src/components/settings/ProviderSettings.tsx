@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { showToast } from '../base/toastState.js'
 import { Button } from '../base/Button.js'
 import { Switch } from '../base/Switch.js'
@@ -14,6 +14,7 @@ import {
   verifyOpenAICompatible,
 } from '../../services/api/openaiCompatible.js'
 import { ApiError } from '../../services/api/client.js'
+import { getChatGPTSession, logoutChatGPT, startChatGPTLogin } from '../../services/api/chatgpt.js'
 import {
   classifyApiError,
   isAgenticHarnessError,
@@ -42,6 +43,8 @@ export const ProviderSettings = () => {
   const [models, setModels] = useState<string[]>([])
   const [testing, setTesting] = useState(false)
   const [fetching, setFetching] = useState(false)
+  const [chatGPTConnected, setChatGPTConnected] = useState(false)
+  const [chatGPTBusy, setChatGPTBusy] = useState(false)
 
   const update = (patch: Partial<typeof EMPTY>) => {
     setDraft((previous) => {
@@ -57,6 +60,10 @@ export const ProviderSettings = () => {
 
   const normalized = normalizeCustomProvider(draft)
   const complete = normalized !== null
+
+  useEffect(() => {
+    void getChatGPTSession().then((session) => setChatGPTConnected(session.connected))
+  }, [])
 
   const useOpenAIPreset = () => update(OPENAI_PRESET)
 
@@ -131,6 +138,23 @@ export const ProviderSettings = () => {
     setDraft(EMPTY)
     setModels([])
     showToast({ key: 'customProviderRemoved' })
+  }
+
+  const connectChatGPT = () => {
+    startChatGPTLogin()
+  }
+
+  const disconnectChatGPT = async () => {
+    setChatGPTBusy(true)
+    try {
+      await logoutChatGPT()
+      setChatGPTConnected(false)
+      if (provider === 'chatgpt') {
+        setProvider('deepseek')
+      }
+    } finally {
+      setChatGPTBusy(false)
+    }
   }
 
   return (
@@ -227,7 +251,32 @@ export const ProviderSettings = () => {
         <div className={styles.note}>{t('customProviderNotes')}</div>
         <div className={styles.subscriptionNotice}>
           <strong>{t('chatgptSubscriptionTitle')}</strong>
-          <span>{t('chatgptSubscriptionUnavailable')}</span>
+          <span>{t('chatgptSubscriptionDescription')}</span>
+          <div className={styles.row}>
+            {chatGPTConnected ? (
+              <>
+                <Button
+                  size="s"
+                  disabled={provider === 'chatgpt'}
+                  onClick={() => setProvider('chatgpt')}
+                >
+                  {t('chatgptUsePlan')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="s"
+                  disabled={chatGPTBusy}
+                  onClick={() => void disconnectChatGPT()}
+                >
+                  {t('chatgptSignOut')}
+                </Button>
+              </>
+            ) : (
+              <Button size="s" onClick={connectChatGPT}>
+                {t('chatgptSignIn')}
+              </Button>
+            )}
+          </div>
           <a href="https://developers.openai.com/siwc" target="_blank" rel="noreferrer">
             {t('chatgptSubscriptionLearnMore')}
           </a>

@@ -766,8 +766,11 @@ export const en = {
   openaiUsePreset: 'Use OpenAI defaults',
   openaiPresetDescription: 'Sets api.openai.com, keeps your key, and suggests gpt-4o-mini.',
   chatgptSubscriptionTitle: 'ChatGPT subscription login',
-  chatgptSubscriptionUnavailable:
-    'This hosted browser app cannot safely use a ChatGPT subscription directly. OpenAI plan sharing requires an approved Sign in with ChatGPT integration with OAuth/PKCE, backend or local companion support, and the Responses API. ChatGPT Plus/Pro and API billing are separate.',
+  chatgptSubscriptionDescription:
+    'Sign in with your ChatGPT account to use eligible plan usage. This requires the deployment to have OpenAI SIWC OAuth configuration.',
+  chatgptSignIn: 'Continue with ChatGPT',
+  chatgptUsePlan: 'Use ChatGPT plan',
+  chatgptSignOut: 'Sign out',
   chatgptSubscriptionLearnMore: 'Read OpenAI integration requirements',
   customSearchDisabledTooltip: 'Smart search runs on DeepSeek servers and is unavailable with a custom provider',
   agenticHarnessOnlyModel:

@@ -11,6 +11,7 @@ import {
 import {
   BUILTIN_MODELS,
   fetchRemoteModels,
+  fetchChatGPTRemoteModels,
   modelLabel,
   readCachedModels,
   type ModelOption,
@@ -50,7 +51,9 @@ const customSeedModels = (): ModelOption[] => {
 export const ModelPicker = () => {
   const t = useTranslate()
   const model = useSettings((state) => state.model)
-  const customEnabled = useSettings(() => isCustomProviderEnabled())
+  const provider = useSettings((state) => state.provider)
+  const customEnabled = provider === 'custom'
+  const chatGPTEnabled = provider === 'chatgpt'
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<ModelOption[]>(() =>
     isCustomProviderEnabled() ? customSeedModels() : mergeModels(readCachedModels() ?? [])
@@ -75,7 +78,7 @@ export const ModelPicker = () => {
   const refresh = useCallback(async (silent = false) => {
     const custom = getCustomProvider()
     const apiKey = custom?.apiKey ?? useSettings.getState().apiKey ?? ''
-    if (!apiKey) {
+    if (!chatGPTEnabled && !apiKey) {
       if (!silent) {
         showToast({ key: 'modelFetchFailed' })
       }
@@ -83,8 +86,10 @@ export const ModelPicker = () => {
     }
     setLoading(true)
     try {
-      const remote = await fetchRemoteModels(apiKey, custom?.baseURL)
-      setModels(custom ? remote : mergeModels(remote))
+      const remote = chatGPTEnabled
+        ? await fetchChatGPTRemoteModels()
+        : await fetchRemoteModels(apiKey, custom?.baseURL)
+      setModels(custom || chatGPTEnabled ? remote : mergeModels(remote))
     } catch {
       if (!silent) {
         showToast({ key: 'modelFetchFailed' })
@@ -92,18 +97,18 @@ export const ModelPicker = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [chatGPTEnabled])
 
   // 首次打开且没有缓存时静默拉一次；失败继续用现有列表；自定义端点每次打开都重新拉取
   useEffect(() => {
-    if (!open || (fetched.current && !customEnabled)) {
+    if (!open || (fetched.current && !customEnabled && !chatGPTEnabled)) {
       return
     }
     fetched.current = true
-    if (customEnabled || !readCachedModels()) {
+    if (customEnabled || chatGPTEnabled || !readCachedModels()) {
       void refresh(true)
     }
-  }, [open, refresh, customEnabled])
+  }, [open, refresh, customEnabled, chatGPTEnabled])
 
   const filteredModels = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase()

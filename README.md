@@ -78,7 +78,7 @@ Notes:
 - Streaming, context breakdown and the usage ledger work; usage is taken from the final chunk's `usage` when the endpoint returns it (`stream_options.include_usage`).
 - Client tools passed through `tool_calls` — agent tools, workspace file tools, etc. — work with any tool-calling model.
 - Heads-up for OpenRouter `:free` models: they carry tight limits (~20 req/min, ~50/day) and some are restricted to agentic harnesses (HTTP 403) and refuse normal chat clients — use a general-purpose free model or the paid variant (e.g. `thinkingmachines/inkling-2-small`).
-- ChatGPT Plus/Pro subscription login is not equivalent to an API key. OpenAI’s official plan-sharing flow requires an approved Sign in with ChatGPT OAuth/PKCE integration with backend or local-companion support and the Responses API; this hosted static browser app currently supports OpenAI through API keys.
+- ChatGPT subscription sign-in is available when the deployment is configured for OpenAI Sign in with ChatGPT: set Vercel `OPENAI_SIWC_CLIENT_ID` and `OPENAI_SIWC_SESSION_SECRET` (at least 32 random characters), and register the callback URL `https://<your-domain>/api/auth/chatgpt/callback` with OpenAI. The app keeps tokens in an encrypted HttpOnly session cookie and proxies Responses API traffic server-side. ChatGPT Plus/Pro and ordinary API billing remain separate.
 
 ## Quick start
 

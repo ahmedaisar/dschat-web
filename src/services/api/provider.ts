@@ -14,6 +14,9 @@ export const getCustomProvider = (): CustomProvider | null => {
 /** 是否以自定义 OpenAI 兼容提供商发送请求 */
 export const isCustomProviderEnabled = (): boolean => getCustomProvider() !== null
 
+/** 是否使用官方 ChatGPT 订阅连接；令牌只在 Vercel HttpOnly 会话中保存 */
+export const isChatGPTProviderEnabled = (): boolean => useSettings.getState().provider === 'chatgpt'
+
 /**
  * 拼接端点路径：根地址可以带或不带 /v1（如 https://api.openai.com/v1 或 https://host/v1）。
  * 已以 /v1 结尾时不再重复添加。
