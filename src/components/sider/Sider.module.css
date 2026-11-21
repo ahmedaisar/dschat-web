@@ -154,6 +154,19 @@
   background-color: var(--dsw-specific-sidebar-nav-item-hover);
 }
 
+.accountAvatar {
+  display: grid;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .settingsIcon {
   display: flex;
   align-items: center;

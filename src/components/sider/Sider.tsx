@@ -22,11 +22,15 @@ import { toggleNanoVM, useNanoVM } from '../../services/nanovm/session.js'
 import { useNanoVMConfig } from '../../services/nanovm/config.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
+import { openAuth } from '../auth/authDialogState.js'
+import { useAuthStore } from '../../services/auth/authStore.js'
 import styles from './Sider.module.css'
 
 /** 展开的侧边栏：名称与收起按钮、开启新对话、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
 export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const t = useTranslate()
+  const authStatus = useAuthStore((state) => state.status)
+  const authUser = useAuthStore((state) => state.user)
   const sessions = useChatStore((state) => state.sessions)
   const labOpen = useLab((state) => state.open)
   const nanoVMEnabled = useNanoVMConfig((state) => state.enabled)
@@ -105,6 +109,16 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         </div>
       </div>
       <div className={styles.bottom}>
+        <button type="button" className={styles.settings} onClick={() => openAuth()}>
+          <span className={styles.accountAvatar}>
+            {authUser ? (authUser.name ?? authUser.email ?? '?').charAt(0).toUpperCase() : '?'}
+          </span>
+          <span className={styles.settingsLabel}>
+            {authStatus === 'loading'
+              ? t('authWorking')
+              : authUser?.name ?? authUser?.email ?? t('authSignIn')}
+          </span>
+        </button>
         {nanoVMEnabled ? (
           <button
             type="button"
