@@ -1,4 +1,6 @@
-import { getPool } from './db.js'
+import { eq } from 'drizzle-orm'
+import { getDb } from './db.js'
+import { userProfile } from '../db/schema.js'
 import { getSession } from './auth.js'
 
 export type CurrentUser = {
@@ -48,14 +50,13 @@ export const requireUser = async (headers: HeadersInit): Promise<CurrentUser> =>
   }
 
   try {
-    const result = await getPool().query<{
-      role: 'user' | 'admin'
-      display_name: string | null
-    }>(
-      'SELECT "role", "display_name" FROM "user_profile" WHERE "user_id" = $1',
-      [user.id]
-    )
-    const profile = result.rows[0]
+    const profile = await getDb().query.userProfile.findFirst({
+      where: eq(userProfile.userId, user.id),
+      columns: {
+        role: true,
+        displayName: true,
+      },
+    })
     if (!profile) {
       throw new AuthorizationError(403, 'User profile is unavailable')
     }
@@ -65,8 +66,8 @@ export const requireUser = async (headers: HeadersInit): Promise<CurrentUser> =>
       email: user.email,
       emailVerified: user.emailVerified ?? false,
       image: user.image ?? null,
-      role: profile.role,
-      displayName: profile.display_name,
+      role: profile.role as 'user' | 'admin',
+      displayName: profile.displayName,
     }
   } catch (error) {
     if (error instanceof AuthorizationError) {

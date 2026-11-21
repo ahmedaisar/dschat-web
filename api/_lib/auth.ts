@@ -1,5 +1,7 @@
-import { getPool } from './db.js'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { getDb } from './db.js'
 import { requireCoreConfig } from './config.js'
+import { account, session, user, userProfile, verification } from '../db/schema.js'
 
 type AuthInstance = {
   handler: (request: Request) => Promise<Response>
@@ -54,7 +56,11 @@ export const getAuth = async (): Promise<AuthInstance> => {
   }
   const authModule = (await import('better-auth')) as unknown as AuthModule
   instance = authModule.betterAuth({
-    database: getPool(),
+    database: drizzleAdapter(getDb(), {
+      provider: 'pg',
+      schema: { user, session, account, verification },
+      transaction: true,
+    }),
     secret,
     baseURL: config.appOrigin ?? undefined,
     trustedOrigins: config.appOrigin ? [config.appOrigin] : undefined,
@@ -75,10 +81,15 @@ export const getAuth = async (): Promise<AuthInstance> => {
         create: {
           after: async (user: { id: string }) => {
             const now = new Date()
-            await getPool().query(
-              'INSERT INTO "user_profile" ("user_id", "role", "created_at", "updated_at") VALUES ($1, \'user\', $2, $2) ON CONFLICT ("user_id") DO NOTHING',
-              [user.id, now]
-            )
+            await getDb()
+              .insert(userProfile)
+              .values({
+                userId: user.id,
+                role: 'user',
+                createdAt: now,
+                updatedAt: now,
+              })
+              .onConflictDoNothing({ target: userProfile.userId })
           },
         },
       },

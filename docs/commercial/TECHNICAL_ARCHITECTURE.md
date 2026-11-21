@@ -26,7 +26,7 @@ The current static-only deployment (`vercel.json`, `.github/workflows/pages.yml`
 - `vercel.json` leaves API function runtime selection to the connected Vercel project and does not rewrite `/api/*` to the SPA. The project runtime must be kept consistent with the tested Node version.
 - `packageManager` pins pnpm for reproducible Vercel installs.
 - Runtime secrets (`DATABASE_URL`, `AUTH_SECRET`, provider and billing keys) are configured per Vercel Development/Preview/Production environment and are never injected through Rspack.
-- `DATABASE_URL` is the Neon pooled runtime URL. `DATABASE_MIGRATION_URL` is optional and used only by the migration command with a direct/admin connection.
+- `DATABASE_URL` is the Neon pooled runtime URL. `DATABASE_MIGRATION_URL` is optional and used only by the Drizzle migration command with a direct/admin connection.
 - Vercel Preview must use an isolated Neon branch/database; no production data is used for Preview.
 - `/api/health` is liveness only. Database/auth/provider readiness checks remain separate.
 
@@ -44,6 +44,10 @@ All protected routes obtain identity from secure session cookies; body/query use
 - `/api/admin/*`: explicit server-side role enforcement plus `admin_audit_logs` writes.
 
 Exact framework routing paths may follow the backend framework selected during Phase 1, but these boundary contracts are mandatory.
+
+## PostgreSQL and ORM design
+
+Drizzle ORM is the canonical application database layer. The Vercel-compatible `pg.Pool` is created once per warm function instance and wrapped by `drizzle-orm/node-postgres`; Better Auth uses its Drizzle adapter. Typed schema definitions live in `api/db/schema.ts`, and generated Drizzle migrations live in `api/db/migrations`. Raw SQL is limited to generated migration output or database-specific expressions.
 
 ## PostgreSQL design
 
