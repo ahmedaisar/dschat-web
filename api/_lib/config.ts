@@ -9,7 +9,8 @@ export type ServerConfig = {
 /**
  * Read server-only configuration without exposing values to the browser.
  * Liveness endpoints may run without a database/auth configuration; protected
- * routes must call requireProductionConfig before doing work.
+ * routes must call requireCoreConfig before doing authenticated work. Email
+ * delivery is validated at the point where a verification or reset message is sent.
  */
 export const readServerConfig = (): ServerConfig => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -19,7 +20,22 @@ export const readServerConfig = (): ServerConfig => ({
   emailConfigured: Boolean(process.env.RESEND_API_KEY?.trim() && process.env.EMAIL_FROM?.trim()),
 })
 
-export const requireProductionConfig = (): ServerConfig => {
+const validateOrigin = (appOrigin: string | null): void => {
+  if (!appOrigin) {
+    return
+  }
+  let origin: URL
+  try {
+    origin = new URL(appOrigin)
+  } catch {
+    throw new Error('APP_ORIGIN must be an absolute HTTP(S) origin')
+  }
+  if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password || origin.pathname !== '/') {
+    throw new Error('APP_ORIGIN must be an absolute HTTP(S) origin without credentials or a path')
+  }
+}
+
+export const requireCoreConfig = (): ServerConfig => {
   const config = readServerConfig()
   const missing: string[] = []
   const secret = process.env.AUTH_SECRET?.trim() ?? ''
@@ -32,22 +48,17 @@ export const requireProductionConfig = (): ServerConfig => {
   if (!config.appOrigin) {
     missing.push('APP_ORIGIN')
   }
-  if (!config.emailConfigured) {
-    missing.push('RESEND_API_KEY and EMAIL_FROM')
-  }
-  if (config.appOrigin) {
-    let origin: URL
-    try {
-      origin = new URL(config.appOrigin)
-    } catch {
-      throw new Error('APP_ORIGIN must be an absolute HTTP(S) origin')
-    }
-    if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password || origin.pathname !== '/') {
-      throw new Error('APP_ORIGIN must be an absolute HTTP(S) origin without credentials or a path')
-    }
-  }
+  validateOrigin(config.appOrigin)
   if (missing.length > 0) {
     throw new Error(`Missing server configuration: ${missing.join(', ')}`)
+  }
+  return config
+}
+
+export const requireProductionConfig = (): ServerConfig => {
+  const config = requireCoreConfig()
+  if (!config.emailConfigured) {
+    throw new Error('Missing server configuration: RESEND_API_KEY and EMAIL_FROM')
   }
   return config
 }

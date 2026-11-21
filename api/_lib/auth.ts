@@ -1,5 +1,5 @@
 import { getPool } from './db.js'
-import { requireProductionConfig } from './config.js'
+import { requireCoreConfig } from './config.js'
 
 type AuthInstance = {
   handler: (request: Request) => Promise<Response>
@@ -47,7 +47,7 @@ export const getAuth = async (): Promise<AuthInstance> => {
   if (instance) {
     return instance
   }
-  const config = requireProductionConfig()
+  const config = requireCoreConfig()
   const secret = process.env.AUTH_SECRET?.trim()
   if (!secret) {
     throw new Error('AUTH_SECRET is not configured')
