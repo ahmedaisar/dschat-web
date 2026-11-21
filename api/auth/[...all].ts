@@ -1,22 +1,10 @@
-import { toNodeHandler } from 'better-auth/node'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getAuth } from '../_lib/auth.js'
+import { authNodeHandler } from '../_lib/auth-handler.js'
 
 // eslint-disable-next-line import/no-default-export
 export default async function auth(
   request: IncomingMessage,
   response: ServerResponse
 ): Promise<void> {
-  try {
-    await toNodeHandler((await getAuth()) as never)(request, response)
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(
-      '[api/auth] request failed',
-      error instanceof Error ? error.message : 'unknown error'
-    )
-    response.statusCode = 503
-    response.setHeader('Content-Type', 'application/json; charset=utf-8')
-    response.end(JSON.stringify({ error: 'service_unavailable' }))
-  }
+  await authNodeHandler(request, response)
 }
