@@ -1,36 +1,34 @@
-import { randomUUID } from 'node:crypto'
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readServerConfig } from './_lib/config.js'
 
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/
 
-const requestId = (request: IncomingMessage): string => {
-  const header = request.headers['x-request-id']
-  return typeof header === 'string' && SAFE_REQUEST_ID.test(header) ? header : randomUUID()
+const requestId = (request: Request): string => {
+  const header = request.headers.get('x-request-id')
+  return header !== null && SAFE_REQUEST_ID.test(header) ? header : globalThis.crypto.randomUUID()
 }
 
 // eslint-disable-next-line import/no-default-export
-export default function health(request: IncomingMessage, response: ServerResponse): void {
+export default function health(request: Request): Response {
   const id = requestId(request)
-  response.setHeader('Cache-Control', 'no-store')
-  response.setHeader('Content-Type', 'application/json; charset=utf-8')
-  response.setHeader('X-Request-Id', id)
+  const headers = new Headers({
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Request-Id': id,
+  })
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    response.statusCode = 405
-    response.setHeader('Allow', 'GET, HEAD')
-    response.end(JSON.stringify({ error: 'method_not_allowed', requestId: id }))
-    return
+    headers.set('Allow', 'GET, HEAD')
+    return Response.json({ error: 'method_not_allowed', requestId: id }, { status: 405, headers })
   }
 
   const config = readServerConfig()
-  response.statusCode = 200
-  response.end(
-    JSON.stringify({
+  return Response.json(
+    {
       ok: true,
       service: 'chat-demo-api',
       environment: config.nodeEnv,
       requestId: id,
-    })
+    },
+    { status: 200, headers }
   )
 }

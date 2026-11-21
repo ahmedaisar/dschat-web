@@ -4,7 +4,7 @@
 
 Build a **TypeScript modular monolith** alongside the existing React/Rspack client. Retain the client as the presentation layer and introduce one server application owning authentication, PostgreSQL persistence, billing, credits, model authorization, inference gateway, admin APIs, reconciliation and observability. Do not introduce microservices in Phase 1.
 
-The current static-only deployment (`vercel.json`, `.github/workflows/pages.yml`) is insufficient for secrets, webhooks, sessions and transactions. Vercel may host server routes only where its runtime/streaming/database connectivity satisfies the documented gateway requirements; otherwise deploy the monolith to a compatible Node runtime. The connected Vercel project is a sandbox, never a substitute for production credentials or data.
+The current static-only deployment (`vercel.json`, `.github/workflows/pages.yml`) is insufficient for secrets, webhooks, sessions and transactions. The selected deployment target is Vercel Node.js Functions with the existing Rspack static output. PostgreSQL will be Neon through the Vercel Marketplace, using a pooled runtime connection string and an isolated Preview branch/database. Migrations use a direct/admin connection and are never run through the pooled runtime path. The connected Vercel project is a sandbox, never a substitute for production credentials or data.
 
 ## Bounded modules
 
@@ -19,6 +19,16 @@ The current static-only deployment (`vercel.json`, `.github/workflows/pages.yml`
 | Inference | validated gateway, provider adapters, normalized streaming, idempotency, request/usage records | UI state and client token estimates |
 | Admin | admin-only commands and audit trail | mutable historical credit records |
 | Operations | health, structured logs, request/correlation IDs, scheduled reconciliation | sensitive content/secret logging |
+
+## Vercel deployment contract
+
+- Static assets remain in `dist/`; root `api/**/*.ts` files are Vercel Node.js Functions.
+- `vercel.json` leaves API function runtime selection to the connected Vercel project and does not rewrite `/api/*` to the SPA. The project runtime must be kept consistent with the tested Node version.
+- `packageManager` pins pnpm for reproducible Vercel installs.
+- Runtime secrets (`DATABASE_URL`, `AUTH_SECRET`, provider and billing keys) are configured per Vercel Development/Preview/Production environment and are never injected through Rspack.
+- `DATABASE_URL` is the Neon pooled runtime URL. `DATABASE_MIGRATION_URL` is optional and used only by the migration command with a direct/admin connection.
+- Vercel Preview must use an isolated Neon branch/database; no production data is used for Preview.
+- `/api/health` is liveness only. Database/auth/provider readiness checks remain separate.
 
 ## Server contracts
 
