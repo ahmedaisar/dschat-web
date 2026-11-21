@@ -28,7 +28,7 @@ Status: **Phase 0 — in progress. No commercial application code changed yet.**
 
 **Risks:** static-only GitHub Pages cannot host server routes; Vercel framework/runtime/SSE/PostgreSQL connectivity must be verified. Email and OAuth require configured provider accounts.
 
-**Status:** In progress. Implemented the Vercel-compatible foundation plus Better Auth route wiring, Neon-compatible pooled `pg` runtime access, initial auth migration, `/api/me`, migration script, and separate API/Rspack TypeScript checks. Live migration/auth verification is blocked until a Neon/Vercel environment is configured; local and Vercel build verification remains required.
+**Status:** In progress. Implemented the Vercel-compatible foundation plus Better Auth route wiring, Neon-compatible pooled `pg` runtime access, initial auth migration, `/api/me`, migration script, and separate API/Rspack TypeScript checks. A Vercel Preview deployment was created and `/api/health` was verified successfully. `/api/me` and `/api/auth/get-session` return controlled `503 service_unavailable` responses because the connected Vercel project currently has no database/auth/email environment variables. Live migration, registration and session tests remain blocked until Neon/Resend/Vercel environment configuration is supplied.
 
 ## Phase 2 — Billing and credit engine
 
