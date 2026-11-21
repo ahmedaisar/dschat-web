@@ -19,7 +19,14 @@ export default async function me(request: Request): Promise<Response> {
   if (request.method !== 'GET') {
     return Response.json({ error: 'method_not_allowed' }, { status: 405, headers: { Allow: 'GET' } })
   }
-  const session = (await getSession(request.headers)) as SessionResult | null
+  let session: SessionResult | null
+  try {
+    session = (await getSession(request.headers)) as SessionResult | null
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[api/me] session lookup failed', error instanceof Error ? error.message : 'unknown error')
+    return Response.json({ error: 'service_unavailable' }, { status: 503 })
+  }
   if (!session?.user?.id || !session.session?.expiresAt) {
     return Response.json({ error: 'unauthorized' }, { status: 401 })
   }
