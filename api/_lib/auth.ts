@@ -52,7 +52,7 @@ export const getAuth = async (): Promise<AuthInstance> => {
   if (!secret) {
     throw new Error('AUTH_SECRET is not configured')
   }
-  const authModule = (await import('better-auth/minimal')) as unknown as AuthModule
+  const authModule = (await import('better-auth')) as unknown as AuthModule
   instance = authModule.betterAuth({
     database: getPool(),
     secret,
