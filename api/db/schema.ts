@@ -158,6 +158,7 @@ export const creditReservation = pgTable('credit_reservation', {
   maximum: bigint('maximum', { mode: 'bigint' }).notNull(),
   idempotencyKey: text('idempotency_key').notNull(),
   inferenceRequestId: text('inference_request_id'),
+  requestFingerprint: text('request_fingerprint').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
