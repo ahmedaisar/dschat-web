@@ -120,8 +120,8 @@ export const model = pgTable('model', {
 
 export const creditAccount = pgTable('credit_account', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
-  available: bigint('available', { mode: 'bigint' }).notNull().default(0n),
-  reserved: bigint('reserved', { mode: 'bigint' }).notNull().default(0n),
+  available: bigint('available', { mode: 'bigint' }).notNull().default(sql`0`),
+  reserved: bigint('reserved', { mode: 'bigint' }).notNull().default(sql`0`),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 }, (table) => [check('credit_account_non_negative_check', sql`${table.available} >= 0 and ${table.reserved} >= 0`)])
