@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
-import { useAuthStore } from '../../services/auth/authStore.js'
+import { AuthApiError, useAuthStore } from '../../services/auth/authStore.js'
 import styles from './AuthDialog.module.css'
 
 export type AuthDialogMode = 'signIn' | 'signUp' | 'forgotPassword'
@@ -83,7 +83,19 @@ export const AuthDialog = ({
         setSubmitted(true)
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : t('authRequestFailed'))
+      if (error instanceof AuthApiError) {
+        if (error.status === 503) {
+          setLocalError(t('authServiceUnavailable'))
+        } else if (error.code === 'INVALID_EMAIL_OR_PASSWORD') {
+          setLocalError(t('authInvalidCredentials'))
+        } else if (error.status === 400) {
+          setLocalError(t('authValidationFailed'))
+        } else {
+          setLocalError(t('authRequestFailed'))
+        }
+      } else {
+        setLocalError(error instanceof Error ? error.message : t('authRequestFailed'))
+      }
     }
   }
 

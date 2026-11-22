@@ -15,6 +15,18 @@ type SessionResponse = {
 
 type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous' | 'error'
 
+export class AuthApiError extends Error {
+  readonly status: number
+  readonly code: string | null
+
+  constructor(status: number, code: string | null, message: string) {
+    super(message)
+    this.name = 'AuthApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 type AuthState = {
   status: AuthStatus
   user: AuthUser | null
@@ -36,13 +48,15 @@ const authRequest = async (path: string, body?: Record<string, string>): Promise
   })
   if (!response.ok) {
     let message = `Request failed (${response.status})`
+    let code: string | null = null
     try {
-      const payload = (await response.json()) as { message?: string; error?: string }
+      const payload = (await response.json()) as { message?: string; error?: string; code?: string }
       message = payload.message ?? payload.error ?? message
+      code = payload.code ?? null
     } catch {
       // Keep the status-based message when the server response is not JSON.
     }
-    throw new Error(message)
+    throw new AuthApiError(response.status, code, message)
   }
 }
 
