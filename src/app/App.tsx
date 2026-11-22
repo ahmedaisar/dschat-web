@@ -44,6 +44,7 @@ export const App = () => {
   const setAuthDialogMode = useAuthDialog((state) => state.setMode)
   const resetToken = new URLSearchParams(window.location.search).get('token')
   const refreshAuth = useAuthStore((state) => state.refresh)
+  const authStatus = useAuthStore((state) => state.status)
   const route = useAppRoute()
   const isMobile = useIsMobile()
   // 移动端侧边栏以独立抽屉管理开合状态
@@ -98,6 +99,11 @@ export const App = () => {
   // URL 是会话的入口；本地 IndexedDB 仍是内容来源。首次加载或浏览器前进/后退时，
   // 只应用 URL 到 store，不再次写入历史，避免 popstate 与 pushState 互相触发。
   useEffect(() => {
+    if (route.kind !== 'home' && authStatus === 'anonymous') {
+      navigate('/', true)
+      openAuth('signIn')
+      return
+    }
     if (!ready || route.kind === 'home') {
       return
     }
@@ -121,7 +127,7 @@ export const App = () => {
     if (activeId !== route.id) {
       selectSession(route.id, { syncRoute: false })
     }
-  }, [activeId, ready, route, sessions])
+  }, [activeId, authStatus, ready, route, sessions])
 
   if (route.kind === 'home') {
     return (
