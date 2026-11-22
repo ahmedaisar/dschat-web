@@ -3,5 +3,10 @@
   "installCommand": "pnpm install",
   "outputDirectory": "dist",
   "framework": null,
+  "functions": {
+    "api/db/migrate.ts": {
+      "includeFiles": "api/db/migrations/**/*"
+    }
+  },
   "rewrites": [{ "source": "/c/(.*)", "destination": "/" }]
 }

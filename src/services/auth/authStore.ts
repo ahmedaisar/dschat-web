@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email, password) => {
     set({ status: 'loading', error: null })
     try {
-      await authRequest('sign-in/email', { email, password })
+      await authRequest('sign-in', { email, password })
       await useAuthStore.getState().refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sign-in failed'
@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (name, email, password) => {
     set({ status: 'loading', error: null })
     try {
-      await authRequest('sign-up/email', { name, email, password })
+      await authRequest('sign-up', { name, email, password })
       set({ status: 'anonymous', error: null })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sign-up failed'
