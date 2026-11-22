@@ -11,7 +11,6 @@ import {
 import { AGENT_TOOLS, agentToolSupported } from '../../services/agent/tools.js'
 import { WORKSPACE_TOOLS } from '../../services/agent/workspaceTools.js'
 import { setWorkspaceEnabled, useWorkspace } from '../../services/workspace/store.js'
-import { useSettings } from '../../services/settings.js'
 import { Switch } from '../base/Switch.js'
 import { Button } from '../base/Button.js'
 import { showToast } from '../base/toastState.js'
@@ -36,12 +35,10 @@ const readNotificationState = (): NotificationState => {
 
 export const AgentToolsSetting = () => {
   const t = useTranslate()
-  const locale = useSettings((state) => state.locale)
   const enabled = useAgentTools((state) => state.enabled)
   const flags = useAgentTools((state) => state.flags)
   const [notification, setNotification] = useState<NotificationState>(readNotificationState)
   const workspaceEnabled = useWorkspace((state) => state.enabled)
-  const zh = locale.startsWith('zh')
 
   // 通知权限可能在别处变更，切回这个分组时重新读一次
   useEffect(() => {
@@ -133,8 +130,8 @@ export const AgentToolsSetting = () => {
         {AGENT_TOOLS.map((tool) => {
           const supported = agentToolSupported(tool)
           const checked = enabled && flags[tool.id] !== false
-          const label = zh ? tool.label : tool.labelEn
-          const summary = zh ? tool.summary : tool.summaryEn
+          const label = tool.labelEn
+          const summary = tool.summaryEn
           return (
             <div
               key={tool.id}
@@ -188,8 +185,8 @@ export const AgentToolsSetting = () => {
       <div className={styles.list}>
         {WORKSPACE_TOOLS.map((tool) => {
           const checked = workspaceEnabled && enabled && flags[tool.id] !== false
-          const label = zh ? tool.label : tool.labelEn
-          const summary = zh ? tool.summary : tool.summaryEn
+          const label = tool.labelEn
+          const summary = tool.summaryEn
           return (
             <div
               key={tool.id}

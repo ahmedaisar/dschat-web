@@ -1945,7 +1945,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
     const {
       autoCompress,
       apiKey: compressKey,
-      locale: compressLocale,
       maxTokens,
     } = useSettings.getState()
     const current = getSession(sessionId)
@@ -1963,7 +1962,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         maxOutputTokens: maxTokens ?? 8192,
       })
     ) {
-      void compressSession(current, compressKey, compressLocale).then((outcome) => {
+      void compressSession(current, compressKey).then((outcome) => {
         if (outcome.ok) {
           setSessionCompression(sessionId, outcome.compression)
         }

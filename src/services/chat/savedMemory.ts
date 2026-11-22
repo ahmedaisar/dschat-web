@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
-import { streamMessage } from '../api/client.js'
 import { useSettings } from '../settings.js'
+import { streamMessage } from '../api/client.js'
 import { translate } from '../../i18n/index.js'
 import { removeSavedMemoryNode, upsertSavedMemoryNode } from './memoryBank.js'
 
@@ -177,14 +177,6 @@ type MemoryOperation =
   | { action: 'update'; id: string; content: string }
   | { action: 'delete'; id: string }
 
-const EXTRACTOR_SYSTEM_ZH = `你是长期记忆提炼器。根据本轮对话，判断是否有需要长期保存的关于用户的稳定事实、身份、职业、长期偏好、常用工具/语言或明确要求“记住”的信息。
-规则：
-1. 只提取来自用户且具有长期价值的信息；一次性任务细节、临时报错代码或闲聊不要提取。
-2. 如果新信息更新或推翻了已有记忆，使用 update 替换对应 id；如果用户要求忘记某条，使用 delete；如果是全新事实，使用 add。
-3. 严禁重复添加已有记忆。如果没有任何需要新增或修改的记忆，必须返回 []。
-4. 只输出合法 JSON 数组，不要输出任何额外解释或 Markdown。格式示例：
-[{"action":"add","content":"用户是一名前端工程师，偏好使用 TypeScript"}]`
-
 const EXTRACTOR_SYSTEM_EN = `You extract long-term memory. From this turn, decide whether there is stable information about the user worth saving: identity, occupation, long-term preferences, tools/languages, or an explicit request to remember something.
 Rules:
 1. Only extract user-originated information with long-term value; skip one-off task details, temporary error codes and small talk.
@@ -247,18 +239,12 @@ export const extractMemoriesFromTurn = async ({
     return false
   }
   const existing = useSavedMemories.getState().items
-  const locale = useSettings.getState().locale
   const existingBlock =
     existing.length > 0
       ? existing.map((item) => `[${item.id}] ${item.content}`).join('\n')
-      : locale === 'zh-CN'
-        ? '（暂无）'
-        : '(none)'
-  const system = locale === 'zh-CN' ? EXTRACTOR_SYSTEM_ZH : EXTRACTOR_SYSTEM_EN
-  const prompt =
-    locale === 'zh-CN'
-      ? `已有记忆：\n${existingBlock}\n\n本轮对话：\n用户：${question}\n助手：${assistantText.slice(0, 600)}`
-      : `Existing memories:\n${existingBlock}\n\nThis turn:\nUser: ${question}\nAssistant: ${assistantText.slice(0, 600)}`
+      : '(none)'
+  const system = EXTRACTOR_SYSTEM_EN
+  const prompt = `Existing memories:\n${existingBlock}\n\nThis turn:\nUser: ${question}\nAssistant: ${assistantText.slice(0, 600)}`
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), EXTRACTOR_TIMEOUT)
   try {

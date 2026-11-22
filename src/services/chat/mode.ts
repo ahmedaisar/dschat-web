@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { useSettings } from '../settings.js'
 
 /**
  * 聊天模式：控制「模型这一轮能用哪些客户端工具」。
@@ -87,24 +86,20 @@ export const CHAT_MODES: ChatMode[] = ['chat', 'web', 'ptc', 'creator']
  * 避免在仅聊天模式里反复尝试调用工具。仅聊天模式没有工具，不加。
  */
 export const modeSystemNote = (mode = chatMode()): string => {
-  const english = useSettings.getState().locale === 'en-US'
   if (mode === 'chat') {
     return ''
   }
-  const notes: Record<Exclude<ChatMode, 'chat'>, { zh: string; en: string }> = {
+  const notes: Record<Exclude<ChatMode, 'chat'>, { en: string }> = {
     web: {
-      zh: '当前模式：网页 Agent。你可以使用浏览器工具与虚拟工作区工具（列目录 / 读写文件 / 看 diff）。虚拟机与 shell 在本模式不可用。',
       en: 'Current mode: Web agent. Browser tools and the virtual workspace are available. The VM and shell are not.',
     },
     ptc: {
-      zh: '当前模式：PTC。你可以批量调用工具：浏览器工具、虚拟工作区与 NanoVM Slim 虚拟机（shell / 文件 / 按需安装运行时）。同一轮可以并发调用多个工具，工具之间可以互相配合。',
       en: 'Current mode: PTC. You may batch tool calls: browser tools, the virtual workspace and NanoVM Slim (shell, files, on-demand runtimes). Several tools can run in parallel within one round and build on each other.',
     },
     creator: {
-      zh: '当前模式：创造。在 PTC 的基础上，你可以在 NanoVM Slim 里自行安装运行时（vm install python / node / git），并把脚本写到 /usr/bin 等 PATH 目录里、chmod +x 之后当作新的命令行工具反复使用。虚拟机里的写操作与安装不需要逐次确认，请谨慎操作。',
       en: 'Current mode: Creator. On top of PTC you may install runtimes inside NanoVM Slim (vm install python / node / git), write scripts into /usr/bin or any PATH directory, chmod +x them and reuse them as new commands. VM writes and installs no longer ask for confirmation — be careful.',
     },
   }
   const note = notes[mode]
-  return english ? note.en : note.zh
+  return note.en
 }

@@ -18,7 +18,7 @@ import type { ObfuscationTechnique } from './unrestricted/parseltongue.js'
 import type { PromptPreset } from './unrestricted/prompts.js'
 import { STM_MODULE_IDS } from './unrestricted/stm.js'
 
-export type Locale = 'zh-CN' | 'en-US'
+export type Locale = 'en-US'
 
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -224,10 +224,6 @@ const write = (key: string, value: string | null) => {
   }
 }
 
-/** 位置选择模式跟随浏览器语言，与应用内选择的界面语言无关。 */
-export const isChineseBrowser = (): boolean =>
-  (typeof navigator === 'undefined' ? 'zh' : navigator.language).toLowerCase().startsWith('zh')
-
 const initialModel = (): ChatModel => {
   const saved = read(KEYS.model)
   return saved !== null && saved.trim() !== '' ? saved.trim() : 'deepseek-flash'
@@ -288,13 +284,7 @@ const initialProvider = (): ProviderMode => {
   return initialCustomProvider() ? 'custom' : 'deepseek'
 }
 
-const initialLocale = (): Locale => {
-  const saved = read(KEYS.locale)
-  if (saved === 'zh-CN' || saved === 'en-US') {
-    return saved
-  }
-  return isChineseBrowser() ? 'zh-CN' : 'en-US'
-}
+const initialLocale = (): Locale => 'en-US'
 
 const initialLocation = (): UserLocation | null => {
   try {
@@ -306,11 +296,7 @@ const initialLocation = (): UserLocation | null => {
     if (location.custom || location.place) {
       return location
     }
-    return isChineseBrowser()
-      ? location.region === 'CN' && location.province
-        ? location
-        : null
-      : { region: location.region }
+    return { region: location.region }
   } catch {
     return null
   }
@@ -543,11 +529,6 @@ export const setModel = (model: ChatModel) => {
   }
   write(KEYS.model, next)
   useSettings.setState({ model: next })
-}
-
-export const setLocale = (locale: Locale) => {
-  write(KEYS.locale, locale)
-  useSettings.setState({ locale })
 }
 
 export const setLocation = (value: UserLocation | null) => {
@@ -930,7 +911,7 @@ export const resetSettings = () => {
     provider: 'deepseek',
     model: 'deepseek-flash',
     streamOutput: true,
-    locale: isChineseBrowser() ? 'zh-CN' : 'en-US',
+    locale: 'en-US',
     themePreference: 'system',
     location: null,
     ttsVoice: 'stella',

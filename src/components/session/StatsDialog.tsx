@@ -76,7 +76,6 @@ const StatsContent = () => {
   const [holiday, setHoliday] = useState(false)
   const [discount, setDiscount] = useState(true)
   const [compressing, setCompressing] = useState(false)
-  const locale = useSettings((state) => state.locale)
   const apiKey = useSettings((state) => state.apiKey) ?? ''
   const maxTokens = useSettings((state) => state.maxTokens)
   const model = useSettings((state) => state.model)
@@ -494,7 +493,7 @@ const StatsContent = () => {
                 return
               }
               setCompressing(true)
-              void compressSession(session, apiKey, locale)
+              void compressSession(session, apiKey)
                 .then((outcome) => {
                   if (outcome.ok) {
                     setSessionCompression(session.id, outcome.compression)

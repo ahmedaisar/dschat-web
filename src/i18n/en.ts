@@ -1,5 +1,3 @@
-import type { zh } from './zh.js'
-
 export const en = {
   welcomeMessageChat250808: 'How can I help you?',
   contentCaveat: 'AI-generated, for reference only',
@@ -1557,6 +1555,4 @@ export const en = {
   changelogV268Reset:
     'Reset the VM straight from the terminal: a red "Reset" in the desktop header and the mobile toolbar, with a confirmation that clears every file and restarts the engine',
   latestReminderLanguage: 'English',
-  settingsLocaleZhCN: 'Simplified Chinese',
-  settingsLocaleEnUS: 'English',
-} satisfies Record<keyof typeof zh, string>
+} as const

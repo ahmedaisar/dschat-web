@@ -1,14 +1,5 @@
-import { cityNames, regionCodes, regionNameOverrides, provinceNames } from './locationData.js'
-
-export { regionCodes } from './locationData.js'
-
-export const provinces = Object.entries(provinceNames).map(([code, name]) => ({
-  code,
-  name,
-  cities: Object.entries(cityNames)
-    .filter(([city]) => city.startsWith(code.slice(0, 2)))
-    .map(([code, name]) => ({ code, name })),
-}))
+export const regionCodes: string[] =
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ')
 
 /** 科幻/特殊位置：空间站、月球、火星，覆盖普通行政区选择 */
 export const specialPlaces = [
@@ -23,8 +14,8 @@ export type SpecialPlace = (typeof specialPlaces)[number]['id']
 
 const specialPlaceIds = new Set<string>(specialPlaces.map((item) => item.id))
 
-export const specialPlaceName = (id: SpecialPlace, locale: 'zh-CN' | 'en-US'): string =>
-  specialPlaces.find((item) => item.id === id)?.[locale === 'zh-CN' ? 'zh' : 'en'] ?? id
+export const specialPlaceName = (id: SpecialPlace): string =>
+  specialPlaces.find((item) => item.id === id)?.en ?? id
 
 export type UserLocation = {
   region: string
@@ -49,22 +40,17 @@ const normalizeCustomPlace = (value: unknown): string | undefined => {
 }
 
 const regions = new Set(regionCodes)
-const regionNames = {
-  'zh-CN': new Intl.DisplayNames(['zh-CN'], { type: 'region' }),
-  'en-US': new Intl.DisplayNames(['en-US'], { type: 'region' }),
-}
+const regionNames = new Intl.DisplayNames(['en-US'], { type: 'region' })
 
-export const getRegionName = (code: string, locale: 'zh-CN' | 'en-US'): string =>
-  regions.has(code)
-    ? (regionNameOverrides[locale][code] ?? regionNames[locale].of(code) ?? code)
-    : ''
+export const getRegionName = (code: string): string =>
+  regions.has(code) ? regionNames.of(code) ?? code : ''
 
 export const normalizeLocation = (value: unknown): UserLocation | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null
   }
   const location = value as Record<string, unknown>
-  const { region, province, city, place } = location
+  const { region, place } = location
   const custom = normalizeCustomPlace(location.custom)
   if (custom) {
     return { region: 'CN', custom }
@@ -77,19 +63,5 @@ export const normalizeLocation = (value: unknown): UserLocation | null => {
   if (typeof region !== 'string' || !regions.has(region)) {
     return null
   }
-  if (region !== 'CN') {
-    return { region }
-  }
-  if (province === undefined) {
-    return city === undefined ? { region } : null
-  }
-  const selectedProvince = provinces.find((item) => item.code === province)
-  if (!selectedProvince) {
-    return null
-  }
-  if (city === undefined) {
-    return { region, province: selectedProvince.code }
-  }
-  const selectedCity = selectedProvince.cities.find((item) => item.code === city)
-  return selectedCity ? { region, province: selectedProvince.code, city: selectedCity.code } : null
+  return { region }
 }

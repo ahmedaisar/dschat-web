@@ -1,5 +1,4 @@
 import { streamMessage } from '../api/client.js'
-import type { Locale } from '../settings.js'
 import { getVisibleMessages } from './branches.js'
 import { getReplyAnswerText } from './reply.js'
 import type { Session, SessionCompression } from './types.js'
@@ -69,12 +68,9 @@ const messageText = (message: ReturnType<typeof getVisibleMessages>[number]): st
   message.role === 'user' ? message.content : getReplyAnswerText(message)
 
 /** 把要压缩的消息拼成带角色的纯文本，单条过长时截断 */
-const buildTranscript = (
-  messages: ReturnType<typeof getVisibleMessages>,
-  locale: Locale
-): string => {
-  const userLabel = locale === 'zh-CN' ? '用户' : 'User'
-  const assistantLabel = locale === 'zh-CN' ? '助手' : 'Assistant'
+const buildTranscript = (messages: ReturnType<typeof getVisibleMessages>): string => {
+  const userLabel = 'User'
+  const assistantLabel = 'Assistant'
   const lines: string[] = []
   let total = 0
   for (const message of messages) {
@@ -99,13 +95,10 @@ const buildTranscript = (
 const summarize = async (
   apiKey: string,
   transcript: string,
-  locale: Locale,
   signal: AbortSignal
 ): Promise<string> => {
   const system =
-    locale === 'zh-CN'
-      ? '你是对话压缩器。把用户给出的对话记录压缩成结构化摘要，固定包含：1) 目标与约束；2) 已确认的事实、决定与结论；3) 代码/文件/产物的当前状态；4) 未完成事项与下一步；5) 重要错误与规避方式。用第三人称中文分条列出，保留关键标识符与数字；不要编造，不要评论，只输出摘要正文。'
-      : 'You compress conversations. Summarise the supplied transcript into a structured summary with: 1) goals and constraints; 2) confirmed facts, decisions and conclusions; 3) current state of code/files/artifacts; 4) open items and next steps; 5) important errors and workarounds. Use third person bullets, keep identifiers and numbers; do not invent, do not comment; output only the summary body.'
+    'You compress conversations. Summarise the supplied transcript into a structured summary with: 1) goals and constraints; 2) confirmed facts, decisions and conclusions; 3) current state of code/files/artifacts; 4) open items and next steps; 5) important errors and workarounds. Use third person bullets, keep identifiers and numbers; do not invent, do not comment; output only the summary body.'
   const body = {
     model: 'deepseek-flash' as const,
     system,
@@ -133,7 +126,6 @@ const summarize = async (
 export const compressSession = async (
   session: Session,
   apiKey: string,
-  locale: Locale
 ): Promise<CompressOutcome> => {
   if (!apiKey) {
     return { ok: false, reason: 'noKey' }
@@ -154,7 +146,7 @@ export const compressSession = async (
     return { ok: false, reason: 'tooShort' }
   }
   const target = visible.slice(0, cutoffIndex + 1)
-  const transcript = buildTranscript(target, locale)
+  const transcript = buildTranscript(target)
   if (transcript === '') {
     return { ok: false, reason: 'tooShort' }
   }
@@ -162,13 +154,10 @@ export const compressSession = async (
   const controller = new AbortController()
   try {
     const previous = session.compression
-    const header =
-      previous && locale === 'zh-CN'
-        ? `上一次的摘要：\n${previous.summary}\n\n新增对话：\n`
-        : previous
-          ? `Previous summary:\n${previous.summary}\n\nNew transcript:\n`
-          : ''
-    const summary = await summarize(apiKey, `${header}${transcript}`, locale, controller.signal)
+    const header = previous
+      ? `Previous summary:\n${previous.summary}\n\nNew transcript:\n`
+      : ''
+    const summary = await summarize(apiKey, `${header}${transcript}`, controller.signal)
     if (summary === '') {
       return { ok: false, reason: 'error' }
     }
