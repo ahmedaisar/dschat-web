@@ -36,6 +36,7 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (name: string, email: string, password: string) => Promise<void>
   requestPasswordReset: (email: string) => Promise<void>
+  resendVerification: (email: string) => Promise<void>
   resetPassword: (token: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -111,6 +112,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ status: 'anonymous', error: null })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sign-up failed'
+      set({ status: 'anonymous', error: message })
+      throw error
+    }
+  },
+  resendVerification: async (email) => {
+    set({ status: 'loading', error: null })
+    try {
+      await authRequest('send-verification-email', {
+        email,
+        callbackURL: window.location.origin,
+      })
+      set({ status: 'anonymous', error: null })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Verification email failed'
       set({ status: 'anonymous', error: message })
       throw error
     }

@@ -53,6 +53,7 @@ export const en = {
   authInvalidCredentials: 'The email or password is incorrect.',
   authValidationFailed: 'Please check the information and try again.',
   authVerificationSent: 'Check your email to verify your account before signing in.',
+  authResendVerification: 'Resend verification email',
   authResetSent: 'If an account exists for that email, a reset link has been sent.',
   authEmailVerificationPending: 'Please verify your email address to finish setting up your account.',
   appName: 'deepseek unrestricted',

@@ -38,9 +38,22 @@ const sendAuthEmail = async (subject: string, email: AuthEmail): Promise<void> =
       text: `Continue with Chat Demo: ${email.url}`,
     }),
   })
+  const responseBody = await response.text()
   if (!response.ok) {
-    throw new Error(`Auth email delivery failed with status ${response.status}`)
+    let providerMessage = responseBody.slice(0, 240).replace(/[\r\n]+/g, ' ')
+    try {
+      const payload = JSON.parse(responseBody) as { message?: string; name?: string }
+      providerMessage = payload.message ?? payload.name ?? providerMessage
+    } catch {
+      // Keep the bounded raw provider response for diagnostics.
+    }
+    throw new Error(`Auth email delivery failed with status ${response.status}: ${providerMessage}`)
   }
+  // eslint-disable-next-line no-console
+  console.info('[api/auth] verification/reset email accepted by Resend', {
+    status: response.status,
+    fromDomain: from.split('@')[1] ?? 'invalid',
+  })
 }
 
 let instance: AuthInstance | null = null

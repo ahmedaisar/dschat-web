@@ -50,6 +50,7 @@ export const zh = {
   authInvalidCredentials: '邮箱或密码不正确。',
   authValidationFailed: '请检查填写的信息后重试。',
   authVerificationSent: '请查收邮件，验证账户后再登录。',
+  authResendVerification: '重新发送验证邮件',
   authResetSent: '如果该邮箱对应账户，重置链接已发送。',
   authEmailVerificationPending: '请验证邮箱地址以完成账户设置。',
   appName: 'deepseek unrestricted',

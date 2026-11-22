@@ -25,6 +25,7 @@ export const AuthDialog = ({
   const signIn = useAuthStore((state) => state.signIn)
   const signUp = useAuthStore((state) => state.signUp)
   const requestPasswordReset = useAuthStore((state) => state.requestPasswordReset)
+  const resendVerification = useAuthStore((state) => state.resendVerification)
   const resetPassword = useAuthStore((state) => state.resetPassword)
   const signOut = useAuthStore((state) => state.signOut)
   const [name, setName] = useState('')
@@ -122,11 +123,29 @@ export const AuthDialog = ({
     <Modal title={title} closable onClose={onClose}>
       {submitted ? (
         <div className={styles.success} role="status">
-          {mode === 'signUp'
-            ? t('authVerificationSent')
-            : mode === 'resetPassword'
-              ? t('authPasswordUpdated')
-              : t('authResetSent')}
+          <p>
+            {mode === 'signUp'
+              ? t('authVerificationSent')
+              : mode === 'resetPassword'
+                ? t('authPasswordUpdated')
+                : t('authResetSent')}
+          </p>
+          {mode === 'signUp' ? (
+            <Button
+              block
+              variant="outlined"
+              disabled={pending}
+              onClick={async () => {
+                try {
+                  await resendVerification(email)
+                } catch (error) {
+                  setLocalError(error instanceof Error ? error.message : t('authRequestFailed'))
+                }
+              }}
+            >
+              {pending ? t('authWorking') : t('authResendVerification')}
+            </Button>
+          ) : null}
         </div>
       ) : (
         <form className={styles.form} onSubmit={(event) => void submit(event)}>
