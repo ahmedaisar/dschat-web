@@ -35,6 +35,7 @@ import { NanoVMHost } from '../components/nanovm/NanoVMHost.js'
 import { AuthDialog } from '../components/auth/AuthDialog.js'
 import { closeAuth, openAuth, useAuthDialog } from '../components/auth/authDialogState.js'
 import { useAuthStore } from '../services/auth/authStore.js'
+import { LandingPage } from '../components/landing/LandingPage.js'
 import styles from './App.module.css'
 
 export const App = () => {
@@ -97,7 +98,7 @@ export const App = () => {
   // URL 是会话的入口；本地 IndexedDB 仍是内容来源。首次加载或浏览器前进/后退时，
   // 只应用 URL 到 store，不再次写入历史，避免 popstate 与 pushState 互相触发。
   useEffect(() => {
-    if (!ready) {
+    if (!ready || route.kind === 'home') {
       return
     }
     if (route.kind === 'unknown') {
@@ -121,6 +122,17 @@ export const App = () => {
       selectSession(route.id, { syncRoute: false })
     }
   }, [activeId, ready, route, sessions])
+
+  if (route.kind === 'home') {
+    return (
+      <>
+        <LandingPage />
+        {authDialogMode ? (
+          <AuthDialog mode={authDialogMode} onClose={closeAuth} onModeChange={setAuthDialogMode} resetToken={resetToken} />
+        ) : null}
+      </>
+    )
+  }
 
   return (
     <>

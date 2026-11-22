@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 export type AppRoute =
+  | { kind: 'home' }
   | { kind: 'new' }
   | { kind: 'conversation'; id: string }
   | { kind: 'unknown'; pathname: string }
@@ -26,7 +27,10 @@ const currentPath = () => (typeof window === 'undefined' ? '/' : window.location
 
 export const parseRoute = (pathname: string): AppRoute => {
   const normalized = pathname.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/'
-  if (normalized === '/' || normalized === NEW_PATH) {
+  if (normalized === '/') {
+    return { kind: 'home' }
+  }
+  if (normalized === NEW_PATH) {
     return { kind: 'new' }
   }
   if (normalized.startsWith(CONVERSATION_PREFIX)) {
@@ -45,7 +49,7 @@ export const parseRoute = (pathname: string): AppRoute => {
   return { kind: 'unknown', pathname }
 }
 
-export const routePath = (route: Exclude<AppRoute, { kind: 'unknown' }>) =>
+export const routePath = (route: Exclude<AppRoute, { kind: 'unknown' | 'home' }>) =>
   route.kind === 'new' ? NEW_PATH : `${CONVERSATION_PREFIX}${encodeURIComponent(route.id)}`
 
 export const newConversationPath = () => NEW_PATH
