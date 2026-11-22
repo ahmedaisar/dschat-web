@@ -36,6 +36,7 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (name: string, email: string, password: string) => Promise<void>
   requestPasswordReset: (email: string) => Promise<void>
+  resetPassword: (token: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -110,6 +111,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ status: 'anonymous', error: null })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sign-up failed'
+      set({ status: 'anonymous', error: message })
+      throw error
+    }
+  },
+  resetPassword: async (token, password) => {
+    set({ status: 'loading', error: null })
+    try {
+      await authRequest('reset-password', { token, newPassword: password })
+      set({ status: 'anonymous', error: null })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Password reset failed'
       set({ status: 'anonymous', error: message })
       throw error
     }

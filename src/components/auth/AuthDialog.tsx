@@ -5,16 +5,18 @@ import { Modal } from '../base/Modal.js'
 import { AuthApiError, useAuthStore } from '../../services/auth/authStore.js'
 import styles from './AuthDialog.module.css'
 
-export type AuthDialogMode = 'signIn' | 'signUp' | 'forgotPassword'
+export type AuthDialogMode = 'signIn' | 'signUp' | 'forgotPassword' | 'resetPassword'
 
 export const AuthDialog = ({
   mode,
   onClose,
   onModeChange,
+  resetToken,
 }: {
   mode: AuthDialogMode
   onClose: () => void
   onModeChange: (mode: AuthDialogMode) => void
+  resetToken?: string | null
 }) => {
   const t = useTranslate()
   const status = useAuthStore((state) => state.status)
@@ -23,6 +25,7 @@ export const AuthDialog = ({
   const signIn = useAuthStore((state) => state.signIn)
   const signUp = useAuthStore((state) => state.signUp)
   const requestPasswordReset = useAuthStore((state) => state.requestPasswordReset)
+  const resetPassword = useAuthStore((state) => state.resetPassword)
   const signOut = useAuthStore((state) => state.signOut)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -78,8 +81,14 @@ export const AuthDialog = ({
       } else if (mode === 'signUp') {
         await signUp(name, email, password)
         setSubmitted(true)
-      } else {
+      } else if (mode === 'forgotPassword') {
         await requestPasswordReset(email)
+        setSubmitted(true)
+      } else {
+        if (!resetToken) {
+          throw new Error(t('authResetLinkInvalid'))
+        }
+        await resetPassword(resetToken, password)
         setSubmitted(true)
       }
     } catch (error) {
@@ -105,13 +114,19 @@ export const AuthDialog = ({
       ? t('authSignIn')
       : mode === 'signUp'
         ? t('authCreateAccount')
-        : t('authForgotPassword')
+        : mode === 'forgotPassword'
+          ? t('authForgotPassword')
+          : t('authResetPassword')
 
   return (
     <Modal title={title} closable onClose={onClose}>
       {submitted ? (
         <div className={styles.success} role="status">
-          {mode === 'signUp' ? t('authVerificationSent') : t('authResetSent')}
+          {mode === 'signUp'
+            ? t('authVerificationSent')
+            : mode === 'resetPassword'
+              ? t('authPasswordUpdated')
+              : t('authResetSent')}
         </div>
       ) : (
         <form className={styles.form} onSubmit={(event) => void submit(event)}>
@@ -121,16 +136,18 @@ export const AuthDialog = ({
               <input value={name} autoComplete="name" required onChange={(event) => setName(event.target.value)} />
             </label>
           ) : null}
-          <label>
-            {t('authEmail')}
-            <input
-              type="email"
-              value={email}
-              autoComplete="email"
-              required
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
+          {mode !== 'resetPassword' ? (
+            <label>
+              {t('authEmail')}
+              <input
+                type="email"
+                value={email}
+                autoComplete="email"
+                required
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+          ) : null}
           {mode !== 'forgotPassword' ? (
             <label>
               {t('authPassword')}
@@ -146,7 +163,13 @@ export const AuthDialog = ({
           ) : null}
           {error ? <div className={styles.error} role="alert">{error}</div> : null}
           <Button block disabled={pending} type="submit">
-            {pending ? t('authWorking') : mode === 'forgotPassword' ? t('authSendReset') : title}
+            {pending
+              ? t('authWorking')
+              : mode === 'forgotPassword'
+                ? t('authSendReset')
+                : mode === 'resetPassword'
+                  ? t('authSavePassword')
+                  : title}
           </Button>
         </form>
       )}
@@ -156,6 +179,8 @@ export const AuthDialog = ({
             <button type="button" onClick={() => onModeChange('signUp')}>{t('authNeedAccount')}</button>
             <button type="button" onClick={() => onModeChange('forgotPassword')}>{t('authForgotPassword')}</button>
           </>
+        ) : mode === 'resetPassword' ? (
+          <button type="button" onClick={() => onModeChange('signIn')}>{t('authBackToSignIn')}</button>
         ) : (
           <button type="button" onClick={() => onModeChange('signIn')}>{t('authBackToSignIn')}</button>
         )}

@@ -33,7 +33,7 @@ import { closeMobileSider } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
 import { NanoVMHost } from '../components/nanovm/NanoVMHost.js'
 import { AuthDialog } from '../components/auth/AuthDialog.js'
-import { closeAuth, useAuthDialog } from '../components/auth/authDialogState.js'
+import { closeAuth, openAuth, useAuthDialog } from '../components/auth/authDialogState.js'
 import { useAuthStore } from '../services/auth/authStore.js'
 import styles from './App.module.css'
 
@@ -41,6 +41,7 @@ export const App = () => {
   const t = useTranslate()
   const authDialogMode = useAuthDialog((state) => state.mode)
   const setAuthDialogMode = useAuthDialog((state) => state.setMode)
+  const resetToken = new URLSearchParams(window.location.search).get('token')
   const refreshAuth = useAuthStore((state) => state.refresh)
   const route = useAppRoute()
   const isMobile = useIsMobile()
@@ -87,9 +88,12 @@ export const App = () => {
   useEffect(() => {
     void initChat()
     void refreshAuth()
+    if (resetToken) {
+      openAuth('resetPassword')
+    }
     // 首次打开先在设置里输入 API Key
     ensureApiKey()
-  }, [refreshAuth])
+  }, [refreshAuth, resetToken])
 
   // URL 是会话的入口；本地 IndexedDB 仍是内容来源。首次加载或浏览器前进/后退时，
   // 只应用 URL 到 store，不再次写入历史，避免 popstate 与 pushState 互相触发。
@@ -203,6 +207,7 @@ export const App = () => {
           mode={authDialogMode}
           onClose={closeAuth}
           onModeChange={setAuthDialogMode}
+          resetToken={resetToken}
         />
       ) : null}
       <Toast />
